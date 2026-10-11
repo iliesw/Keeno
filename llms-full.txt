@@ -1189,7 +1189,7 @@ Outside Vite, turn on development mode with `globalThis.__LUX_DEV__ = true` befo
 - `.lx` semantics in the types: a local state reads as its value plus `set`, `get`, `peek`, `onUpdate`, `undo`, `redo`, `canUndo` and `canRedo`.
 - Typed props: a component's props type is the type argument of its `props<P>()` call. Using it with a missing or mistyped prop is an error, and prop names complete on its tag. Parents write `children` as nested markup; inside the component it is a `Children` function.
 
-Install "Lux" (`inflector.lux-vscode`) from the VS Code Marketplace or Open VSX. To build it from the repo instead:
+Install "Lux Framework" (`inflector.inflector-lux`) from the VS Code Marketplace or Open VSX. To build it from the repo instead:
 
 ```bash
 bun run --cwd packages/vscode package

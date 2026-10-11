@@ -1,6 +1,6 @@
 {
-  "name": "lux-vscode",
-  "displayName": "Lux",
+  "name": "inflector-lux",
+  "displayName": "Lux Framework",
   "description": "Syntax highlighting and IntelliSense for Lux (.lx) components",
   "version": "0.1.0",
   "publisher": "inflector",

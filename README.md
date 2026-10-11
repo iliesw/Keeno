@@ -60,7 +60,7 @@ npm, pnpm and yarn work too. Continue with [Getting started](docs/getting-starte
 | [`@inflector/lux-check`](packages/lux-check) | Type-checks `.lx` and `.ts` files from the command line |
 | [`@inflector/lux-compiler`](packages/compiler) | The `.lx` compiler (used by the Vite plugin) |
 | [`@inflector/lux-language-server`](packages/language-server) | Volar-based language server (used by the editor extension and `lux-check`) |
-| [Lux for VS Code](packages/vscode) | Syntax highlighting and IntelliSense (`inflector.lux-vscode`) |
+| [Lux for VS Code](packages/vscode) | Syntax highlighting and IntelliSense (`inflector.inflector-lux`) |
 
 ## Documentation
 

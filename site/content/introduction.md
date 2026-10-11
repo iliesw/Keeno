@@ -42,7 +42,7 @@ Lux is a compiled, signal-based frontend framework. Components are `.lx` files t
 | `@inflector/lux-check` | Type-checks `.lx` and `.ts` files from the command line |
 | `@inflector/lux-compiler` | The `.lx` compiler (used by the Vite plugin) |
 | `@inflector/lux-language-server` | Volar-based language server (used by the editor extension and `lux-check`) |
-| Lux for VS Code | Syntax highlighting and IntelliSense (`inflector.lux-vscode`) |
+| Lux for VS Code | Syntax highlighting and IntelliSense (`inflector.inflector-lux`) |
 
 ## About this site
 
