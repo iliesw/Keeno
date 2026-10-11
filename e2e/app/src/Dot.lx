@@ -1,0 +1,5 @@
+<script lang="ts">
+  const { x, y, r = 4 } = props()
+</script>
+
+<circle class="dot" cx={x} cy={y} r={r} fill="teal" />

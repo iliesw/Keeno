@@ -1,0 +1,34 @@
+{
+  "name": "lux",
+  "version": "0.1.0",
+  "description": "Compiled, signal-based UI runtime for Lux (.lx) components",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "lux-source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./internal": {
+      "lux-source": "./src/internal.ts",
+      "types": "./dist/internal.d.ts",
+      "import": "./dist/internal.js",
+      "default": "./dist/internal.js"
+    },
+    "./lx": {
+      "lux-source": "./src/lx.d.ts",
+      "types": "./dist/lx.d.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": ["dist", "lx.d.ts"],
+  "scripts": {
+    "build": "bun ../../scripts/build-package.ts --target=browser",
+    "prepack": "bun run build"
+  }
+}

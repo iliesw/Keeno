@@ -1,0 +1,18 @@
+<script lang="ts">
+  const { title, onSave, log } = props()
+  const count = state(0)
+  const name = state('')
+
+  init(() => log('init'))
+  destroy(() => log('destroy'))
+  update(() => log(`auto ${count}`))
+  update(() => log(`deps ${name} ${count}`), [name, count])
+  count.onUpdate((old, next) => log(`onUpdate ${old}->${next}`))
+</script>
+
+<h1>{title}: {count}</h1>
+<button class="inc" onClick={() => count.set(count + 1)}>+1</button>
+<input bind:value={name} />
+<span class="name">{name}</span>
+{count > 2 && <p class="warn">big!</p>}
+<button class="save" onClick={() => onSave(count)}>save</button>

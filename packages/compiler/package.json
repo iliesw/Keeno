@@ -1,0 +1,43 @@
+{
+  "name": "@lux/compiler",
+  "version": "0.1.0",
+  "description": "Compiler for Lux (.lx) single-file components",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "lux-source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./split": {
+      "lux-source": "./src/split.ts",
+      "types": "./dist/split.d.ts",
+      "import": "./dist/split.js",
+      "default": "./dist/split.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": ["dist"],
+  "publishConfig": { "access": "public" },
+  "scripts": {
+    "build": "bun ../../scripts/build-package.ts --target=node",
+    "prepack": "bun run build"
+  },
+  "dependencies": {
+    "@babel/generator": "^7.26.2",
+    "@babel/parser": "^7.26.2",
+    "@babel/traverse": "^7.25.9",
+    "@babel/types": "^7.26.0",
+    "postcss": "^8.4.49",
+    "postcss-selector-parser": "^7.0.0"
+  },
+  "devDependencies": {
+    "lux": "workspace:*",
+    "@types/babel__generator": "^7.6.8",
+    "@types/babel__traverse": "^7.20.6"
+  }
+}

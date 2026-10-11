@@ -1,0 +1,33 @@
+# Lux
+
+> Lux is a compiled, signal-based frontend framework. Components are `.lx` files with HTML-first JSX markup, a `<script>` block and a scoped `<style>` block. The compiler (via `vite-plugin-lux`) turns them into direct DOM code with fine-grained updates: no virtual DOM, no re-rendering components. Tooling is Bun (packages, scripts, `bun test`) plus Vite.
+
+Rules that differ from React, Svelte and Vue, which models get wrong most often:
+
+- **Reading state:** in `.lx` files, read a local state by name (`count`), not `count()` or `count.value`. Write with `count.set(v)`, never `count = v`.
+- **Reserved members:** `x.set`, `x.get`, `x.peek`, `x.onUpdate`, `x.undo`, `x.redo`, `x.canUndo` and `x.canRedo` stay on the state. Any other member (`x.length`, `x.map`) reads the value.
+- **Immutable updates:** `todos.set([...todos, item])`. In-place mutation (`todos.push`) does not update anything.
+- **Computed values:** use `derived(() => …)`. Don't copy values between states in `update()`.
+- **Shared stores:** in plain `.ts` files, states are plain objects (`s.get()`, `s.set()`), and imported stores stay that way in components.
+- **Props:** `const { a, b = 1 } = props()` stays reactive. No `...rest`; use `const p = props()` instead.
+- **Markup:** `class`, not `className` (both work). Use `onClick={fn}`, not `@click` or `on:click`. Two-way binding is `bind:value={state}`.
+- **Lists:** `{list.map(item => <li key={item.id}>…</li>)}` is keyed. The callback must return JSX directly.
+- **Lifecycle:** `init(fn)` runs after mount and its return value is cleanup. `update(fn)` is an auto-tracked effect. `update(fn, [a, b])` runs only when `a` or `b` changes, not on mount. `destroy(fn)` runs on unmount.
+- **State options:** `persist`, `url`, `history`, `equals`, `validate`, `debounce` and `throttle`.
+
+## Docs
+
+- [Getting started](docs/getting-started.md): setup with Bun and Vite, a first component, mounting
+- [Components](docs/components.md): script, markup and style; props, children, lifecycle, mount
+- [Reactivity](docs/reactivity.md): state read and write rules, derived, update vs onUpdate, stores, batching
+- [State options](docs/state-options.md): persist, url, history (undo/redo), equals, validate, debounce, throttle
+- [Templates](docs/templates.md): expressions, conditionals, keyed lists, events, bind, class arrays, spread
+- [Styles](docs/styles.md): scoped CSS and `:global()`
+- [Tooling](docs/tooling.md): Vite plugin, HMR, VS Code extension, testing with `bun test`
+- [API reference](docs/api.md): every export, and the compile rules in one table
+
+## Optional
+
+- [Full docs in one file](llms-full.txt): all of the above concatenated, for loading into a model's context
+- [Design spec](PLAN.md): the original architecture and semantics
+- [Examples](examples/): `examples/counter` and `examples/todo`

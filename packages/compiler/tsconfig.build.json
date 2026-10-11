@@ -1,0 +1,15 @@
+{
+  // Declarations for dist/ (run by scripts/build-package.ts). Unlike the root tsconfig, sibling
+  // packages resolve to their built dist/ here, not to their sources.
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    
+    "noEmit": false,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "rootDir": "src",
+    "outDir": "dist",
+    "paths": {}
+  },
+  "include": ["src"]
+}

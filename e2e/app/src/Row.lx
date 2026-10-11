@@ -1,0 +1,5 @@
+<script lang="ts">
+  const { name, qty } = props()
+</script>
+
+<tr class="row"><td class="name">{name}</td><td class="qty">{qty}</td></tr>

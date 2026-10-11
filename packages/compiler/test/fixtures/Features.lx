@@ -1,0 +1,17 @@
+<script lang="ts">
+  const text = state('a', { history: 10 })
+  const qty = state(2)
+  const price = state(5)
+  const total = derived(() => qty * price)
+  const active = state(false)
+  const attrs = state<Record<string, unknown>>({ placeholder: 'type here', 'data-kind': 'demo' })
+</script>
+
+<p class="total">{total}</p>
+<button class="more" onClick={() => qty.set(qty + 1)}>more</button>
+<input class="text" bind:value={text} />
+<button class="undo" disabled={!text.canUndo} onClick={() => text.undo()}>undo</button>
+<button class="redo" disabled={!text.canRedo} onClick={() => text.redo()}>redo</button>
+<span class={['flag', active && 'on']} onClick={() => active.set(!active)}>flag</span>
+<input class="spread" {...attrs} title="t" />
+<button class="swap" onClick={() => attrs.set({ placeholder: 'changed' })}>swap</button>

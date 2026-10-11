@@ -1,0 +1,49 @@
+{
+  "name": "lux-vscode",
+  "displayName": "Lux",
+  "description": "Syntax highlighting and IntelliSense for Lux (.lx) components",
+  "version": "0.1.0",
+  "publisher": "lux",
+  "private": true,
+  "license": "MIT",
+  "engines": { "vscode": "^1.90.0" },
+  "categories": ["Programming Languages"],
+  "icon": "images/icon.png",
+  "main": "./dist/client.js",
+  "activationEvents": [],
+  "contributes": {
+    "languages": [
+      {
+        "id": "lux",
+        "aliases": ["Lux", "lux"],
+        "extensions": [".lx"],
+        "icon": { "light": "./images/file-icon.svg", "dark": "./images/file-icon.svg" },
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "lux",
+        "scopeName": "source.lux",
+        "path": "./syntaxes/lux.tmLanguage.json",
+        "embeddedLanguages": {
+          "meta.embedded.block.lux.script": "typescriptreact",
+          "meta.embedded.block.lux.style": "css",
+          "meta.embedded.expression.lux": "typescriptreact"
+        }
+      }
+    ]
+  },
+  "scripts": {
+    "build": "bun run scripts/build.ts",
+    "package": "bun run scripts/package.ts"
+  },
+  "devDependencies": {
+    "@lux/language-server": "workspace:*",
+    "@types/vscode": "~1.90.0",
+    "@volar/vscode": "~2.4.28",
+    "@vscode/vsce": "^4.0.0",
+    "vscode-oniguruma": "^2.0.1",
+    "vscode-textmate": "^9.3.2"
+  }
+}

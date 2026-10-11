@@ -1,0 +1,50 @@
+<script lang="ts">
+  import Display from './Display.lx'
+
+  const clamp = (v: number) => Math.min(100, Math.max(-100, v))
+
+  // Saved across reloads, kept between -100 and 100, with undo/redo.
+  const count = state(0, { persist: 'lux-count', validate: clamp, history: 100 })
+  // Empty or invalid input is rejected; anything else is a whole number of at least 1.
+  const step = state(1, { validate: (v, prev) => (v == null || Number.isNaN(v) ? prev : Math.max(1, Math.round(v))) })
+  const parity = derived(() => (count % 2 === 0 ? 'even' : 'odd'))
+
+  update(() => console.log('step or count changed'), [step, count])
+  count.onUpdate((old, next) => console.log(`count ${old} -> ${next}`))
+</script>
+
+<h1>Counter</h1>
+<Display value={count} label="Current" />
+<p class="parity">The count is {parity}.</p>
+<label>
+  Step <input type="number" min="1" bind:value={step} />
+</label>
+<div class="buttons">
+  <button onClick={() => count.set(count - step)}>-{step}</button>
+  <button onClick={() => count.set(count + step)}>+{step}</button>
+  <button onClick={() => count.set(0)}>reset</button>
+  <button class="undo" disabled={!count.canUndo} onClick={() => count.undo()}>undo</button>
+  <button class="redo" disabled={!count.canRedo} onClick={() => count.redo()}>redo</button>
+</div>
+{count > 10 && <p class={['warn', count === 100 && 'max']}>That's a big number!</p>}
+
+<style>
+  :global(body) {
+    font-family: system-ui, sans-serif;
+    margin: 2rem;
+  }
+  h1 {
+    color: teal;
+  }
+  .buttons {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+  }
+  .warn {
+    color: crimson;
+  }
+  .max {
+    font-weight: bold;
+  }
+</style>

@@ -1,0 +1,14 @@
+<script lang="ts">
+  const { value, label = 'Value' } = props()
+</script>
+
+<p>{label}: <strong>{value}</strong></p>
+
+<style>
+  p {
+    font-size: 1.5rem;
+  }
+  strong {
+    color: teal;
+  }
+</style>

@@ -1,0 +1,8 @@
+{
+  "name": "example-counter",
+  "private": true,
+  "type": "module",
+  "scripts": { "dev": "bunx --bun vite", "build": "bunx --bun vite build" },
+  "dependencies": { "lux": "workspace:*" },
+  "devDependencies": { "vite": "^5.4.11", "vite-plugin-lux": "workspace:*" }
+}

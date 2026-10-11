@@ -1,0 +1,36 @@
+{
+  "name": "lux-check",
+  "version": "0.1.0",
+  "description": "Command-line type checker for Lux (.lx) projects",
+  "license": "MIT",
+  "type": "module",
+  "bin": { "lux-check": "./dist/cli.js" },
+  "main": "./dist/check.js",
+  "types": "./dist/check.d.ts",
+  "exports": {
+    ".": {
+      "lux-source": "./src/check.ts",
+      "types": "./dist/check.d.ts",
+      "import": "./dist/check.js",
+      "default": "./dist/check.js"
+    },
+    "./cli": {
+      "lux-source": "./src/cli.ts",
+      "types": "./dist/cli.d.ts",
+      "import": "./dist/cli.js",
+      "default": "./dist/cli.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "bun ../../scripts/build-package.ts --target=node",
+    "prepack": "bun run build"
+  },
+  "dependencies": {
+    "@lux/language-server": "workspace:*",
+    "@volar/kit": "~2.4.28",
+    "volar-service-typescript": "~0.0.71"
+  },
+  "peerDependencies": { "typescript": "^5.0.0" }
+}

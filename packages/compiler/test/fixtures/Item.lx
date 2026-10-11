@@ -1,0 +1,11 @@
+<script lang="ts">
+  const { todo, onToggle, onRemove, log } = props()
+  init(() => log(`init ${todo.id}`))
+  destroy(() => log(`destroy ${todo.id}`))
+</script>
+
+<li class={todo.done ? 'done' : ''}>
+  <input type="checkbox" checked={todo.done} onChange={() => onToggle(todo.id)} />
+  <span>{todo.text}</span>
+  <button onClick={() => onRemove(todo.id)}>x</button>
+</li>

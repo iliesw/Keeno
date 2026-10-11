@@ -1,0 +1,321 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`script rewrite a bare state read becomes x.get() 1`] = `
+"import { state } from "lux";
+export default function Test($$props) {
+  const count = state(0);
+  console.log(count.get() + 1);
+  return null;
+}"
+`;
+
+exports[`script rewrite reserved members are not unwrapped; other members are 1`] = `
+"import { state } from "lux";
+export default function Test($$props) {
+  const todos = state([]);
+  todos.set([...todos.get(), 1]);
+  todos.onUpdate(() => {});
+  todos.peek();
+  todos.get();
+  const n = todos.get().length;
+  todos.get()?.at(0);
+  return null;
+}"
+`;
+
+exports[`script rewrite the deps array of update() is not rewritten 1`] = `
+"import { state, update } from "lux";
+export default function Test($$props) {
+  const a = state(1);
+  const b = state(2);
+  update(() => console.log(a.get(), b.get()), [a, b]);
+  return null;
+}"
+`;
+
+exports[`script rewrite props destructuring reads $$props 1`] = `
+"import { insert as _$insert, template as _$template } from "lux/internal";
+const _tmpl$1 = _$template("<p></p>");
+export default function Test($$props) {
+  $$props.onSave($$props.title, $$props["aria-label"], $$props.size ?? 3);
+  const _el$1 = _tmpl$1();
+  _$insert(_el$1, () => $$props.title);
+  return _el$1;
+}"
+`;
+
+exports[`script rewrite imports and types are hoisted; the rest runs per instance 1`] = `
+"import X from "./X";
+type T = {
+  a: number;
+};
+interface I {
+  b: string;
+}
+export default function MyWidget($$props) {
+  const v: T = {
+    a: 1
+  };
+  return null;
+}"
+`;
+
+exports[`template codegen static markup becomes one hoisted template 1`] = `
+"import { template as _$template } from "lux/internal";
+const _tmpl$1 = _$template("<div><h1 id=\\"t\\">Hello <b>world</b></h1></div>");
+export default function Test($$props) {
+  return _tmpl$1();
+}"
+`;
+
+exports[`template codegen text expressions use insert with comment markers 1`] = `
+"import { state } from "lux";
+import { insert as _$insert, template as _$template } from "lux/internal";
+const _tmpl$1 = _$template("<h1><!>: </h1>");
+export default function Test($$props) {
+  const count = state(0);
+  const _el$1 = _tmpl$1();
+  const _el$2 = _el$1.firstChild;
+  _$insert(_el$1, () => $$props.title, _el$2);
+  _$insert(_el$1, () => count.get());
+  return _el$1;
+}"
+`;
+
+exports[`template codegen dynamic attributes, boolean attributes, aliases 1`] = `
+"import { state } from "lux";
+import { attr as _$attr, template as _$template } from "lux/internal";
+const _tmpl$1 = _$template("<label for=\\"x\\" class=\\"a\\" hidden data-n=\\"1\\">x</label>");
+export default function Test($$props) {
+  const t = state("");
+  const _el$1 = _tmpl$1();
+  _$attr(_el$1, "title", () => t.get());
+  return _el$1;
+}"
+`;
+
+exports[`template codegen events become on(); non-literal handlers are read lazily 1`] = `
+"import { state } from "lux";
+import { on as _$on, template as _$template } from "lux/internal";
+const _tmpl$1 = _$template("<button>+</button>");
+export default function Test($$props) {
+  const n = state(0);
+  function reset() {}
+  const _el$1 = _tmpl$1();
+  _$on(_el$1, "click", () => n.set(n.get() + 1));
+  _$on(_el$1, "dblclick", reset);
+  _$on(_el$1, "keydown", e => $$props.onKey?.(e));
+  return _el$1;
+}"
+`;
+
+exports[`template codegen &&, || and ternaries become and/or/cond 1`] = `
+"import { state } from "lux";
+import { and as _$and, insert as _$insert, or as _$or, cond as _$cond, template as _$template } from "lux/internal";
+const _tmpl$1 = _$template("<p class=\\"warn\\">big!</p>");
+const _tmpl$2 = _$template("<b>yes</b>");
+const _tmpl$3 = _$template("<i>no</i>");
+const _tmpl$4 = _$template("<div><!><!></div>");
+export default function Test($$props) {
+  const count = state(0);
+  const name = state("");
+  const ok = state(true);
+  const _el$4 = _tmpl$4();
+  const _el$5 = _el$4.firstChild;
+  const _el$6 = _el$5.nextSibling;
+  _$insert(_el$4, _$and(() => count.get() > 5, () => _tmpl$1()), _el$5);
+  _$insert(_el$4, _$or(() => name.get(), () => "anon"), _el$6);
+  _$insert(_el$4, _$cond(() => ok.get(), () => _tmpl$2(), () => _tmpl$3()));
+  return _el$4;
+}"
+`;
+
+exports[`template codegen .map with a key becomes mapKeyed with the row param read as a state 1`] = `
+"import { state } from "lux";
+import { attr as _$attr, insert as _$insert, mapKeyed as _$mapKeyed, template as _$template } from "lux/internal";
+const _tmpl$1 = _$template("<li></li>");
+const _tmpl$2 = _$template("<ul></ul>");
+export default function Test($$props) {
+  const todos = state([]);
+  const _el$2 = _tmpl$2();
+  _$insert(_el$2, _$mapKeyed(() => todos.get(), t => t.id, t => {
+    const _el$1 = _tmpl$1();
+    _$attr(_el$1, "class", () => t.get().done ? "done" : "");
+    _$insert(_el$1, () => t.get().text);
+    return _el$1;
+  }));
+  return _el$2;
+}"
+`;
+
+exports[`template codegen .map with index and destructuring 1`] = `
+"import { state } from "lux";
+import { insert as _$insert, mapKeyed as _$mapKeyed, template as _$template } from "lux/internal";
+const _tmpl$1 = _$template("<li><!>: </li>");
+const _tmpl$2 = _$template("<ul></ul>");
+export default function Test($$props) {
+  const items = state([]);
+  const _el$3 = _tmpl$2();
+  _$insert(_el$3, _$mapKeyed(() => items.get(), ({
+    id,
+    label: l
+  }, i) => id, (_item, i) => {
+    const _el$1 = _tmpl$1();
+    const _el$2 = _el$1.firstChild;
+    _$insert(_el$1, () => i.get(), _el$2);
+    _$insert(_el$1, () => _item.get().label);
+    return _el$1;
+  }));
+  return _el$3;
+}"
+`;
+
+exports[`template codegen components get getters for dynamic props and plain values otherwise 1`] = `
+"import { state } from "lux";
+import { createComponent as _$createComponent } from "lux/internal";
+import Item from "./Item.lx";
+export default function Test($$props) {
+  const t = state({
+    text: ""
+  });
+  const n = state(0);
+  function save(v) {}
+  return _$createComponent(Item, {
+    get text() {
+      return t.get().text;
+    },
+    get count() {
+      return n.get();
+    },
+    label: "x",
+    n: 1,
+    onSave: v => save(v),
+    handler: save,
+    on: true
+  });
+}"
+`;
+
+exports[`template codegen component children arrive as a children function 1`] = `
+"import { state } from "lux";
+import { insert as _$insert, createComponent as _$createComponent, template as _$template } from "lux/internal";
+import Card from "./Card.lx";
+const _tmpl$1 = _$template("<p></p>");
+export default function Test($$props) {
+  const n = state(0);
+  return _$createComponent(Card, {
+    title: "t",
+    children: () => [(() => {
+      const _el$1 = _tmpl$1();
+      _$insert(_el$1, () => n.get());
+      return _el$1;
+    })(), "text"]
+  });
+}"
+`;
+
+exports[`template codegen nested element refs are walked before any insert 1`] = `
+"import { state } from "lux";
+import { insert as _$insert, template as _$template } from "lux/internal";
+const _tmpl$1 = _$template("<div><p></p><p><b></b></p></div>");
+export default function Test($$props) {
+  const a = state(1);
+  const b = state(2);
+  const _el$1 = _tmpl$1();
+  const _el$2 = _el$1.firstChild;
+  const _el$3 = _el$2.nextSibling;
+  const _el$4 = _el$3.firstChild;
+  _$insert(_el$2, () => a.get());
+  _$insert(_el$4, () => b.get());
+  return _el$1;
+}"
+`;
+
+exports[`template codegen the plan example compiles 1`] = `
+"import { state, init, update, destroy } from "lux";
+import { createComponent as _$createComponent, insert as _$insert, on as _$on, bind as _$bind, and as _$and, mapKeyed as _$mapKeyed, template as _$template } from "lux/internal";
+import Item from './Item.lx';
+const _tmpl$1 = _$template("<p class=\\"warn lux-f6a61950\\">big!</p>");
+const _tmpl$2 = _$template("<h1 class=\\"lux-f6a61950\\"><!>: </h1>");
+const _tmpl$3 = _$template("<button class=\\"lux-f6a61950\\">+1</button>");
+const _tmpl$4 = _$template("<input class=\\"lux-f6a61950\\">");
+const _tmpl$5 = _$template("<ul class=\\"lux-f6a61950\\"></ul>");
+const _tmpl$6 = _$template("<button class=\\"lux-f6a61950\\">save</button>");
+export default function Counter($$props) {
+  const count = state(0);
+  const todos = state<{
+    id: number;
+    text: string;
+  }[]>([]);
+  const name = state('');
+  init(() => console.log('mounted'));
+  destroy(() => console.log('bye'));
+  update(() => localStorage.setItem('n', String(count.get()))); // auto-tracked
+  update(() => console.log('name or count changed'), [name, count]); // explicit deps
+  count.onUpdate((old, next) => console.log(old, '->', next));
+  function add() {
+    todos.set([...todos.get(), {
+      id: Date.now(),
+      text: name.get()
+    }]);
+    name.set('');
+  }
+  return [(() => {
+    const _el$2 = _tmpl$2();
+    const _el$3 = _el$2.firstChild;
+    _$insert(_el$2, () => $$props.title, _el$3);
+    _$insert(_el$2, () => count.get());
+    return _el$2;
+  })(), (() => {
+    const _el$4 = _tmpl$3();
+    _$on(_el$4, "click", () => count.set(count.get() + 1));
+    return _el$4;
+  })(), (() => {
+    const _el$5 = _tmpl$4();
+    _$bind(_el$5, "value", name);
+    return _el$5;
+  })(), _$and(() => count.get() > 5, () => _tmpl$1()), (() => {
+    const _el$6 = _tmpl$5();
+    _$insert(_el$6, _$mapKeyed(() => todos.get(), t => t.id, t => _$createComponent(Item, {
+      get text() {
+        return t.get().text;
+      }
+    })));
+    return _el$6;
+  })(), (() => {
+    const _el$7 = _tmpl$6();
+    _$on(_el$7, "click", () => $$props.onSave(count.get()));
+    return _el$7;
+  })()];
+}"
+`;
+
+exports[`template codegen the plan example compiles 2`] = `
+"
+  h1.lux-f6a61950 { color: teal }          /* scoped to this component */
+  body { margin: 0 } /* escape hatch */
+"
+`;
+
+exports[`derived, history members, spread, class arrays spread on a DOM element: all attributes go through spread() in order 1`] = `
+"import { state } from "lux";
+import { mergeProps as _$mergeProps, spread as _$spread, bind as _$bind, template as _$template } from "lux/internal";
+const _tmpl$1 = _$template("<input>");
+export default function Test($$props) {
+  const attrs = state({});
+  const hint = state("");
+  const name = state("");
+  function log() {}
+  const _el$1 = _tmpl$1();
+  _$spread(_el$1, _$mergeProps({
+    type: "text"
+  }, () => attrs.get(), {
+    get placeholder() {
+      return hint.get();
+    },
+    onInput: log
+  }));
+  _$bind(_el$1, "value", name);
+  return _el$1;
+}"
+`;
