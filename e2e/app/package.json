@@ -4,5 +4,5 @@
   "type": "module",
   "scripts": { "dev": "bunx --bun vite" },
   "dependencies": { "@inflector/lux": "workspace:*", "@inflector/lux-router": "workspace:*" },
-  "devDependencies": { "vite": "^5.4.11", "@inflector/vite-plugin-lux": "workspace:*" }
+  "devDependencies": { "vite": "^8.3.3", "@inflector/vite-plugin-lux": "workspace:*" }
 }

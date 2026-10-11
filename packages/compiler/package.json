@@ -47,10 +47,10 @@
     "prepack": "bun run build"
   },
   "dependencies": {
-    "@babel/generator": "^7.26.2",
-    "@babel/parser": "^7.26.2",
-    "@babel/traverse": "^7.25.9",
-    "@babel/types": "^7.26.0",
+    "@babel/generator": "^8.0.6",
+    "@babel/parser": "^8.0.7",
+    "@babel/traverse": "^8.0.7",
+    "@babel/types": "^8.0.6",
     "postcss": "^8.4.49",
     "postcss-selector-parser": "^7.0.0"
   },

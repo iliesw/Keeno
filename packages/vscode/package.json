@@ -61,7 +61,7 @@
   },
   "devDependencies": {
     "@inflector/lux-language-server": "workspace:*",
-    "@types/vscode": "~1.90.0",
+    "@types/vscode": "~1.140.0",
     "@volar/vscode": "~2.4.28",
     "@vscode/vsce": "^4.0.0",
     "vscode-oniguruma": "^2.0.1",

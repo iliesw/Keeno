@@ -4,5 +4,5 @@
   "type": "module",
   "scripts": { "dev": "bunx --bun vite", "build": "bunx --bun vite build", "check": "lux-check" },
   "dependencies": { "@inflector/lux": "workspace:*" },
-  "devDependencies": { "@inflector/lux-check": "workspace:*", "vite": "^5.4.11", "@inflector/vite-plugin-lux": "workspace:*" }
+  "devDependencies": { "@inflector/lux-check": "workspace:*", "vite": "^8.3.3", "@inflector/vite-plugin-lux": "workspace:*" }
 }
