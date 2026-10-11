@@ -1,8 +1,26 @@
 {
-  "name": "lux",
+  "name": "@inflector/lux",
   "version": "0.1.0",
   "description": "Compiled, signal-based UI runtime for Lux (.lx) components",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iliesw/Lux.git",
+    "directory": "packages/lux"
+  },
+  "homepage": "https://github.com/iliesw/Lux/tree/main/packages/lux#readme",
+  "bugs": {
+    "url": "https://github.com/iliesw/Lux/issues"
+  },
+  "keywords": [
+    "lux",
+    "ui",
+    "framework",
+    "signals",
+    "reactive",
+    "compiler",
+    "components"
+  ],
   "type": "module",
   "sideEffects": false,
   "main": "./dist/index.js",
@@ -20,15 +38,38 @@
       "import": "./dist/internal.js",
       "default": "./dist/internal.js"
     },
+    "./server": {
+      "lux-source": "./src/server.ts",
+      "types": "./dist/server.d.ts",
+      "import": "./dist/server.js",
+      "default": "./dist/server.js"
+    },
     "./lx": {
       "lux-source": "./src/lx.d.ts",
       "types": "./dist/lx.d.ts"
     },
     "./package.json": "./package.json"
   },
-  "files": ["dist", "lx.d.ts"],
+  "files": [
+    "dist",
+    "lx.d.ts"
+  ],
   "scripts": {
     "build": "bun ../../scripts/build-package.ts --target=browser",
     "prepack": "bun run build"
+  },
+  "peerDependencies": {
+    "linkedom": ">=0.16.0"
+  },
+  "peerDependenciesMeta": {
+    "linkedom": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "linkedom": "^0.18.13"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

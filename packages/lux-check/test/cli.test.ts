@@ -28,6 +28,18 @@ describe('lux-check', () => {
     expect(code).toBe(1)
   }, 60_000)
 
+  test('the e2e fixture app (router, built-ins, State values) is clean', () => {
+    const { code, out } = run('e2e/app')
+    expect(out).toMatch(/^0 errors in \d+ files\n$/)
+    expect(code).toBe(0)
+  }, 60_000)
+
+  test('built-in components type their render callbacks', () => {
+    const { code, out } = run('packages/lux-check/test/fixtures/builtins/tsconfig.json')
+    expect(out).toMatch(/^0 errors in 3 files\n$/)
+    expect(code).toBe(0)
+  }, 60_000)
+
   test('a missing tsconfig is a usage error', () => {
     expect(run('does/not/exist').code).toBe(2)
   })

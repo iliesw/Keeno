@@ -1,0 +1,5 @@
+<script lang="ts">
+  const { explode } = props<{ explode: boolean }>()
+</script>
+
+<span class="bomb">{explode ? (() => { throw new Error('kaboom') })() : 'calm'}</span>

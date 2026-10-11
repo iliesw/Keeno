@@ -68,13 +68,13 @@ Arrays and objects are immutable by convention: you update them with `.set([...a
 ## Repo layout (Bun workspaces, TypeScript)
 ```
 packages/
-  lux/                       runtime (published as "lux")
+  lux/                       runtime (published as "@inflector/lux")
     src/signal.ts            State class, tracking context, batch/microtask scheduler
     src/lifecycle.ts         owner tree; init / update / destroy / onUpdate disposal
     src/dom.ts               template(), insert(), mapKeyed(), attr(), on(), bind()
     src/component.ts         createComponent(), props proxy, mount(Component, target)
     src/index.ts             public exports + types: State<T>, state<T>()
-  compiler/                  "@lux/compiler"
+  compiler/                  "@inflector/lux-compiler"
     src/split.ts             .lx → { script, lang, markup, style }
     src/script.ts            Babel parse (ts+jsx); rewrite state reads, props destructuring, update deps
     src/template.ts          markup wrapped in <>…</>, parsed as JSX → DOM codegen
@@ -91,7 +91,7 @@ examples/counter, examples/todo
    - Rewrites a reference to `x.get()` unless it is the object of `.set`, `.onUpdate`, `.get` or `.peek`, sits inside the deps array of `update`, or is a `bind:` target.
    - Reports a compile error if a state is reassigned.
    - Rewrites `const {a,b} = props()` so that later references read `$$props.a`.
-   - Auto-injects the imports `state`, `props`, `init`, `update` and `destroy` from `lux`.
+   - Auto-injects the imports `state`, `props`, `init`, `update` and `destroy` from `@inflector/lux`.
 3. **template.ts**: parses `<>{markup}</>` with Babel JSX, and the same state rewrite runs inside expressions.
    - Static HTML subtrees are hoisted into one `template('<h1 class="lux-ab12"> <!></h1>')` per component and cloned on each instance, the way Solid does it.
    - Dynamic parts become `insert(parent, () => expr, marker)` or `attr(el, 'class', () => expr)`, each wrapped in a tracked effect.

@@ -78,7 +78,7 @@ Outside `.lx` files, states are plain objects, so you call `.get()` and `.set()`
 
 ```ts
 // store.ts
-import { derived, state } from 'lux'
+import { derived, state } from '@inflector/lux'
 
 export const user = state<{ name: string } | null>(null, { persist: 'user' })
 export const isLoggedIn = derived(() => user.get() !== null)
@@ -88,6 +88,6 @@ Only states and deriveds declared in the `.lx` file itself are unwrapped. An imp
 
 ## Batching and flush
 
-All work runs in one microtask, in this order: stale deriveds, DOM updates, mount jobs (`init` and the first `update` runs), then `update` re-runs. `flush()` from `lux` runs pending work synchronously, which is handy in tests.
+All work runs in one microtask, in this order: stale deriveds, DOM updates, mount jobs (`init` and the first `update` runs), then `update` re-runs. `flush()` from `@inflector/lux` runs pending work synchronously, which is handy in tests.
 
 See [State options](state-options.md) for persistence, URL sync, undo/redo, validation and debouncing.

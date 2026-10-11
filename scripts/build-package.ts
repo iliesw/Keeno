@@ -3,7 +3,7 @@
 //
 // Entry points come from the package's `exports` map: each entry's `lux-source` condition names
 // the source file and its `import` condition the output. Hand-written `.d.ts` entries (types-only
-// exports such as `lux/lx`) are copied as-is.
+// exports such as `@inflector/lux/lx`) are copied as-is.
 import { copyFileSync, cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
@@ -35,7 +35,7 @@ rmSync(path.join(cwd, 'dist'), { recursive: true, force: true })
 
 // Bundle a copy of src/ staged outside the repo, for two Bun.build quirks (Bun 1.4):
 // - the root tsconfig `paths` (workspace packages -> sources) win over `external`, which would
-//   inline sibling packages such as @lux/compiler into vite-plugin-lux;
+//   inline sibling packages such as @inflector/lux-compiler into vite-plugin-lux;
 // - `"sideEffects": false` in the package's own package.json turns on barrel optimisation, which
 //   drops everything re-exported by entry points like src/index.ts.
 // A fixed path (not mkdtemp) keeps chunk hashes stable between builds.
@@ -52,7 +52,7 @@ try {
     outdir: path.join(cwd, 'dist'),
     target,
     format: 'esm',
-    // Entry points share chunks, so e.g. `lux` and `lux/internal` use one copy of the signal graph.
+    // Entry points share chunks, so e.g. `@inflector/lux` and `@inflector/lux/internal` use one copy of the signal graph.
     splitting: true,
     // Dependencies (including sibling workspace packages) are resolved by the consumer.
     packages: 'external',

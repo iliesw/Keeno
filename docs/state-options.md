@@ -15,7 +15,7 @@
 ## equals
 
 ```ts
-import { deepEqual } from 'lux'
+import { deepEqual } from '@inflector/lux'
 
 const filters = state({ tags: [] as string[] }, { equals: deepEqual })
 filters.set({ tags: [] }) // no change, nothing re-runs

@@ -1,8 +1,24 @@
 {
-  "name": "@lux/language-server",
+  "name": "@inflector/lux-language-server",
   "version": "0.1.0",
   "description": "Volar-based language server for Lux (.lx) components",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iliesw/Lux.git",
+    "directory": "packages/language-server"
+  },
+  "homepage": "https://github.com/iliesw/Lux/tree/main/packages/language-server#readme",
+  "bugs": {
+    "url": "https://github.com/iliesw/Lux/issues"
+  },
+  "keywords": [
+    "lux",
+    "language-server",
+    "volar",
+    "lsp",
+    "lx"
+  ],
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -21,14 +37,18 @@
     },
     "./package.json": "./package.json"
   },
-  "files": ["dist"],
-  "publishConfig": { "access": "public" },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "bun ../../scripts/build-package.ts --target=node",
     "prepack": "bun run build"
   },
   "dependencies": {
-    "@lux/compiler": "workspace:*",
+    "@inflector/lux-compiler": "workspace:*",
     "@volar/language-core": "~2.4.28",
     "@volar/language-server": "~2.4.28",
     "@volar/typescript": "~2.4.28",
@@ -38,6 +58,9 @@
   },
   "devDependencies": {
     "@volar/test-utils": "~2.4.28",
-    "lux": "workspace:*"
+    "@inflector/lux": "workspace:*"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }

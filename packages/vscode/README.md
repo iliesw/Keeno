@@ -1,11 +1,16 @@
 # Lux for VS Code
 
-Syntax highlighting and IntelliSense for Lux `.lx` components:
+Language support for [Lux](https://github.com/iliesw/Lux) `.lx` components:
 
 - Highlighting for `<script>` (TypeScript), markup (JSX) and `<style>` (CSS).
 - Completions, hover, go to definition and type errors in scripts and markup, powered by TypeScript.
   Local states read as their value, with `set`, `get`, `peek` and `onUpdate` available.
+- Typed props: using a component with a missing or mistyped prop is an error, and its prop names complete.
 - HTML tag, attribute and event completions, with typed event objects.
 - CSS completions in `<style>`.
 
-Build and package from the repo with `bun run --cwd packages/vscode package`.
+The extension uses the TypeScript version bundled with VS Code and the types of the `@inflector/lux` package installed in your project. Install it with `bun add @inflector/lux` (or npm, pnpm or yarn).
+
+To get the same type errors in CI, use [`@inflector/lux-check`](https://www.npmjs.com/package/@inflector/lux-check).
+
+[Documentation](https://github.com/iliesw/Lux#documentation) · [Issues](https://github.com/iliesw/Lux/issues)

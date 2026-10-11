@@ -109,16 +109,16 @@ describe('script rewrite', () => {
 
   test('lux APIs are auto-imported only when used and not imported', () => {
     const out = body('', 'const a = state(0)\ninit(() => {})')
-    expect(out).toContain('import { state, init } from "lux"')
-    const out2 = js('<script>import { state as s } from "lux"\nconst a = s(0)\nconsole.log(a)</script>')
-    expect(out2.match(/from "lux"/g)).toHaveLength(1)
+    expect(out).toContain('import { state, init } from "@inflector/lux"')
+    const out2 = js('<script>import { state as s } from "@inflector/lux"\nconst a = s(0)\nconsole.log(a)</script>')
+    expect(out2.match(/from "@inflector\/lux"/g)).toHaveLength(1)
     expect(out2).toContain('console.log(a.get())')
   })
 
   test('a local function named like an API is not treated as one', () => {
     const out = body('', 'function state(v) { return v }\nconst a = state(1)\nconsole.log(a)')
     expect(out).toContain('console.log(a)')
-    expect(out).not.toContain('from "lux"')
+    expect(out).not.toContain('from "@inflector/lux"')
   })
 
   test('imports and types are hoisted; the rest runs per instance', () => {
@@ -152,7 +152,7 @@ describe('template codegen', () => {
 
   test('text expressions use insert with comment markers', () => {
     const out = body('<h1>{title}: {count}</h1>', 'const { title } = props()\nconst count = state(0)')
-    expect(out).toContain('"<h1><!>: </h1>"')
+    expect(out).toContain('"<h1><!---->: </h1>"')
     expect(out).toContain('_$insert(_el$1, () => $$props.title, _el$2)')
     expect(out).toContain('_$insert(_el$1, () => count.get())')
     expect(out).toMatchSnapshot()
@@ -272,7 +272,7 @@ describe('template codegen', () => {
 
   test('components inside elements are inserted', () => {
     const out = body('<div><Item /><span /></div>', 'import Item from "./Item.lx"')
-    expect(out).toContain('"<div><!><span></span></div>"')
+    expect(out).toContain('"<div><!----><span></span></div>"')
     expect(out).toContain('_$insert(_el$1, _$createComponent(Item, {}), _el$2)')
   })
 
@@ -300,7 +300,7 @@ describe('template codegen', () => {
 describe('derived, history members, spread, class arrays', () => {
   test('derived reads unwrap like states and derived is auto-imported', () => {
     const out = body('<p>{total}</p>', 'const n = state(2)\nconst total = derived(() => n * 10)\nconsole.log(total + 1, total.peek())')
-    expect(out).toContain('import { state, derived } from "lux"')
+    expect(out).toContain('import { state, derived } from "@inflector/lux"')
     expect(out).toContain('derived(() => n.get() * 10)')
     expect(out).toContain('console.log(total.get() + 1, total.peek())')
     expect(out).toContain('() => total.get()')

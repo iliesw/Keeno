@@ -11,15 +11,17 @@
     // never need a build. Bun applies these at runtime too. Published consumers get dist/ through
     // each package's `exports`; packages/*/tsconfig.build.json turns this off for declaration builds.
     "paths": {
-      "lux": ["./packages/lux/src/index.ts"],
-      "lux/internal": ["./packages/lux/src/internal.ts"],
-      "lux/lx": ["./packages/lux/src/lx.d.ts"],
-      "@lux/compiler": ["./packages/compiler/src/index.ts"],
-      "@lux/compiler/split": ["./packages/compiler/src/split.ts"],
-      "vite-plugin-lux": ["./packages/vite-plugin-lux/src/index.ts"],
-      "@lux/language-server": ["./packages/language-server/src/index.ts"],
-      "@lux/language-server/server": ["./packages/language-server/src/server.ts"],
-      "lux-check": ["./packages/lux-check/src/check.ts"]
+      "@inflector/lux": ["./packages/lux/src/index.ts"],
+      "@inflector/lux/internal": ["./packages/lux/src/internal.ts"],
+      "@inflector/lux/lx": ["./packages/lux/src/lx.d.ts"],
+      "@inflector/lux-compiler": ["./packages/compiler/src/index.ts"],
+      "@inflector/lux-compiler/split": ["./packages/compiler/src/split.ts"],
+      "@inflector/vite-plugin-lux": ["./packages/vite-plugin-lux/src/index.ts"],
+      "@inflector/lux-language-server": ["./packages/language-server/src/index.ts"],
+      "@inflector/lux-language-server/server": ["./packages/language-server/src/server.ts"],
+      "@inflector/lux-check": ["./packages/lux-check/src/check.ts"],
+      "@inflector/lux/server": ["./packages/lux/src/server.ts"],
+      "@inflector/lux-router": ["./packages/router/src/index.ts"]
     }
   },
   "exclude": ["**/node_modules", "**/dist"]

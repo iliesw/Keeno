@@ -1,6 +1,6 @@
 # Lux
 
-> Lux is a compiled, signal-based frontend framework. Components are `.lx` files with HTML-first JSX markup, a `<script>` block and a scoped `<style>` block. The compiler (via `vite-plugin-lux`) turns them into direct DOM code with fine-grained updates: no virtual DOM, no re-rendering components. Tooling is Bun (packages, scripts, `bun test`) plus Vite.
+> Lux is a compiled, signal-based frontend framework. Components are `.lx` files with HTML-first JSX markup, a `<script>` block and a scoped `<style>` block. The compiler (via `@inflector/vite-plugin-lux`) turns them into direct DOM code with fine-grained updates: no virtual DOM, no re-rendering components. Tooling is Bun (packages, scripts, `bun test`) plus Vite.
 
 Rules that differ from React, Svelte and Vue, which models get wrong most often:
 
@@ -14,6 +14,9 @@ Rules that differ from React, Svelte and Vue, which models get wrong most often:
 - **Lists:** `{list.map(item => <li key={item.id}>…</li>)}` is keyed. The callback must return JSX directly.
 - **Lifecycle:** `init(fn)` runs after mount and its return value is cleanup. `update(fn)` is an auto-tracked effect. `update(fn, [a, b])` runs only when `a` or `b` changes, not on mount. `destroy(fn)` runs on unmount.
 - **State options:** `persist`, `url`, `history`, `equals`, `validate`, `debounce` and `throttle`.
+- **Built-ins:** `ErrorBoundary`, `Await`, `Dynamic`, `Portal`, `Transition` and `lazy()` are imported from `@inflector/lux`. Render props such as `fallback={(error, reset) => <p>…</p>}` and `fulfilled={(value) => …}` are functions.
+- **Context:** `provide(Ctx, value)` and `inject(Ctx)` are called in `<script>`. To make the value reactive, provide a state. An injected state is a plain object, so use `.get()`.
+- **Packages:** `@inflector/lux` (runtime), `@inflector/lux/server` (`renderToString`), `@inflector/lux-router`, `@inflector/vite-plugin-lux` and `@inflector/lux-check`.
 
 ## Docs
 
@@ -23,8 +26,14 @@ Rules that differ from React, Svelte and Vue, which models get wrong most often:
 - [State options](docs/state-options.md): persist, url, history (undo/redo), equals, validate, debounce, throttle
 - [Templates](docs/templates.md): expressions, conditionals, keyed lists, events, bind, class arrays, spread
 - [Styles](docs/styles.md): scoped CSS and `:global()`
-- [Tooling](docs/tooling.md): Vite plugin, HMR, VS Code extension, testing with `bun test`
+- [Context](docs/context.md): createContext, provide and inject
+- [Built-in components](docs/built-ins.md): ErrorBoundary, Await, lazy, Dynamic, Portal, Transition
+- [Routing](docs/routing.md): @inflector/lux-router: Router, Link, navigate, useRoute
+- [Server rendering](docs/ssr.md): renderToString, hydrate, Vite SSR setup
+- [Security](docs/security.md): what is escaped, innerHTML, javascript: URLs, CSP
+- [Tooling](docs/tooling.md): Vite plugin, HMR, dev mode, VS Code extension, lux-check, testing with `bun test`
 - [API reference](docs/api.md): every export, and the compile rules in one table
+- [Versioning and support](docs/stability.md): semver policy, public API, supported browsers, Node and Vite versions
 
 ## Optional
 
@@ -45,15 +54,15 @@ Lux is a compiled, signal-based frontend framework. You write components in `.lx
 Lux uses Bun for packages, scripts and tests, and Vite for the dev server and builds.
 
 ```bash
-bun add lux
-bun add -d vite vite-plugin-lux
+bun add @inflector/lux
+bun add -d vite @inflector/vite-plugin-lux
 ```
 
 `vite.config.ts`:
 
 ```ts
 import { defineConfig } from 'vite'
-import lux from 'vite-plugin-lux'
+import lux from '@inflector/vite-plugin-lux'
 
 export default defineConfig({
   plugins: [lux()],
@@ -70,7 +79,7 @@ export default defineConfig({
 `src/main.ts`:
 
 ```ts
-import { mount } from 'lux'
+import { mount } from '@inflector/lux'
 import App from './App.lx'
 
 mount(App, document.getElementById('app')!)
@@ -80,7 +89,7 @@ mount(App, document.getElementById('app')!)
 
 ```ts
 declare module '*.lx' {
-  const Component: import('lux').Component
+  const Component: import('@inflector/lux').Component
   export default Component
 }
 ```
@@ -162,7 +171,7 @@ Nested content arrives as the `children` prop, a function that renders it. Type 
 
 ```html Card.lx
 <script lang="ts">
-  import type { Children } from 'lux'
+  import type { Children } from '@inflector/lux'
   const { title, children } = props<{ title: string; children?: Children }>()
 </script>
 
@@ -300,7 +309,7 @@ Outside `.lx` files, states are plain objects, so you call `.get()` and `.set()`
 
 ```ts
 // store.ts
-import { derived, state } from 'lux'
+import { derived, state } from '@inflector/lux'
 
 export const user = state<{ name: string } | null>(null, { persist: 'user' })
 export const isLoggedIn = derived(() => user.get() !== null)
@@ -310,7 +319,7 @@ Only states and deriveds declared in the `.lx` file itself are unwrapped. An imp
 
 ## Batching and flush
 
-All work runs in one microtask, in this order: stale deriveds, DOM updates, mount jobs (`init` and the first `update` runs), then `update` re-runs. `flush()` from `lux` runs pending work synchronously, which is handy in tests.
+All work runs in one microtask, in this order: stale deriveds, DOM updates, mount jobs (`init` and the first `update` runs), then `update` re-runs. `flush()` from `@inflector/lux` runs pending work synchronously, which is handy in tests.
 
 See [State options](state-options.md) for persistence, URL sync, undo/redo, validation and debouncing.
 
@@ -335,7 +344,7 @@ See [State options](state-options.md) for persistence, URL sync, undo/redo, vali
 ## equals
 
 ```ts
-import { deepEqual } from 'lux'
+import { deepEqual } from '@inflector/lux'
 
 const filters = state({ tags: [] as string[] }, { equals: deepEqual })
 filters.set({ tags: [] }) // no change, nothing re-runs
@@ -621,13 +630,388 @@ The CSS is served as a virtual module (`Foo.lx?lux&type=style.css`). Vite inject
 
 ---
 
+<!-- file: docs/context.md -->
+
+# Context
+
+Context passes a value from a component to everything rendered inside it, however deep, without threading it through props. Typical uses are a theme, the current user or a store.
+
+```ts
+// theme.ts
+import { createContext, state, type State } from '@inflector/lux'
+
+export const Theme = createContext<State<'light' | 'dark'>>(state('light'))
+```
+
+A component provides a value with `provide(context, value)`:
+
+```html App.lx
+<script lang="ts">
+  import { provide, state } from '@inflector/lux'
+  import { Theme } from './theme'
+  import Toolbar from './Toolbar.lx'
+  const theme = state<'light' | 'dark'>('dark')
+  provide(Theme, theme)
+</script>
+
+<button onClick={() => theme.set(theme === 'dark' ? 'light' : 'dark')}>Switch</button>
+<Toolbar />
+```
+
+Any component inside it reads the value with `inject(context)`:
+
+```html Toolbar.lx
+<script lang="ts">
+  import { inject } from '@inflector/lux'
+  import { Theme } from './theme'
+  const theme = inject(Theme)
+</script>
+
+<nav class={theme.get()}>…</nav>
+```
+
+- `inject` returns the value from the closest component that provided one, or else the context's default value. `createContext()` without a default gives `undefined`.
+- Call `provide` and `inject` in the `<script>` block, while the component is being created. Event handlers, timers and promise callbacks run outside the component tree, so `inject` there only sees the default.
+- Context values are not reactive by themselves. To share something that changes, provide a state (as above) or an object of states. An injected state is a plain object, like a state imported from a `.ts` file, so read it with `.get()` and write it with `.set()`.
+- Context reaches everything a component renders: children passed as markup, keyed list rows, `<Portal>` content and components loaded with `lazy()`.
+
+---
+
+<!-- file: docs/built-ins.md -->
+
+# Built-in components
+
+`@inflector/lux` exports a few components for things plain markup can't express: catching errors, waiting for promises, loading code on demand, rendering elsewhere in the page, and animating elements in and out. Import them like any component.
+
+## ErrorBoundary
+
+An error thrown while a component renders, updates or mounts (including inside `init` and `update`) goes to the closest `<ErrorBoundary>`, which shows `fallback` instead of its children:
+
+```html App.lx
+<script lang="ts">
+  import { ErrorBoundary } from '@inflector/lux'
+  import Chart from './Chart.lx'
+</script>
+
+<ErrorBoundary
+  fallback={(error, reset) => (
+    <div class="error">
+      <p>Something went wrong: {String(error)}</p>
+      <button onClick={reset}>Try again</button>
+    </div>
+  )}
+  onError={(error) => console.error(error)}
+>
+  <Chart />
+</ErrorBoundary>
+```
+
+- `fallback` is either content (`fallback="Failed"`) or a function of the error and `reset`. `reset()` renders the children again from scratch.
+- `onError` is called once for each caught error, which makes it a good place to report to an error tracker.
+- An error thrown by the fallback itself goes to the next boundary up.
+- Errors in event handlers, timers and promise callbacks are **not** caught, because they don't happen while rendering. Handle them where they happen, or store them in a state and throw it while rendering.
+- Without a boundary, the error is thrown from `mount()`, or reported as an uncaught error if it happens during a later update. The rest of the app keeps working.
+
+A `derived` that throws passes the error on to whatever reads it, and it recovers on its own once its sources change.
+
+## Await
+
+`<Await>` renders the states of a promise:
+
+```html User.lx
+<script lang="ts">
+  import { Await } from '@inflector/lux'
+  const { id } = props<{ id: number }>()
+  const load = (id: number) => fetch(`/api/users/${id}`).then((r) => r.json() as Promise<{ name: string }>)
+</script>
+
+<Await
+  promise={load(id)}
+  pending={() => <p>Loading…</p>}
+  fulfilled={(user) => <h1>{user.name}</h1>}
+  rejected={(error) => <p class="error">{String(error)}</p>}
+/>
+```
+
+- When `id` changes, `load(id)` runs again and `pending` shows until the new promise settles. Results from a promise that was replaced in the meantime are ignored.
+- Without `rejected`, a rejection goes to the closest `<ErrorBoundary>`.
+- A plain value instead of a promise renders `fulfilled` right away.
+
+## lazy
+
+`lazy()` loads a component when it is first rendered, so it ends up in its own chunk:
+
+```ts
+import { lazy } from '@inflector/lux'
+
+export const Chart = lazy(() => import('./Chart.lx'), { pending: () => 'Loading chart…' })
+```
+
+Use `Chart` like any other component. `Chart.preload()` starts loading earlier, for example on hover. If loading fails, the error goes to the closest `<ErrorBoundary>`, and rendering the component again (for example with `reset()`) retries the load.
+
+## Dynamic
+
+`<Dynamic>` renders whatever component is in its `component` prop and passes it the other props. It creates a new instance when `component` changes:
+
+```html Tabs.lx
+<script lang="ts">
+  import { Dynamic } from '@inflector/lux'
+  import Profile from './Profile.lx'
+  import Settings from './Settings.lx'
+  const tabs = { profile: Profile, settings: Settings }
+  const tab = state<keyof typeof tabs>('profile')
+</script>
+
+<button onClick={() => tab.set('profile')}>Profile</button>
+<button onClick={() => tab.set('settings')}>Settings</button>
+<Dynamic component={tabs[tab]} user="ada" />
+```
+
+## Portal
+
+`<Portal>` renders its children at the end of another element. This is useful for modals, toasts and popovers that must escape `overflow: hidden` or stacking contexts:
+
+```html Modal.lx
+<script lang="ts">
+  import { Portal } from '@inflector/lux'
+  import type { Children } from '@inflector/lux'
+  const { onClose, children } = props<{ onClose: () => void; children?: Children }>()
+</script>
+
+<Portal target="body">
+  <div class="backdrop" onClick={onClose}>
+    <div class="modal" onClick={(e) => e.stopPropagation()}>{children?.()}</div>
+  </div>
+</Portal>
+
+<style>
+  .backdrop { position: fixed; inset: 0; background: rgb(0 0 0 / 0.4) }
+</style>
+```
+
+- `target` is an element or a CSS selector. It defaults to `document.body`, and is read once, when the portal is created.
+- The children stay part of this component: its scoped styles, context, error boundaries and `destroy` all apply, and their nodes are removed when the portal is destroyed.
+- DOM events bubble through the real DOM, that is through the target and not through the portal's position in the tree.
+
+## Transition
+
+`<Transition>` animates elements as they are added and removed inside it. Elements that are being removed stay in place until their animation ends.
+
+```html Panel.lx
+<script lang="ts">
+  import { Transition } from '@inflector/lux'
+  const open = state(false)
+</script>
+
+<button onClick={() => open.set(!open)}>Toggle</button>
+<Transition name="fade">{open && <div class="panel">Hello</div>}</Transition>
+
+<style>
+  .fade-enter-active, .fade-leave-active { transition: opacity 200ms }
+  .fade-enter-from, .fade-leave-to { opacity: 0 }
+</style>
+```
+
+An entering element gets the classes `{name}-enter-from` and `{name}-enter-active` first. One frame later, `{name}-enter-from` is swapped for `{name}-enter-to`, and all three are removed when the longest transition or animation on the element ends. Leaving works the same way with `leave`. The default `name` is `lux`.
+
+- `appear`: also animate the elements present on first render.
+- `onEnter(el, done)` / `onLeave(el, done)`: animate with JavaScript (for example the Web Animations API) instead of classes. Call `done()` when finished.
+- This works for conditionals, ternaries (the old and new element animate at the same time) and keyed lists.
+- A dynamic `class={…}` on an animated element replaces its class list, which drops the transition classes. Animate a wrapper element instead.
+
+---
+
+<!-- file: docs/routing.md -->
+
+# Routing
+
+`@inflector/lux-router` is a small client-side router built on the History API.
+
+```bash
+bun add @inflector/lux-router
+```
+
+## Routes
+
+```html App.lx
+<script lang="ts">
+  import { lazy } from '@inflector/lux'
+  import { Link, Router, type RouteDefinition } from '@inflector/lux-router'
+  import Home from './Home.lx'
+  import User from './User.lx'
+  import NotFound from './NotFound.lx'
+
+  const routes: RouteDefinition[] = [
+    { path: '/', component: Home },
+    { path: '/users/:id', component: User },
+    { path: '/settings', component: lazy(() => import('./Settings.lx')) },
+    { path: '*', component: NotFound },
+  ]
+</script>
+
+<nav>
+  <Link href="/" exact>Home</Link>
+  <Link href="/users/1">Ada</Link>
+  <Link href="/settings">Settings</Link>
+</nav>
+<Router routes={routes} />
+```
+
+- Routes are tried in order and the first match wins, so put specific paths before general ones and `*` last.
+- `:name` matches one path segment. A final `*` matches the rest of the path, as `params['*']`, and `*name` names it, as `params.name`. Trailing slashes are ignored and params are URL-decoded.
+- `<Router>` keeps the component when only the params change, so `/users/1` → `/users/2` updates `params` in place. It creates a new instance when a different route matches.
+- `fallback={() => …}` renders when nothing matches, if you don't want a `*` route.
+- `base="/app"` serves the app under a path prefix. Route paths, `<Link href>` and `navigate()` then use paths without the prefix.
+
+## Route components
+
+A route component receives `params`:
+
+```html User.lx
+<script lang="ts">
+  import { useRoute } from '@inflector/lux-router'
+  const { params } = props<{ params: { id: string } }>()
+  const route = useRoute()
+</script>
+
+<h1>User {params.id}</h1>
+<p>Tab: {route.query.get('tab') ?? 'overview'}</p>
+```
+
+`useRoute()` gives the current route anywhere inside `<Router>`: `path`, `params`, `query` (a `URLSearchParams`), `hash` and `matched` (the route definition). Its fields are reactive, so templates and `update()` follow navigation.
+
+## Navigation
+
+- `<Link href="/users/1">` renders an `<a>` that navigates without reloading. While its path is active, it gets the class `active` (change it with `activeClass`) and `aria-current="page"`. A link is active on its own path and on the paths below it, and `exact` limits it to its own path. `replace` replaces the history entry instead of adding one.
+- Component-scoped styles don't reach the `<a>` that `<Link>` renders. To style links with scoped CSS, write your own anchor with the `link` click handler: `<a href="/about" onClick={link}>About</a>`. With a `base`, write `href={href('/about')}`. `isActive('/about')` tells you whether to mark it.
+- `navigate('/users/2')` navigates from code. `navigate('/login', { replace: true })` replaces the current entry, and `{ scroll: false }` keeps the scroll position. Relative URLs such as `navigate('?tab=2')` work too.
+- Clicks with a modifier key, a middle click, `target="_blank"`, `download` and links to other sites are left to the browser.
+- Query parameters synced with `state(v, { url: 'tab' })` follow navigation, including back and forward.
+
+## Server rendering
+
+On the server there is no browser location, so pass the request URL: `<Router routes={routes} url={request.url} />`. See [Server rendering](ssr.md).
+
+---
+
+<!-- file: docs/ssr.md -->
+
+# Server rendering
+
+Lux renders components to HTML on the server (Node, Bun or Deno) with `renderToString`. In the browser, `hydrate` then takes over that markup.
+
+```bash
+bun add linkedom
+```
+
+`renderToString` creates nodes with [linkedom](https://github.com/WebReflection/linkedom), a small server-side DOM, so it needs that package installed. It doesn't change any globals.
+
+## Rendering
+
+```ts
+// src/entry-server.ts
+import { renderToString } from '@inflector/lux/server'
+import App from './App.lx'
+
+export async function render(url: string) {
+  return renderToString(App, { url })
+}
+```
+
+```ts
+// src/entry-client.ts
+import { hydrate } from '@inflector/lux'
+import App from './App.lx'
+
+hydrate(App, document.getElementById('app')!)
+```
+
+What runs on the server:
+
+- The `<script>` block, templates, `derived` values and child components render, and text and attributes are escaped.
+- `init` and `update` callbacks **don't** run, because there is no mounted DOM. Put browser-only code (`window`, `localStorage`, timers, fetching in the browser) in `init`.
+- `<Await>` renders its `pending` content, because rendering is synchronous. Fetch data before you render and pass it as props when the page needs it in the HTML.
+- `state(v, { persist })` and `state(v, { url })` use their initial value.
+- `<Transition>` doesn't animate.
+- Input values are written as `value="…"` attributes, so they show before the page hydrates.
+
+## Hydration
+
+`hydrate(App, element, props)` renders the app in the browser and replaces the server markup in the same task, so nothing flashes. It is simpler than node-by-node hydration, but has some costs:
+
+- The client renders the whole tree once, so the page becomes interactive no faster than with `mount()`.
+- Focus, text selection and text typed into inputs before `hydrate` runs are lost. Keep the time between first paint and hydration short: load the client script with `<script type="module">` in `<head>`.
+- If the client render throws, the server markup stays and the error is rethrown.
+
+## With Vite
+
+Set up Vite's SSR mode as the [Vite SSR guide](https://vite.dev/guide/ssr) describes. `@inflector/vite-plugin-lux` needs no extra options.
+
+- **In development**, load your server entry with `vite.ssrLoadModule('/src/entry-server.ts')`. Don't import `renderToString` directly in your Node server file. The components and `renderToString` must come from the same copy of the runtime, and the runtime warns when two copies are loaded.
+- **In production**, build the client with `vite build`, then the server entry with `vite build --ssr src/entry-server.ts`, and import the server bundle from Node.
+- Scoped CSS is part of the client build. Link the CSS files from Vite's manifest in your HTML template, as the Vite guide describes.
+
+## Routing
+
+On the server, give the router the request URL: `<Router routes={routes} url={url} />`, with `url` a prop of your app that only `entry-server` passes. On the client `url` is `undefined`, so the router follows the browser location. See [Routing](routing.md).
+
+## Without Vite
+
+`renderToStringWith(document, App, props)` renders synchronously with a DOM document you provide, for example another server DOM implementation, or a test.
+
+---
+
+<!-- file: docs/security.md -->
+
+# Security
+
+## What is escaped
+
+- `{expr}` in markup always renders as text (a DOM text node), never as HTML. `<p>{userInput}</p>` is safe whatever `userInput` contains.
+- Attribute values are set with `setAttribute` or the matching DOM property. They can't break out of the attribute.
+- Static text and attributes written in a template are escaped by the compiler.
+- `renderToString` escapes text and attributes in the HTML it produces.
+
+## What is not
+
+**`innerHTML`.** `<div innerHTML={html} />` inserts raw HTML, exactly like the DOM property. Never pass it content that a user can influence unless you sanitize it first, for example with [DOMPurify](https://github.com/cure53/DOMPurify):
+
+```html Article.lx
+<script lang="ts">
+  import DOMPurify from 'dompurify'
+  const { body } = props<{ body: string }>()
+</script>
+
+<article innerHTML={DOMPurify.sanitize(body)} />
+```
+
+**`javascript:` URLs.** A dynamic URL attribute (`href`, `src`, `action`, `formaction`, `xlink:href`, `poster`, `cite`, `background`, `ping`) whose value is a `javascript:` URL is **blocked**: the attribute is removed and an error is logged. Browsers also accept variants with leading spaces, tabs inside the scheme and mixed case, and those are blocked too. A static `href="javascript:…"` written in the template is left alone, since the author wrote it. Other schemes, such as `data:` URLs in `src`, pass through. Validate them yourself if users can supply them.
+
+**Event handlers and spread.** `{...attrs}` applies every key as an attribute, and keys starting with `on` followed by a capital letter become event listeners. Don't spread objects that come from users.
+
+**Styles.** A `style={…}` string that comes from user input can still do things like overlay the page. Prefer fixed classes.
+
+## Content Security Policy
+
+The runtime and compiled components don't use `eval`, `new Function` or inline event handler attributes. They work under a strict CSP such as `script-src 'self'`. In development, Vite injects styles with `<style>` tags, so `style-src` needs `'unsafe-inline'` or a nonce there. Production builds emit CSS files.
+
+Templates are parsed once per component by assigning the compiler's static HTML to a `<template>` element's `innerHTML`. A page that enforces [Trusted Types](https://developer.mozilla.org/en-US/docs/Web/API/Trusted_Types_API) (`require-trusted-types-for 'script'`) needs a default policy that allows those assignments.
+
+## Reporting a vulnerability
+
+Please report security issues privately through [GitHub security advisories](https://github.com/iliesw/Lux/security/advisories/new), not in public issues.
+
+---
+
 <!-- file: docs/tooling.md -->
 
 # Tooling
 
 ## Vite plugin
 
-`vite-plugin-lux` compiles `.lx` files, serves their CSS, strips TypeScript with esbuild and chains source maps. Options: `lux({ hmr?: boolean })`.
+`@inflector/vite-plugin-lux` compiles `.lx` files, serves their CSS, strips TypeScript (with Oxc on Vite 8, and esbuild on Vite 5 to 7) and chains source maps. It supports Vite 5, 6, 7 and 8. Options: `lux({ hmr?: boolean })`.
+
+During `vite dev` the plugin also turns on development mode: warnings such as duplicate keys in a list, and a console hook for inspecting the component tree (below). Production builds have neither.
 
 ## Hot module replacement
 
@@ -636,6 +1020,15 @@ In dev, editing a `.lx` file swaps the component in place without a page reload:
 - **What re-mounts:** every live instance re-mounts with the same props, and its own state resets.
 - **What survives:** parent state.
 - **CSS:** style changes apply without re-mounting.
+
+## Inspecting the component tree
+
+In development mode, the browser console has a `__LUX_DEVTOOLS__` object:
+
+- `__LUX_DEVTOOLS__.print()` prints the mounted component tree as collapsible groups, with each component's current props.
+- `__LUX_DEVTOOLS__.tree()` returns the same tree as data: `{ name, props, children }[]`.
+
+Outside Vite, turn on development mode with `globalThis.__LUX_DEV__ = true` before mounting.
 
 ## Editor support (VS Code and Cursor)
 
@@ -649,7 +1042,7 @@ In dev, editing a `.lx` file swaps the component in place without a page reload:
 - `.lx` semantics in the types: a local state reads as its value plus `set`, `get`, `peek`, `onUpdate`, `undo`, `redo`, `canUndo` and `canRedo`.
 - Typed props: a component's props type is the type argument of its `props<P>()` call. Using it with a missing or mistyped prop is an error, and prop names complete on its tag. Parents write `children` as nested markup; inside the component it is a `Children` function.
 
-Build and install it:
+Install "Lux" (`inflector.lux-vscode`) from the VS Code Marketplace or Open VSX. To build it from the repo instead:
 
 ```bash
 bun run --cwd packages/vscode package
@@ -663,9 +1056,9 @@ Limitations:
 
 ## Type checking in CI (`lux-check`)
 
-`lux-check` (from `packages/lux-check`) reports the same type errors as the editor, for every `.lx` and `.ts` file in a tsconfig. It prints `file:line:col - error TSxxxx: message` and exits with 1 when there are errors (2 for a missing tsconfig or a bad option).
+`lux-check` (the `@inflector/lux-check` package) reports the same type errors as the editor, for every `.lx` and `.ts` file in a tsconfig. It prints `file:line:col - error TSxxxx: message` and exits with 1 when there are errors (2 for a missing tsconfig or a bad option).
 
-Add it as a dev dependency with a script, as `examples/todo` does (`"check": "lux-check"`), then:
+Install it with `bun add -d @inflector/lux-check` and add a script, as `examples/todo` does (`"check": "lux-check"`), then:
 
 ```bash
 bun run --cwd examples/todo check
@@ -677,11 +1070,11 @@ bun run --cwd examples/todo check
 
 ## Testing
 
-Use `bun test` with happy-dom registered in a preload (`bunfig.toml`: `[test] preload = ["./test-setup.ts"]`). Mount components with `mount()`, then await a microtask (or call `flush()`) before asserting DOM changes. To test `.lx` files directly, register a Bun plugin that runs `compile()` from `@lux/compiler` (see `packages/compiler/test/e2e.test.ts`).
+Use `bun test` with happy-dom registered in a preload (`bunfig.toml`: `[test] preload = ["./test-setup.ts"]`). Mount components with `mount()`, then await a microtask (or call `flush()`) before asserting DOM changes. To test `.lx` files directly, register a Bun plugin that runs `compile()` from `@inflector/lux-compiler` (see `packages/compiler/test/e2e.test.ts`).
 
 ## Compiler
 
-`compile(source, { filename, hmrId? })` from `@lux/compiler` returns `{ js, css, map, scope, name }`. The output is TypeScript when the script is.
+`compile(source, { filename, hmrId? })` from `@inflector/lux-compiler` returns `{ js, css, map, scope, name }`. The output is TypeScript when the script is.
 
 ---
 
@@ -689,7 +1082,7 @@ Use `bun test` with happy-dom registered in a preload (`bunfig.toml`: `[test] pr
 
 # API reference
 
-Everything below is exported from `lux`. In `.lx` files, `state`, `derived`, `props`, `init`, `update` and `destroy` are available without importing.
+Everything below is exported from `@inflector/lux`. In `.lx` files, `state`, `derived`, `props`, `init`, `update` and `destroy` are available without importing.
 
 ## Reactivity
 
@@ -738,9 +1131,65 @@ init(fn: () => void | (() => void)): void
 update(fn: () => void | (() => void), deps?: (Signal | (() => unknown))[]): void
 destroy(fn: () => void): void
 mount(Component, target: Node, props?): { destroy(): void }
+hydrate(Component, target: Element, props?): { destroy(): void }  // take over server-rendered markup
 type Component<P = any> = (props: P) => unknown
 type Children = () => unknown                    // the `children` prop: renders the nested markup
 ```
+
+## Context
+
+```ts
+createContext<T>(defaultValue: T, name?: string): Context<T>
+createContext<T>(): Context<T | undefined>
+provide<T>(context: Context<T>, value: T): void   // while a component is being created
+inject<T>(context: Context<T>): T                 // closest provided value, or the default
+```
+
+See [Context](context.md).
+
+## Built-in components
+
+| Component | Props |
+|---|---|
+| `ErrorBoundary` | `fallback?: content \| (error, reset) => content`, `onError?: (error) => void`, children |
+| `Await` | `promise`, `pending?: () => content`, `fulfilled?: (value) => content`, `rejected?: (error) => content` |
+| `Dynamic` | `component`, plus the props passed to it |
+| `Portal` | `target?: Element \| selector` (default `document.body`), children |
+| `Transition` | `name?` (default `lux`), `appear?`, `onEnter?(el, done)`, `onLeave?(el, done)`, children |
+
+```ts
+lazy(load: () => Promise<{ default: Component } | Component>, options?: { pending?: () => unknown }): Component & { preload(): Promise<Component> }
+```
+
+See [Built-in components](built-ins.md).
+
+## Server rendering (`@inflector/lux/server`)
+
+```ts
+renderToString(Component, props?): Promise<string>           // needs the linkedom package
+renderToStringWith(document: Document, Component, props?): string
+```
+
+See [Server rendering](ssr.md).
+
+## Router (`@inflector/lux-router`)
+
+```ts
+Router            // props: routes, base?, url?, fallback?
+Link              // props: href, replace?, activeClass?, exact?, class?, children
+navigate(to: string, options?: { replace?: boolean; state?: unknown; scroll?: boolean }): void
+useRoute(): { path, params, query: URLSearchParams, hash, matched }
+link(event: MouseEvent): void                 // onClick handler for your own <a>
+href(path: string): string                    // path with the router's base
+isActive(path: string, exact?: boolean): boolean
+matchPath(pattern: string, path: string): Record<string, string> | null
+```
+
+See [Routing](routing.md).
+
+## Development mode
+
+`globalThis.__LUX_DEV__ = true` turns on development warnings (duplicate list keys, for example) and the `__LUX_DEVTOOLS__` console hook. `@inflector/vite-plugin-lux` sets it during `vite dev`. Production builds leave it off.
 
 ## .lx compile rules (summary)
 
@@ -765,3 +1214,43 @@ Compile errors:
 - `export` in `<script>`
 - rest props
 - two `<script>` or `<style>` blocks
+
+---
+
+<!-- file: docs/stability.md -->
+
+# Versioning and support
+
+## Versions
+
+All packages follow [semantic versioning](https://semver.org). Releases and changelogs are managed with [changesets](https://github.com/changesets/changesets), and every release is listed in each package's `CHANGELOG.md`.
+
+While the version is `0.x`:
+
+- A **minor** release (`0.1` → `0.2`) may contain breaking changes. Each one is listed under its changelog entry with migration steps.
+- A **patch** release (`0.1.0` → `0.1.1`) only contains fixes and additions.
+
+Pin a minor range (`~0.1.0` or `^0.1.0`, which npm treats the same way below 1.0) and read the changelog before upgrading. `1.0` will mark the API below as stable.
+
+Upgrade `@inflector/lux`, `@inflector/lux-compiler` and `@inflector/vite-plugin-lux` together. Compiled components call helpers from `@inflector/lux/internal`, and the compiler and the runtime are released in lockstep.
+
+## Public API
+
+Public, and covered by semver:
+
+- Everything exported from `@inflector/lux` (see the [API reference](api.md)), `@inflector/lux/server` and `@inflector/lux-router`.
+- The `.lx` file format and the template and script rules in these docs.
+- The options of `@inflector/vite-plugin-lux`, the `lux-check` CLI, and `compile()` from `@inflector/lux-compiler`.
+
+Not public: `@inflector/lux/internal`, the shape of the compiler's output, class names starting with `lux-`, and anything marked `@internal`. These can change in any release.
+
+## Supported environments
+
+| | Supported |
+|---|---|
+| Browsers | Last 2 versions of Chrome, Edge, Firefox and Safari (the end-to-end tests run in Chromium, Firefox and WebKit) |
+| Node.js | 18 and later for the compiler, Vite plugin, `lux-check` and server rendering (CI tests Node 20 and 22) |
+| Bun | 1.4 and later |
+| Vite | 5, 6, 7 and 8 (CI builds a test app with each) |
+| TypeScript | 5.0 and later |
+| Editors | VS Code 1.90 and later, and editors based on it (Cursor) |

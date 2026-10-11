@@ -1,6 +1,6 @@
 # Lux
 
-> Lux is a compiled, signal-based frontend framework. Components are `.lx` files with HTML-first JSX markup, a `<script>` block and a scoped `<style>` block. The compiler (via `vite-plugin-lux`) turns them into direct DOM code with fine-grained updates: no virtual DOM, no re-rendering components. Tooling is Bun (packages, scripts, `bun test`) plus Vite.
+> Lux is a compiled, signal-based frontend framework. Components are `.lx` files with HTML-first JSX markup, a `<script>` block and a scoped `<style>` block. The compiler (via `@inflector/vite-plugin-lux`) turns them into direct DOM code with fine-grained updates: no virtual DOM, no re-rendering components. Tooling is Bun (packages, scripts, `bun test`) plus Vite.
 
 Rules that differ from React, Svelte and Vue, which models get wrong most often:
 
@@ -14,6 +14,9 @@ Rules that differ from React, Svelte and Vue, which models get wrong most often:
 - **Lists:** `{list.map(item => <li key={item.id}>…</li>)}` is keyed. The callback must return JSX directly.
 - **Lifecycle:** `init(fn)` runs after mount and its return value is cleanup. `update(fn)` is an auto-tracked effect. `update(fn, [a, b])` runs only when `a` or `b` changes, not on mount. `destroy(fn)` runs on unmount.
 - **State options:** `persist`, `url`, `history`, `equals`, `validate`, `debounce` and `throttle`.
+- **Built-ins:** `ErrorBoundary`, `Await`, `Dynamic`, `Portal`, `Transition` and `lazy()` are imported from `@inflector/lux`. Render props such as `fallback={(error, reset) => <p>…</p>}` and `fulfilled={(value) => …}` are functions.
+- **Context:** `provide(Ctx, value)` and `inject(Ctx)` are called in `<script>`. To make the value reactive, provide a state. An injected state is a plain object, so use `.get()`.
+- **Packages:** `@inflector/lux` (runtime), `@inflector/lux/server` (`renderToString`), `@inflector/lux-router`, `@inflector/vite-plugin-lux` and `@inflector/lux-check`.
 
 ## Docs
 
@@ -23,8 +26,14 @@ Rules that differ from React, Svelte and Vue, which models get wrong most often:
 - [State options](docs/state-options.md): persist, url, history (undo/redo), equals, validate, debounce, throttle
 - [Templates](docs/templates.md): expressions, conditionals, keyed lists, events, bind, class arrays, spread
 - [Styles](docs/styles.md): scoped CSS and `:global()`
-- [Tooling](docs/tooling.md): Vite plugin, HMR, VS Code extension, testing with `bun test`
+- [Context](docs/context.md): createContext, provide and inject
+- [Built-in components](docs/built-ins.md): ErrorBoundary, Await, lazy, Dynamic, Portal, Transition
+- [Routing](docs/routing.md): @inflector/lux-router: Router, Link, navigate, useRoute
+- [Server rendering](docs/ssr.md): renderToString, hydrate, Vite SSR setup
+- [Security](docs/security.md): what is escaped, innerHTML, javascript: URLs, CSP
+- [Tooling](docs/tooling.md): Vite plugin, HMR, dev mode, VS Code extension, lux-check, testing with `bun test`
 - [API reference](docs/api.md): every export, and the compile rules in one table
+- [Versioning and support](docs/stability.md): semver policy, public API, supported browsers, Node and Vite versions
 
 ## Optional
 

@@ -4,6 +4,7 @@ import {
   Signal,
   createComputation,
   getOwner,
+  handleError,
   onCleanup,
   queueMount,
   runWithOwner,
@@ -17,12 +18,24 @@ export type Dep = Signal<any> | (() => unknown)
 
 export class ComponentOwner extends Owner {
   props: Record<string, any>
+  /** The component function (used by dev tools). */
+  component: Function | null
   mounted = false
   mountJobs: (() => void)[] = []
 
-  constructor(parent: Owner | null, props: Record<string, any>) {
+  constructor(parent: Owner | null, props: Record<string, any>, component: Function | null = null) {
     super(parent)
     this.props = props
+    this.component = component
+  }
+}
+
+/** Run a mount job, sending what it throws to the nearest error boundary. */
+function runJob(owner: ComponentOwner, job: () => void) {
+  try {
+    runWithOwner(owner, job)
+  } catch (err) {
+    handleError(err, owner)
   }
 }
 
@@ -34,7 +47,7 @@ function currentComponent(api: string): ComponentOwner {
 }
 
 function addMountJob(owner: ComponentOwner, job: () => void) {
-  if (owner.mounted) queueMount(() => owner.disposed || runWithOwner(owner, job))
+  if (owner.mounted) queueMount(() => owner.disposed || runJob(owner, job))
   else owner.mountJobs.push(job)
 }
 
@@ -44,9 +57,10 @@ export function mountComponent(owner: ComponentOwner) {
   owner.mounted = true
   const jobs = owner.mountJobs
   owner.mountJobs = []
-  runWithOwner(owner, () => {
-    for (const job of jobs) job()
-  })
+  for (const job of jobs) {
+    if (owner.disposed) return
+    runJob(owner, job)
+  }
 }
 
 /** Run `fn` once after the component's DOM is inserted. A returned function runs on destroy. */

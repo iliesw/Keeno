@@ -1,7 +1,7 @@
 // Compile real .lx fixtures, load them through a Bun plugin and mount them in happy-dom.
 import { plugin } from 'bun'
 import { afterEach, beforeAll, describe, expect, test } from 'bun:test'
-import { mount, type MountedApp } from 'lux'
+import { flush, mount, type MountedApp } from '@inflector/lux'
 import { compile } from '../src/index'
 
 beforeAll(() => {
@@ -86,7 +86,7 @@ describe('Counter', () => {
   })
 
   test('props stay reactive', async () => {
-    const { state } = await import('lux')
+    const { state } = await import('@inflector/lux')
     const title = state('A')
     const el = await render('Counter', {
       get title() {
@@ -238,5 +238,32 @@ describe('children and ternaries', () => {
     await tick()
     expect($(el, '.yes')).toBeNull()
     expect($(el, '.no')).not.toBeNull()
+  })
+})
+
+describe('Shell (built-in components from .lx)', () => {
+  test('ErrorBoundary, Await, Transition and Portal', async () => {
+    let resolve!: (v: string) => void
+    const el = await render('Shell', { load: () => new Promise<string>((r) => (resolve = r)) })
+    expect($(el, '.bomb').textContent).toBe('calm')
+    expect($(el, 'i').textContent).toBe('loading')
+    expect(document.querySelector('body > aside.toast')?.textContent).toBe('toast')
+
+    resolve('done')
+    await tick()
+    expect($(el, 'b').textContent).toBe('done')
+
+    $(el, '.toggle').click()
+    flush()
+    expect($(el, '.panel').className).toContain('fade-enter-active')
+
+    $(el, '.boom').click()
+    await tick()
+    expect(el.querySelector('.bomb')).toBeNull()
+    expect($(el, '.err').textContent).toBe('Error: kaboom')
+
+    app!.destroy()
+    app = undefined
+    expect(document.querySelector('aside.toast')).toBeNull()
   })
 })

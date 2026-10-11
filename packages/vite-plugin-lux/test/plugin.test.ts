@@ -12,12 +12,13 @@ function setup(command: 'serve' | 'build') {
   return plugin
 }
 
-describe('vite-plugin-lux', () => {
+describe('@inflector/vite-plugin-lux', () => {
   test('transforms .lx to JS without TypeScript, importing the scoped CSS', async () => {
     const out = await setup('build').transform(source, file)
     expect(out.code).toContain(`import "${file}?lux&type=style.css"`)
-    expect(out.code).toContain('from "lux/internal"')
+    expect(out.code).toContain('from "@inflector/lux/internal"')
     expect(out.code).not.toContain('import.meta.hot')
+    expect(out.code).not.toContain('__LUX_DEV__')
     expect(out.map.mappings.length).toBeGreaterThan(0)
   })
 
@@ -25,6 +26,7 @@ describe('vite-plugin-lux', () => {
     const out = await setup('serve').transform(source, file)
     expect(out.code).toContain('export default _$hot(TodoItem, "src/TodoItem.lx")')
     expect(out.code).toContain('import.meta.hot.accept()')
+    expect(out.code).toContain('globalThis.__LUX_DEV__ = true')
   })
 
   test('serves the scoped CSS from the virtual module', () => {

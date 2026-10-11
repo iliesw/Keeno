@@ -1,7 +1,7 @@
 // Type-check a project's .lx (and .ts) files the way the editor does: the Lux language plugin turns
 // each .lx file into virtual TSX, and @volar/kit runs TypeScript over a tsconfig and maps the
 // diagnostics back to .lx positions.
-import { createLuxLanguagePlugin } from '@lux/language-server'
+import { createLuxLanguagePlugin } from '@inflector/lux-language-server'
 import { createTypeScriptChecker } from '@volar/kit'
 import path from 'node:path'
 import ts from 'typescript'

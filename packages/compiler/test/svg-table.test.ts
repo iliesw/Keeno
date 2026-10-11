@@ -2,7 +2,7 @@
 // rendering in happy-dom (Playwright covers real-browser parsing in e2e/svg-table.e2e.ts).
 import { plugin } from 'bun'
 import { afterEach, beforeAll, describe, expect, test } from 'bun:test'
-import { mount, type MountedApp } from 'lux'
+import { mount, type MountedApp } from '@inflector/lux'
 import { compile } from '../src/index'
 
 const js = (markup: string, script = '') => compile(`<script lang="ts">\n${script}\n</script>\n${markup}`, { filename: 'src/Test.lx' }).js

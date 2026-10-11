@@ -7,6 +7,7 @@ import {
   LUX_APIS,
   MAP_PLACEHOLDER,
   RESERVED_MEMBERS,
+  RUNTIME,
   codeFrameError,
   traverse,
   type PropBinding,
@@ -55,7 +56,7 @@ export function buildComponentAst(parts: SplitResult, ctx: CompileContext, name:
 
 // ---------------------------------------------------------------------------
 
-/** True if `callee` refers to `name` from `lux` (imported, or unbound and auto-injected). */
+/** True if `callee` refers to `name` from `@inflector/lux` (imported, or unbound and auto-injected). */
 export function isLuxApi(callee: NodePath, name: string): boolean {
   if (!callee.isIdentifier()) return false
   const binding = callee.scope.getBinding(callee.node.name)
@@ -63,7 +64,7 @@ export function isLuxApi(callee: NodePath, name: string): boolean {
   if (binding.kind !== 'module') return false
   const spec = binding.path.node
   const decl = binding.path.parentPath?.node
-  if (!t.isImportSpecifier(spec) || !t.isImportDeclaration(decl) || decl.source.value !== 'lux') return false
+  if (!t.isImportSpecifier(spec) || !t.isImportDeclaration(decl) || decl.source.value !== RUNTIME) return false
   const imported = t.isIdentifier(spec.imported) ? spec.imported.name : spec.imported.value
   return imported === name
 }
@@ -315,7 +316,7 @@ export function rewrite(file: t.File, ctx: CompileContext) {
   })
 }
 
-/** The `lux` APIs the module uses without importing them. */
+/** The `@inflector/lux` APIs the module uses without importing them. */
 export function findAutoImports(file: t.File): string[] {
   traverse.cache.clear()
   const found: string[] = []

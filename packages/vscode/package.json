@@ -3,11 +3,24 @@
   "displayName": "Lux",
   "description": "Syntax highlighting and IntelliSense for Lux (.lx) components",
   "version": "0.1.0",
-  "publisher": "lux",
+  "publisher": "inflector",
   "private": true,
   "license": "MIT",
-  "engines": { "vscode": "^1.90.0" },
-  "categories": ["Programming Languages"],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iliesw/Lux.git",
+    "directory": "packages/vscode"
+  },
+  "homepage": "https://github.com/iliesw/Lux/tree/main/packages/vscode#readme",
+  "bugs": {
+    "url": "https://github.com/iliesw/Lux/issues"
+  },
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
   "icon": "images/icon.png",
   "main": "./dist/client.js",
   "activationEvents": [],
@@ -15,9 +28,17 @@
     "languages": [
       {
         "id": "lux",
-        "aliases": ["Lux", "lux"],
-        "extensions": [".lx"],
-        "icon": { "light": "./images/file-icon.svg", "dark": "./images/file-icon.svg" },
+        "aliases": [
+          "Lux",
+          "lux"
+        ],
+        "extensions": [
+          ".lx"
+        ],
+        "icon": {
+          "light": "./images/file-icon.svg",
+          "dark": "./images/file-icon.svg"
+        },
         "configuration": "./language-configuration.json"
       }
     ],
@@ -39,7 +60,7 @@
     "package": "bun run scripts/package.ts"
   },
   "devDependencies": {
-    "@lux/language-server": "workspace:*",
+    "@inflector/lux-language-server": "workspace:*",
     "@types/vscode": "~1.90.0",
     "@volar/vscode": "~2.4.28",
     "@vscode/vsce": "^4.0.0",

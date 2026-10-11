@@ -23,7 +23,7 @@ export function createLuxLanguagePlugin(ts: typeof TS): LanguagePlugin<URI> {
         const isTs = code.languageId === 'typescriptreact'
         return { code, extension: isTs ? '.tsx' : '.jsx', scriptKind: isTs ? ts.ScriptKind.TSX : ts.ScriptKind.JSX }
       },
-      // .lx markup is JSX typed by the global JSX namespace from `lux/lx`.
+      // .lx markup is JSX typed by the global JSX namespace from `@inflector/lux/lx`.
       resolveLanguageServiceHost(host) {
         return new Proxy(host, {
           get(target, key, receiver) {

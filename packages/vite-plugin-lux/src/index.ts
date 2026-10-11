@@ -1,8 +1,24 @@
 // Vite plugin: compiles .lx files, serves their scoped CSS as a virtual module, wires HMR.
-import { compile } from '@lux/compiler'
+import { compile } from '@inflector/lux-compiler'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
-import { transformWithEsbuild, type Plugin, type ResolvedConfig } from 'vite'
+import * as vite from 'vite'
+import type { Plugin, ResolvedConfig } from 'vite'
+
+/**
+ * Strip TypeScript from the compiled module. Vite 8 bundles Oxc and only finds esbuild when it is
+ * installed separately, so prefer `transformWithOxc` when this Vite version has it.
+ */
+async function stripTypes(code: string, file: string, map: any): Promise<{ code: string; map: any }> {
+  const oxc = (vite as any).transformWithOxc as undefined | ((...args: any[]) => Promise<{ code: string; map: any; errors?: any[] }>)
+  if (oxc) {
+    const out = await oxc(code, file, { lang: 'ts', sourcemap: true }, map)
+    if (out.errors?.length) throw new Error(out.errors.map((e: any) => e.message ?? String(e)).join('\n'))
+    return { code: out.code, map: out.map }
+  }
+  const out = await vite.transformWithEsbuild(code, file, { loader: 'ts', sourcemap: true, sourcefile: file }, map)
+  return { code: out.code, map: out.map }
+}
 
 export interface LuxPluginOptions {
   /** Enable hot module replacement in dev (default true). */
@@ -55,9 +71,10 @@ export default function lux(options: LuxPluginOptions = {}): Plugin {
       if (result.css) js = `import ${JSON.stringify(`${file}?${STYLE_QUERY}`)};\n${js}`
       // Self-accept: re-executing the module swaps the implementation behind the stable wrapper.
       if (hmr) js += '\nif (import.meta.hot) import.meta.hot.accept()\n'
+      // `vite dev` turns on the runtime's development warnings and dev tools hook.
+      if (config.command === 'serve') js += '\nglobalThis.__LUX_DEV__ = true\n'
 
-      const out = await transformWithEsbuild(js, file, { loader: 'ts', sourcemap: true, sourcefile: file }, result.map)
-      return { code: out.code, map: out.map as any }
+      return stripTypes(js, file, result.map)
     },
   }
 }

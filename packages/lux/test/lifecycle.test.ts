@@ -191,7 +191,9 @@ describe('destroy and disposal order', () => {
   test('onUpdate inside a component is removed on destroy', () => {
     const a = state(0)
     let n = 0
-    const root = render(() => a.onUpdate(() => n++))
+    const root = render(() => {
+      a.onUpdate(() => n++)
+    })
     a.set(1)
     root.dispose()
     a.set(2)

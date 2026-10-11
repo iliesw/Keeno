@@ -7,15 +7,15 @@ Lux is a compiled, signal-based frontend framework. You write components in `.lx
 Lux uses Bun for packages, scripts and tests, and Vite for the dev server and builds.
 
 ```bash
-bun add lux
-bun add -d vite vite-plugin-lux
+bun add @inflector/lux
+bun add -d vite @inflector/vite-plugin-lux
 ```
 
 `vite.config.ts`:
 
 ```ts
 import { defineConfig } from 'vite'
-import lux from 'vite-plugin-lux'
+import lux from '@inflector/vite-plugin-lux'
 
 export default defineConfig({
   plugins: [lux()],
@@ -32,7 +32,7 @@ export default defineConfig({
 `src/main.ts`:
 
 ```ts
-import { mount } from 'lux'
+import { mount } from '@inflector/lux'
 import App from './App.lx'
 
 mount(App, document.getElementById('app')!)
@@ -42,7 +42,7 @@ mount(App, document.getElementById('app')!)
 
 ```ts
 declare module '*.lx' {
-  const Component: import('lux').Component
+  const Component: import('@inflector/lux').Component
   export default Component
 }
 ```

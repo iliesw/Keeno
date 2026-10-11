@@ -21,10 +21,13 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? 'github' : 'list',
   use: {
-    ...devices['Desktop Chrome'],
     trace: 'retain-on-failure',
   },
-  projects: [{ name: 'chromium' }],
+  projects: [
+    { name: 'chromium', use: devices['Desktop Chrome'] },
+    { name: 'firefox', use: devices['Desktop Firefox'] },
+    { name: 'webkit', use: devices['Desktop Safari'] },
+  ],
   webServer: [
     server('examples/todo', PORTS.todo),
     server('examples/counter', PORTS.counter),

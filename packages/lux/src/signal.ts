@@ -14,12 +14,27 @@ interface Listener {
 let currentOwner: Owner | null = null
 let currentListener: Listener | null = null
 
+// Two copies of the runtime don't share this tracking state, so components from one copy break
+// when rendered by the other (typically the `development` and default builds mixed during SSR).
+const INSTANCE = Symbol.for('lux.runtime')
+if ((globalThis as any)[INSTANCE]) {
+  console.warn(
+    '[lux] two copies of @inflector/lux are loaded. Components and the functions that render them ' +
+      '(mount, renderToString) must come from the same copy: with Vite SSR, import renderToString ' +
+      'in a module loaded through ssrLoadModule, not directly in Node.',
+  )
+} else (globalThis as any)[INSTANCE] = true
+
 /** A node in the ownership tree. Disposing an owner disposes its children, then runs its cleanups. */
 export class Owner {
   parent: Owner | null
   children: Owner[] | null = null
   cleanups: Cleanup[] | null = null
   disposed = false
+  /** Values provided to descendants with `provide()`, keyed by context id. */
+  context: Map<symbol, unknown> | null = null
+  /** Handles errors thrown by descendants (see `handleError`). Rethrow to pass them further up. */
+  onError: ((error: unknown) => void) | null = null
 
   constructor(parent: Owner | null = currentOwner) {
     this.parent = parent
@@ -45,6 +60,28 @@ export class Owner {
       if (i >= 0) this.parent.children.splice(i, 1)
     }
   }
+}
+
+/** Errors that already went up the whole owner chain without a handler, so outer levels don't retry. */
+const unhandled = new WeakSet<object>()
+
+/**
+ * Pass `error` to the nearest owner (starting at `owner`) with an `onError` handler. A handler
+ * that throws passes its error further up. Throws when no handler takes it.
+ */
+export function handleError(error: unknown, owner: Owner | null): void {
+  if (typeof error === 'object' && error !== null && unhandled.has(error)) throw error
+  for (let o = owner; o; o = o.parent) {
+    if (!o.onError || o.disposed) continue
+    try {
+      o.onError(error)
+      return
+    } catch (err) {
+      error = err
+    }
+  }
+  if (typeof error === 'object' && error !== null) unhandled.add(error)
+  throw error
 }
 
 function runCleanup(fn: Cleanup) {
@@ -89,6 +126,10 @@ export class Computation extends Owner implements Listener {
     currentListener = this
     try {
       this.fn()
+    } catch (err) {
+      currentOwner = prevOwner
+      currentListener = prevListener
+      handleError(err, this)
     } finally {
       currentOwner = prevOwner
       currentListener = prevListener
@@ -183,14 +224,19 @@ export class Derived<T> extends Signal<T> implements Listener {
     if (currentOwner) onCleanup(() => this.dispose())
   }
 
+  /** @internal The error thrown by the last computation, rethrown to readers until it succeeds. */
+  _error: { value: unknown } | null = null
+
   override get(): T {
     this._refresh()
     this._track()
+    if (this._error) throw this._error.value
     return this._value
   }
 
   override peek(): T {
     this._refresh()
+    if (this._error) throw this._error.value
     return this._value
   }
 
@@ -217,20 +263,30 @@ export class Derived<T> extends Signal<T> implements Listener {
     let next: T
     try {
       next = this._fn()
+    } catch (err) {
+      // Keep the error for readers; clearing `_dirty` lets the next source change notify again.
+      this._dirty = false
+      this._error = { value: err }
+      if (this._observers) for (const o of [...this._observers]) o.notify()
+      return
     } finally {
       currentListener = prev
       this._computing = false
     }
     this._dirty = false
     const old = this._value
+    const recovered = this._error !== null
+    this._error = null
     if (!this._initialized) {
       this._initialized = true
       this._value = next
       return
     }
-    if (this._equals(old, next)) return
+    if (!recovered && this._equals(old, next)) return
     this._value = next
-    this._notify(old, next)
+    if (recovered) {
+      if (this._observers) for (const o of [...this._observers]) o.notify()
+    } else this._notify(old, next)
   }
 
   dispose() {

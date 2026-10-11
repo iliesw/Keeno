@@ -46,7 +46,7 @@ Nested content arrives as the `children` prop, a function that renders it. Type 
 
 ```html Card.lx
 <script lang="ts">
-  import type { Children } from 'lux'
+  import type { Children } from '@inflector/lux'
   const { title, children } = props<{ title: string; children?: Children }>()
 </script>
 

@@ -7,7 +7,9 @@ import * as t from '@babel/types'
 export const traverse: typeof _traverse = (_traverse as any).default ?? _traverse
 export const generate: typeof _generate = (_generate as any).default ?? _generate
 
-/** Names injected from `lux` when used without an import. */
+/** Module the runtime APIs are imported from. */
+export const RUNTIME = '@inflector/lux'
+/** Names injected from `@inflector/lux` when used without an import. */
 export const LUX_APIS = ['state', 'derived', 'props', 'init', 'update', 'destroy'] as const
 /** Members of a state (or derived) that are not unwrapped. */
 export const RESERVED_MEMBERS = new Set(['set', 'onUpdate', 'get', 'peek', 'undo', 'redo', 'canUndo', 'canRedo'])
@@ -30,7 +32,7 @@ export class CompileContext {
   /** Declaring identifiers of destructured props. */
   propIds = new WeakMap<t.Identifier, PropBinding>()
   propDeclarators = new WeakSet<t.VariableDeclarator>()
-  /** `lux/internal` helpers used by the generated code: name -> local identifier name. */
+  /** `@inflector/lux/internal` helpers used by the generated code: name -> local identifier name. */
   helpers = new Map<string, string>()
   /** Hoisted templates, keyed by html (prefixed with `svg:` for SVG fragments). */
   templates = new Map<string, { id: string; html: string; svg: boolean }>()

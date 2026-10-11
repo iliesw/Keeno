@@ -13,16 +13,30 @@ let server: LanguageServerHandle
 
 beforeAll(async () => {
   server = startLanguageServer(serverModule, repo)
+  // Pushed diagnostics are pulled explicitly below; without a handler test-utils logs each one.
+  server.connection.onNotification('textDocument/publishDiagnostics', () => {})
+  // Only surface server errors (type 1), not informational capability messages.
+  server.connection.onNotification('window/logMessage', (e: { type: number; message: string }) => {
+    if (e.type === 1) console.error(e.message)
+  })
   await server.initialize(pathToFileURL(repo).href, { typescript: { tsdk } })
 }, 30_000)
 
 afterAll(async () => {
-  await server.shutdown()
-  server.process.kill()
+  // test-utils logs the connection's close event.
+  const log = console.log
+  console.log = () => {}
+  try {
+    await server.shutdown()
+    server.process.kill()
+    await new Promise((r) => setTimeout(r, 50))
+  } finally {
+    console.log = log
+  }
 })
 
 let n = 0
-/** Open an in-memory .lx document next to the example (so `lux` resolves). Returns its URI and a position helper. */
+/** Open an in-memory .lx document next to the example (so `@inflector/lux` resolves). Returns its URI and a position helper. */
 async function open(content: string) {
   const uri = pathToFileURL(path.join(exampleSrc, `__test${n++}.lx`)).href
   const doc = await server.openInMemoryDocument(uri, 'lux', content.replace('|', ''))
@@ -177,7 +191,7 @@ describe('typed props', () => {
 
   test('props are typed inside the component; children is a function', async () => {
     const { uri } = await open(`<script lang="ts">
-  import type { Children } from 'lux'
+  import type { Children } from '@inflector/lux'
   const { title, children } = props<{ title: string; children?: Children }>()
   const n: number = title
   children?.()
@@ -190,7 +204,7 @@ describe('typed props', () => {
 
   test('a parent passes children as nested markup', async () => {
     const card = await open(`<script lang="ts">
-  import type { Children } from 'lux'
+  import type { Children } from '@inflector/lux'
   const { title, children } = props<{ title: string; children: Children }>()
 </script>
 <section><h2>{title}</h2>{children}</section>`)

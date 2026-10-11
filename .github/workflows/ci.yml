@@ -5,9 +5,13 @@ on:
     branches: [main]
   pull_request:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
-    name: ${{ matrix.os }}
+    name: Test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -37,3 +41,96 @@ jobs:
         run: |
           bun run --cwd examples/todo build
           bun run --cwd examples/counter build
+
+      - name: Type-check the todo example with lux-check
+        run: bun run --cwd examples/todo check
+
+  e2e:
+    name: E2E (${{ matrix.browser }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.0
+
+      - name: Install
+        run: bun install --frozen-lockfile
+
+      - name: Build packages
+        run: bun run build
+
+      - name: Install ${{ matrix.browser }}
+        run: bunx playwright install --with-deps ${{ matrix.browser }}
+
+      - name: Playwright
+        run: bunx playwright test --project=${{ matrix.browser }}
+        env:
+          CI: true
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-${{ matrix.browser }}
+          path: test-results
+          retention-days: 7
+
+  # Install the packed tarballs in a fresh project with npm, then build, type-check and
+  # server-render it on Node, once per supported Vite major.
+  smoke:
+    name: Smoke (Node ${{ matrix.node }}, Vite ${{ matrix.vite }}, ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, node: 20, vite: 5 }
+          - { os: ubuntu-latest, node: 20, vite: 6 }
+          - { os: ubuntu-latest, node: 22, vite: 7 }
+          - { os: ubuntu-latest, node: 22, vite: 8 }
+          - { os: windows-latest, node: 22, vite: 8 }
+          - { os: macos-latest, node: 22, vite: 8 }
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Install
+        run: bun install --frozen-lockfile
+
+      - name: Build packages
+        run: bun run build
+
+      - name: Smoke test
+        run: bun run scripts/smoke.ts --vite=${{ matrix.vite }}
+
+  changeset:
+    name: Changeset present
+    if: github.event_name == 'pull_request' && github.head_ref != 'changeset-release/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.0
+
+      - name: Install
+        run: bun install --frozen-lockfile
+
+      # Fails when published packages changed without a changeset (`bunx changeset add --empty` for none).
+      - name: Check
+        run: bunx changeset status --since=origin/${{ github.base_ref }}

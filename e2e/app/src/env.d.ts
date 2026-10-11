@@ -1,4 +1,4 @@
 declare module '*.lx' {
-  const Component: import('lux').Component
+  const Component: import('@inflector/lux').Component
   export default Component
 }

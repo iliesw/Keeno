@@ -406,7 +406,8 @@ export class TemplateCompiler {
           if (i === children.length - 1) {
             call('insert', [parent, value])
           } else {
-            html += '<!>'
+            // The full comment form: some HTML parsers (htmlparser2, used by linkedom for SSR) mis-read `<!>`.
+            html += '<!---->'
             call('insert', [parent, value, ref([...path, index])])
             index++
           }

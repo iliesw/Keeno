@@ -1,6 +1,6 @@
 # API reference
 
-Everything below is exported from `lux`. In `.lx` files, `state`, `derived`, `props`, `init`, `update` and `destroy` are available without importing.
+Everything below is exported from `@inflector/lux`. In `.lx` files, `state`, `derived`, `props`, `init`, `update` and `destroy` are available without importing.
 
 ## Reactivity
 
@@ -49,9 +49,65 @@ init(fn: () => void | (() => void)): void
 update(fn: () => void | (() => void), deps?: (Signal | (() => unknown))[]): void
 destroy(fn: () => void): void
 mount(Component, target: Node, props?): { destroy(): void }
+hydrate(Component, target: Element, props?): { destroy(): void }  // take over server-rendered markup
 type Component<P = any> = (props: P) => unknown
 type Children = () => unknown                    // the `children` prop: renders the nested markup
 ```
+
+## Context
+
+```ts
+createContext<T>(defaultValue: T, name?: string): Context<T>
+createContext<T>(): Context<T | undefined>
+provide<T>(context: Context<T>, value: T): void   // while a component is being created
+inject<T>(context: Context<T>): T                 // closest provided value, or the default
+```
+
+See [Context](context.md).
+
+## Built-in components
+
+| Component | Props |
+|---|---|
+| `ErrorBoundary` | `fallback?: content \| (error, reset) => content`, `onError?: (error) => void`, children |
+| `Await` | `promise`, `pending?: () => content`, `fulfilled?: (value) => content`, `rejected?: (error) => content` |
+| `Dynamic` | `component`, plus the props passed to it |
+| `Portal` | `target?: Element \| selector` (default `document.body`), children |
+| `Transition` | `name?` (default `lux`), `appear?`, `onEnter?(el, done)`, `onLeave?(el, done)`, children |
+
+```ts
+lazy(load: () => Promise<{ default: Component } | Component>, options?: { pending?: () => unknown }): Component & { preload(): Promise<Component> }
+```
+
+See [Built-in components](built-ins.md).
+
+## Server rendering (`@inflector/lux/server`)
+
+```ts
+renderToString(Component, props?): Promise<string>           // needs the linkedom package
+renderToStringWith(document: Document, Component, props?): string
+```
+
+See [Server rendering](ssr.md).
+
+## Router (`@inflector/lux-router`)
+
+```ts
+Router            // props: routes, base?, url?, fallback?
+Link              // props: href, replace?, activeClass?, exact?, class?, children
+navigate(to: string, options?: { replace?: boolean; state?: unknown; scroll?: boolean }): void
+useRoute(): { path, params, query: URLSearchParams, hash, matched }
+link(event: MouseEvent): void                 // onClick handler for your own <a>
+href(path: string): string                    // path with the router's base
+isActive(path: string, exact?: boolean): boolean
+matchPath(pattern: string, path: string): Record<string, string> | null
+```
+
+See [Routing](routing.md).
+
+## Development mode
+
+`globalThis.__LUX_DEV__ = true` turns on development warnings (duplicate list keys, for example) and the `__LUX_DEVTOOLS__` console hook. `@inflector/vite-plugin-lux` sets it during `vite dev`. Production builds leave it off.
 
 ## .lx compile rules (summary)
 

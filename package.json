@@ -9,14 +9,21 @@
   "scripts": {
     "test": "bun test",
     "test:e2e": "bunx playwright test",
-    "test:e2e:install": "bunx playwright install chromium",
+    "test:e2e:install": "bunx playwright install chromium firefox webkit",
+    "test:smoke": "bun run scripts/smoke.ts",
+    "bench": "bun run scripts/bench.ts",
     "typecheck": "tsc --noEmit -p .",
     "build": "bun run scripts/build.ts",
     "predev": "bun run build",
     "dev": "bun run --cwd examples/todo dev",
-    "docs:llms": "bun run scripts/build-llms.ts"
+    "docs:llms": "bun run scripts/build-llms.ts",
+    "changeset": "changeset",
+    "version-packages": "bun run scripts/version.ts",
+    "release": "bun run scripts/release.ts"
   },
   "devDependencies": {
+    "@changesets/changelog-github": "^1.0.1",
+    "@changesets/cli": "^3.0.3",
     "@happy-dom/global-registrator": "^15.11.7",
     "@playwright/test": "^1.64.0",
     "@types/bun": "^1.1.14",

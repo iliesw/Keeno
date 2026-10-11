@@ -1,4 +1,4 @@
-// Editor-only types for code inside `.lx` files (used by @lux/language-server, never at runtime).
+// Editor-only types for code inside `.lx` files (used by @inflector/lux-language-server, never at runtime).
 // In a .lx file a local state reads as its value, so `state(v)` is typed as the value plus the
 // reserved members. `x.foo` on anything else is `x.get().foo`, which is what the intersection gives.
 import type { Component, Dep, DerivedOptions, State, StateOptions, UpdateListener } from './index'
@@ -140,6 +140,8 @@ declare global {
     interface IntrinsicAttributes {
       key?: any
     }
+    /** Parents write nested markup where components receive `children` as a render function. */
+    type LibraryManagedAttributes<C, P> = 'children' extends keyof P ? LxComponentProps<P> : P
     type IntrinsicElements = {
       [K in keyof HTMLElementTagNameMap]: LxAttributes<HTMLElementTagNameMap[K]>
     } & {
@@ -150,4 +152,5 @@ declare global {
   }
 }
 
-export type { Component, State }
+// `State` comes from `export *` above as a class, so `new State(v)` and `instanceof State` work in .lx files.
+export type { Component }

@@ -1,7 +1,7 @@
 // Turn an .lx file into a TSX virtual file that TypeScript understands, plus a CSS virtual file.
 //
-//   <script> imports            -> module level (`from 'lux'` becomes `from 'lux/lx'`)
-//   auto-imported lux APIs      -> `import { state, ... } from 'lux/lx'` (editor typings)
+//   <script> imports            -> module level (`from '@inflector/lux'` becomes `from '@inflector/lux/lx'`)
+//   auto-imported lux APIs      -> `import { state, ... } from '@inflector/lux/lx'` (editor typings)
 //   rest of <script>            -> body of `export default function __LuxComponent($$props) { … }`
 //   markup                      -> `return (<> … </>)` at the end of that body
 //
@@ -14,7 +14,7 @@
 // Source text is copied verbatim and mapped back, so TypeScript's completions, hovers,
 // diagnostics and go-to-definition land on the right spot in the .lx file. Parsing uses the
 // TypeScript parser, which tolerates the half-typed code an editor sends.
-import { split, type SplitResult } from '@lux/compiler/split'
+import { split, type SplitResult } from '@inflector/lux-compiler/split'
 import type { CodeInformation, CodeMapping, VirtualCode } from '@volar/language-core'
 import type * as TS from 'typescript'
 
@@ -127,9 +127,9 @@ export function generateScript(ts: typeof TS, source: string, parts = safeSplit(
   for (const imp of imports) {
     const start = imp.getStart(sf)
     const spec = ts.isImportDeclaration(imp) ? imp.moduleSpecifier : undefined
-    if (spec && ts.isStringLiteral(spec) && spec.text === 'lux') {
+    if (spec && ts.isStringLiteral(spec) && spec.text === '@inflector/lux') {
       b.map(offset + start, script.slice(start, spec.getStart(sf)))
-      b.add(`'lux/lx'`)
+      b.add(`'@inflector/lux/lx'`)
       b.map(offset + spec.end, script.slice(spec.end, imp.end))
     } else {
       b.map(offset + start, script.slice(start, imp.end))
@@ -138,7 +138,7 @@ export function generateScript(ts: typeof TS, source: string, parts = safeSplit(
   }
   const declared = declaredNames(ts, sf)
   const missing = LUX_APIS.filter((n) => !declared.has(n))
-  if (missing.length) b.add(`import { ${missing.join(', ')} } from 'lux/lx';\n`)
+  if (missing.length) b.add(`import { ${missing.join(', ')} } from '@inflector/lux/lx';\n`)
 
   const propsType = parts.lang === 'ts' ? propsTypeText(ts, sf) : undefined
   b.add(propsType ? 'function __LuxRender() {\n' : 'export default function __LuxComponent($$props: Record<string, any>) {\n')
@@ -163,7 +163,7 @@ export function generateScript(ts: typeof TS, source: string, parts = safeSplit(
   if (propsType) {
     b.add('\n</>)] as const;\n}\n')
     b.add(
-      "export default function __LuxComponent($$props: import('lux/lx').LxComponentProps<ReturnType<typeof __LuxRender>[0]>) {\n" +
+      "export default function __LuxComponent($$props: import('@inflector/lux/lx').LxComponentProps<ReturnType<typeof __LuxRender>[0]>) {\n" +
         '  return __LuxRender()[1]\n}\n',
     )
   } else b.add('\n</>);\n}\n')

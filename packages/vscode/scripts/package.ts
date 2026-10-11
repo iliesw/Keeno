@@ -8,4 +8,4 @@ const run = (cmd: string[]) => {
 }
 
 run(['bun', 'run', 'scripts/build.ts', '--production'])
-run(['bun', 'x', 'vsce', 'package', '--no-dependencies', '--allow-missing-repository', '--skip-license', '-o', 'lux-vscode.vsix'])
+run(['bun', 'x', 'vsce', 'package', '--no-dependencies', '-o', 'lux-vscode.vsix'])

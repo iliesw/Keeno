@@ -1,0 +1,9 @@
+<script lang="ts">
+  const { broken } = props<{ broken: boolean }>()
+  const check = (b: boolean) => {
+    if (b) throw new Error('broken on purpose')
+    return 'fine'
+  }
+</script>
+
+<p class="fragile">{check(broken)}</p>

@@ -1,7 +1,8 @@
 // Component instantiation, props merging and mounting.
+import { isDev } from './dev'
 import { ComponentOwner, mountComponent } from './lifecycle'
-import { insert } from './dom'
-import { Owner, flush, getOwner, queueMount, runWithOwner, untrack } from './signal'
+import { insert, isStatic, region } from './dom'
+import { Owner, flush, getOwner, handleError, queueMount, runWithOwner, untrack } from './signal'
 
 export type Component<P = any> = (props: P) => unknown
 
@@ -11,10 +12,22 @@ export type Children = () => unknown
 /**
  * Create a component instance owned by the current owner. The component function runs
  * untracked; `init`/`update` jobs run once its DOM has been inserted (children before parents).
+ * Reactive output (a function, or an array containing one) is rendered under the component's
+ * owner, so context and error boundaries reach everything it renders.
  */
 export function createComponent<P extends Record<string, any>>(Comp: Component<P>, props: P): unknown {
-  const owner = new ComponentOwner(getOwner(), props)
-  const out = runWithOwner(owner, () => untrack(() => Comp(props)))
+  const owner = new ComponentOwner(getOwner(), props, Comp)
+  let out: unknown
+  try {
+    out = runWithOwner(owner, () => {
+      const result = untrack(() => Comp(props))
+      return isStatic(result) ? result : region(result)
+    })
+  } catch (err) {
+    owner.dispose()
+    handleError(err, owner.parent)
+    return undefined
+  }
   queueMount(() => mountComponent(owner))
   return out
 }
@@ -49,21 +62,117 @@ export function mergeProps(...sources: (Record<string, any> | (() => Record<stri
   })
 }
 
+/** Props of `<Dynamic>`: the component to render, plus the props passed through to it. */
+export type DynamicProps<P = Record<string, any>> = P & { component: Component<P> | null | undefined | false }
+
+/**
+ * Render the component in the `component` prop with the other props. The instance is re-created
+ * when `component` changes: `<Dynamic component={tabs[current]} user={user} />`.
+ */
+export function Dynamic<P extends Record<string, any>>(props: DynamicProps<P>): unknown {
+  const rest = new Proxy(props, {
+    get: (target, key) => (key === 'component' ? undefined : Reflect.get(target, key)),
+    has: (target, key) => key !== 'component' && Reflect.has(target, key),
+    ownKeys: (target) => Reflect.ownKeys(target).filter((k) => k !== 'component'),
+  }) as unknown as P
+  return () => {
+    const C = props.component
+    return C ? untrack(() => createComponent(C, rest)) : null
+  }
+}
+
 export interface MountedApp {
   /** Destroy the component tree and remove its nodes. */
   destroy(): void
 }
 
+/** Root owners of mounted apps, for the dev tools hook. */
+const roots = new Set<Owner>()
+
 /** Render `Comp` at the end of `target`, run its `init`/`update` jobs, and return a handle. */
 export function mount<P extends Record<string, any>>(Comp: Component<P>, target: Node, props: P = {} as P): MountedApp {
   const root = new Owner(null)
+  if (isDev()) {
+    roots.add(root)
+    installDevtoolsHook()
+  }
   const nodes = runWithOwner(root, () => insert(target, () => createComponent(Comp, props)))
   flush()
   return {
     destroy() {
       const current = nodes()
       root.dispose()
+      roots.delete(root)
       for (const n of current) n.parentNode?.removeChild(n)
+    },
+  }
+}
+
+/**
+ * Take over server-rendered markup in `target`: the app is rendered client-side and replaces the
+ * server nodes in the same task, so there is no flash. Focus, selection and text typed into
+ * inputs before this runs are not kept.
+ */
+export function hydrate<P extends Record<string, any>>(Comp: Component<P>, target: Element, props: P = {} as P): MountedApp {
+  const fragment = target.ownerDocument.createDocumentFragment()
+  while (target.firstChild) fragment.appendChild(target.firstChild)
+  try {
+    return mount(Comp, target, props)
+  } catch (err) {
+    // Keep the server markup if the client render fails.
+    target.replaceChildren(fragment)
+    throw err
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Dev tools hook: `__LUX_DEVTOOLS__.tree()` in the browser console (development mode only).
+
+export interface ComponentInfo {
+  name: string
+  props: Record<string, unknown>
+  children: ComponentInfo[]
+}
+
+/** The component trees of all mounted apps. */
+export function inspect(): ComponentInfo[] {
+  const walk = (o: Owner, out: ComponentInfo[]) => {
+    if (o instanceof ComponentOwner && !o.disposed) {
+      const info: ComponentInfo = { name: o.component?.name || 'Anonymous', props: {}, children: [] }
+      untrack(() => {
+        for (const key of Object.keys(o.props)) {
+          try {
+            info.props[key] = o.props[key]
+          } catch (err) {
+            info.props[key] = err
+          }
+        }
+      })
+      out.push(info)
+      out = info.children
+    }
+    for (const child of o.children ?? []) walk(child, out)
+  }
+  const out: ComponentInfo[] = []
+  for (const r of roots) walk(r, out)
+  return out
+}
+
+function installDevtoolsHook() {
+  const g = globalThis as any
+  if (g.__LUX_DEVTOOLS__) return
+  g.__LUX_DEVTOOLS__ = {
+    tree: inspect,
+    /** Print the component tree with console.group. */
+    print() {
+      const show = (nodes: ComponentInfo[]) => {
+        for (const n of nodes) {
+          console.groupCollapsed(n.name, n.props)
+          show(n.children)
+          console.groupEnd()
+        }
+      }
+      show(inspect())
     },
   }
 }

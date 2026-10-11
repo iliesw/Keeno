@@ -1,8 +1,23 @@
 {
-  "name": "@lux/compiler",
+  "name": "@inflector/lux-compiler",
   "version": "0.1.0",
   "description": "Compiler for Lux (.lx) single-file components",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iliesw/Lux.git",
+    "directory": "packages/compiler"
+  },
+  "homepage": "https://github.com/iliesw/Lux/tree/main/packages/compiler#readme",
+  "bugs": {
+    "url": "https://github.com/iliesw/Lux/issues"
+  },
+  "keywords": [
+    "lux",
+    "compiler",
+    "lx",
+    "components"
+  ],
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -21,8 +36,12 @@
     },
     "./package.json": "./package.json"
   },
-  "files": ["dist"],
-  "publishConfig": { "access": "public" },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "bun ../../scripts/build-package.ts --target=node",
     "prepack": "bun run build"
@@ -36,8 +55,11 @@
     "postcss-selector-parser": "^7.0.0"
   },
   "devDependencies": {
-    "lux": "workspace:*",
+    "@inflector/lux": "workspace:*",
     "@types/babel__generator": "^7.6.8",
     "@types/babel__traverse": "^7.20.6"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }

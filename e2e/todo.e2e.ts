@@ -191,11 +191,18 @@ test.describe('state options', () => {
     const historyLength = await page.evaluate(() => history.length)
     const search = page.locator('input.search')
 
-    await search.pressSequentially('plan', { delay: 50 })
-    // Still pending: the input shows the text, but the list and URL haven't changed.
+    // Type inside the page and check right after the last keystroke, so a slow test runner can't
+    // miss the window: the input shows the text, but the list and URL haven't changed yet.
+    const pending = await page.evaluate(() => {
+      const input = document.querySelector('input.search') as HTMLInputElement
+      for (const ch of 'plan') {
+        input.value += ch
+        input.dispatchEvent(new Event('input', { bubbles: true }))
+      }
+      return { count: document.querySelectorAll('main ul > li').length, url: location.href }
+    })
+    expect(pending).toEqual({ count: 2, url: TODO })
     await expect(search).toHaveValue('plan')
-    expect(await items(page).count()).toBe(2)
-    expect(page.url()).toBe(TODO)
 
     await expect(items(page)).toHaveText(['Read the plan✕'])
     await expect(page).toHaveURL(/\?q=plan$/)

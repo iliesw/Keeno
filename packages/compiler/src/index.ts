@@ -1,6 +1,6 @@
 // compile(source, { filename }) -> { js, css, map }
 import * as t from '@babel/types'
-import { CompileContext, generate } from './context'
+import { CompileContext, RUNTIME, generate } from './context'
 import { analyze, buildComponentAst, findAutoImports, rewrite } from './script'
 import { split } from './split'
 import { scopeStyle } from './style'
@@ -12,9 +12,9 @@ export { scopeStyle } from './style'
 export interface CompileOptions {
   /** Used for the scope hash, the component name, error messages and source maps. */
   filename: string
-  /** Module the runtime is imported from (default `lux`). */
+  /** Module the runtime is imported from (default `@inflector/lux`). */
   runtime?: string
-  /** Dev only: export a hot-swappable wrapper registered under this id (see `lux/internal` `hot`). */
+  /** Dev only: export a hot-swappable wrapper registered under this id (see `@inflector/lux/internal` `hot`). */
   hmrId?: string
 }
 
@@ -73,7 +73,7 @@ function inlineReturn(fn: t.FunctionDeclaration) {
 
 export function compile(source: string, options: CompileOptions): CompileResult {
   const { filename } = options
-  const runtime = options.runtime ?? 'lux'
+  const runtime = options.runtime ?? RUNTIME
   const parts = split(source)
   const scope = scopeClass(filename)
   const css = parts.style ? scopeStyle(parts.style.content, scope, filename) : ''

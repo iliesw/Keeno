@@ -1,6 +1,29 @@
 // DOM helpers used by compiled templates.
+import { isDev, warn } from './dev'
 import { Owner, createComputation, memo, runWithOwner, untrack } from './signal'
 import { State } from './state'
+
+let serverDocument: Document | null = null
+
+/** The document nodes are created in: the browser's, or the one `renderToString` installed. */
+export function getDocument(): Document {
+  return serverDocument ?? document
+}
+
+/** @internal Render into `doc` instead of the global document (server rendering). */
+export function setDocument(doc: Document | null): void {
+  serverDocument = doc
+}
+
+/** True while rendering on the server (`renderToString`). */
+export function isServer(): boolean {
+  return serverDocument !== null
+}
+
+/** True for DOM nodes. Duck-typed, so nodes from a server-side DOM work too. */
+export function isNode(value: unknown): value is Node {
+  return typeof value === 'object' && value !== null && typeof (value as Node).nodeType === 'number'
+}
 
 /**
  * Parse `html` once (lazily) and return a function that clones its first node. With `svg`, the
@@ -9,11 +32,14 @@ import { State } from './state'
  */
 export function template(html: string, svg = false): () => Node {
   let node: Node | undefined
+  let owner: Document | undefined
   return () => {
-    if (!node) {
-      const tpl = document.createElement('template')
+    const doc = getDocument()
+    if (!node || owner !== doc) {
+      const tpl = doc.createElement('template')
       tpl.innerHTML = svg ? `<svg>${html}</svg>` : html
       node = svg ? tpl.content.firstChild!.firstChild! : tpl.content.firstChild!
+      owner = doc
     }
     return node.cloneNode(true)
   }
@@ -23,28 +49,35 @@ export function template(html: string, svg = false): () => Node {
 // insert
 
 /** Flatten a static renderable value (no functions) into DOM nodes. */
-function collect(value: unknown, out: Node[]) {
+export function collect(value: unknown, out: Node[]): void {
   if (value == null || typeof value === 'boolean') return
   if (Array.isArray(value)) {
     for (const v of value) collect(v, out)
-  } else if (value instanceof Node) {
+  } else if (isNode(value)) {
     if (value.nodeType === 11) out.push(...value.childNodes)
     else out.push(value)
   } else {
-    out.push(document.createTextNode(String(value)))
+    out.push(getDocument().createTextNode(String(value)))
   }
 }
 
 /** True if rendering `value` never needs to re-run (no functions inside). */
-function isStatic(value: unknown): boolean {
+export function isStatic(value: unknown): boolean {
   if (typeof value === 'function') return false
   if (Array.isArray(value)) return value.every(isStatic)
   return true
 }
 
 /** Replace `current` with `next` before `marker`, moving only nodes that are out of place. */
-function reconcile(parent: Node, current: Node[], next: Node[], marker: Node | null) {
+export function reconcile(parent: Node, current: Node[], next: Node[], marker: Node | null): void {
   if (next.length === current.length && next.every((n, i) => n === current[i])) return
+  // The fast path assumes `current` is still in place; something else may have moved its nodes.
+  if (current.some((n) => n.parentNode !== parent)) return reconcileSlow(parent, current, next, marker)
+  reconcileArrays(parent, current.slice(), next, marker)
+}
+
+/** Remove what isn't in `next`, then walk `next` backwards, moving each node that is out of place. */
+function reconcileSlow(parent: Node, current: Node[], next: Node[], marker: Node | null) {
   if (current.length) {
     const keep = new Set(next)
     for (const n of current) if (!keep.has(n) && n.parentNode === parent) parent.removeChild(n)
@@ -54,6 +87,79 @@ function reconcile(parent: Node, current: Node[], next: Node[], marker: Node | n
     const n = next[i]
     if (n.parentNode !== parent || n.nextSibling !== ref) parent.insertBefore(n, ref)
     ref = n
+  }
+}
+
+/**
+ * Turn the contiguous nodes `a` (ending right before `after`) into `b` with few DOM operations:
+ * skip the common prefix and suffix, handle pure insertions, removals and a backward swap
+ * directly, and otherwise use a node -> index map, inserting runs that are already in order.
+ * The approach of udomdiff (Andrea Giammarchi) and dom-expressions' reconcileArrays (Ryan
+ * Carniato), both MIT licensed.
+ */
+function reconcileArrays(parent: Node, a: Node[], b: Node[], after: Node | null) {
+  let aStart = 0
+  let bStart = 0
+  let aEnd = a.length
+  let bEnd = b.length
+  let map: Map<Node, number> | null = null
+  while (aStart < aEnd || bStart < bEnd) {
+    // Common prefix.
+    if (aStart < aEnd && bStart < bEnd && a[aStart] === b[bStart]) {
+      aStart++
+      bStart++
+      continue
+    }
+    // Common suffix.
+    while (aEnd > aStart && bEnd > bStart && a[aEnd - 1] === b[bEnd - 1]) {
+      aEnd--
+      bEnd--
+    }
+    if (aEnd === aStart) {
+      // Only insertions left: before the first node of the matched suffix.
+      const ref = bEnd < b.length ? b[bEnd] : after
+      while (bStart < bEnd) parent.insertBefore(b[bStart++], ref)
+    } else if (bEnd === bStart) {
+      // Only removals left.
+      while (aStart < aEnd) {
+        const n = a[aStart++]
+        if (!map?.has(n) && n.parentNode === parent) parent.removeChild(n)
+      }
+    } else if (a[aStart] === b[bEnd - 1] && b[bStart] === a[aEnd - 1]) {
+      // The first and last nodes swapped places.
+      const ref = a[--aEnd].nextSibling
+      parent.insertBefore(b[bStart++], a[aStart++].nextSibling)
+      parent.insertBefore(b[--bEnd], ref)
+      a[aEnd] = b[bEnd]
+    } else {
+      if (!map) {
+        map = new Map()
+        for (let i = bStart; i < bEnd; i++) map.set(b[i], i)
+      }
+      const index = map.get(a[aStart])
+      if (index == null) {
+        // Not in `b` any more.
+        parent.removeChild(a[aStart++])
+      } else if (bStart < index && index < bEnd) {
+        // How many nodes from a[aStart] on are already in `b`'s order?
+        let i = aStart
+        let sequence = 1
+        while (++i < aEnd && i < bEnd) {
+          const t = map.get(a[i])
+          if (t == null || t !== index + sequence) break
+          sequence++
+        }
+        if (sequence > index - bStart) {
+          // A long run stays in place: insert the nodes `b` wants before it.
+          const ref = a[aStart]
+          while (bStart < index) parent.insertBefore(b[bStart++], ref)
+        } else {
+          parent.replaceChild(b[bStart++], a[aStart++])
+        }
+      } else {
+        aStart++
+      }
+    }
   }
 }
 
@@ -76,7 +182,7 @@ function patch(parent: Node, value: unknown, current: Node[], marker: Node | nul
  * Every function, including each function inside an array, gets its own computation, so
  * re-running one never re-evaluates (or re-creates) its siblings or the outer expression.
  */
-function resolve(value: unknown, commit: (v: unknown) => void) {
+export function resolve(value: unknown, commit: (v: unknown) => void): void {
   if (typeof value === 'function') {
     createComputation(() => resolve((value as () => unknown)(), commit))
   } else if (isStatic(value)) {
@@ -106,6 +212,25 @@ export function insert(parent: Node, value: unknown, marker: Node | null = null)
   let current: Node[] = []
   resolve(value, (v) => (current = patch(parent, v, current, marker)))
   return () => current
+}
+
+/**
+ * Resolve a renderable value into a tracked list of nodes owned by the current owner (computations
+ * it creates are disposed with that owner). Reading the returned accessor tracks changes.
+ */
+export function region(value: unknown): () => Node[] {
+  const out = new State<Node[]>([], { equals: () => false })
+  let ready = false
+  let nodes: Node[] = []
+  resolve(value, (v) => {
+    const next: Node[] = []
+    collect(v, next)
+    nodes = next
+    if (ready) out.set(next)
+  })
+  ready = true
+  out.set(nodes)
+  return () => out.get()
 }
 
 // ---------------------------------------------------------------------------
@@ -184,8 +309,13 @@ export function mapKeyed<T>(
         else old.set(r.key, [r])
       }
       const next: Row<T>[] = []
+      const seen = isDev() ? new Set<unknown>() : null
       items.forEach((value, i) => {
         const k = key(value, i)
+        if (seen) {
+          if (seen.has(k)) warn(`duplicate key ${String(k)} in a list: rows with the same key may be reordered or reused unexpectedly`)
+          seen.add(k)
+        }
         const row = old.get(k)?.shift()
         if (row) {
           row.item.set(value)
@@ -224,11 +354,25 @@ export function classValue(v: unknown): string {
   return String(v)
 }
 
+/** Attributes holding URLs, where a dynamic `javascript:` value would run code. */
+const URL_ATTRS = new Set(['href', 'src', 'action', 'formaction', 'xlink:href', 'poster', 'cite', 'background', 'ping'])
+// Browsers ignore leading control characters/spaces and tabs or newlines inside the scheme.
+const JAVASCRIPT_URL = /^[\u0000-\u001F ]*j[\r\n\t]*a[\r\n\t]*v[\r\n\t]*a[\r\n\t]*s[\r\n\t]*c[\r\n\t]*r[\r\n\t]*i[\r\n\t]*p[\r\n\t]*t[\r\n\t]*:/i
+
+/** True for a `javascript:` URL in a URL attribute. Static attributes written in a template are never checked. */
+export function isUnsafeUrl(name: string, v: unknown): boolean {
+  return URL_ATTRS.has(name.toLowerCase()) && typeof v === 'string' && JAVASCRIPT_URL.test(v)
+}
+
 function setAttr(el: Element, name: string, v: unknown, scope?: string) {
-  if (name === 'class') {
+  if (isUnsafeUrl(name, v)) {
+    console.error(`[lux] blocked a javascript: URL in ${name}=… on <${el.tagName.toLowerCase()}>`)
+    el.removeAttribute(name)
+  } else if (name === 'class') {
     let cls = classValue(v)
     if (scope) cls = cls ? `${cls} ${scope}` : scope
-    if (el.getAttribute('class') !== cls) el.setAttribute('class', cls)
+    if (!cls) el.removeAttribute('class')
+    else if (el.getAttribute('class') !== cls) el.setAttribute('class', cls)
   } else if (PROPERTIES.has(name) && name in el) {
     const value = name === 'value' ? (v == null ? '' : v) : v
     if ((el as any)[name] !== value) (el as any)[name] = value

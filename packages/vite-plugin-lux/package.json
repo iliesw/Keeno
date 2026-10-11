@@ -1,8 +1,23 @@
 {
-  "name": "vite-plugin-lux",
+  "name": "@inflector/vite-plugin-lux",
   "version": "0.1.0",
   "description": "Vite plugin for Lux (.lx) single-file components",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iliesw/Lux.git",
+    "directory": "packages/vite-plugin-lux"
+  },
+  "homepage": "https://github.com/iliesw/Lux/tree/main/packages/vite-plugin-lux#readme",
+  "bugs": {
+    "url": "https://github.com/iliesw/Lux/issues"
+  },
+  "keywords": [
+    "lux",
+    "vite",
+    "vite-plugin",
+    "lx"
+  ],
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -15,12 +30,26 @@
     },
     "./package.json": "./package.json"
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "bun ../../scripts/build-package.ts --target=node",
     "prepack": "bun run build"
   },
-  "dependencies": { "@lux/compiler": "workspace:*" },
-  "peerDependencies": { "vite": "^5.0.0 || ^6.0.0 || ^7.0.0" },
-  "devDependencies": { "vite": "^5.4.11" }
+  "dependencies": {
+    "@inflector/lux-compiler": "workspace:*"
+  },
+  "peerDependencies": {
+    "vite": "^5.0.0 || ^6.0.0 || ^7.0.0 || ^8.0.0"
+  },
+  "devDependencies": {
+    "vite": "^5.4.11"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
 }

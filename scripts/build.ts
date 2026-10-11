@@ -1,7 +1,7 @@
 // Build every publishable package, in dependency order (each one's .d.ts files need its deps' dist/).
 import path from 'node:path'
 
-const order = ['lux', 'compiler', 'vite-plugin-lux', 'language-server', 'lux-check']
+const order = ['lux', 'router', 'compiler', 'vite-plugin-lux', 'language-server', 'lux-check']
 const root = path.resolve(import.meta.dir, '..')
 
 for (const name of order) {
