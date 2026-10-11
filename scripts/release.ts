@@ -4,7 +4,7 @@
 //   bun run scripts/release.ts [--dry-run]
 //
 // - npm packages: built, packed with `bun pm pack` (which turns `workspace:` ranges into real
-//   versions), then published with `npm publish` (with provenance on GitHub Actions).
+//   versions), then published with `npm publish` (with provenance on GitHub Actions, when the repo is public).
 // - The VS Code extension: packaged and published to the Marketplace (VSCE_PAT) and Open VSX
 //   (OVSX_PAT) when its version has no git tag yet.
 // Each release is tagged `<name>@<version>`, and a `New tag:` line is printed for changesets/action.
@@ -16,6 +16,8 @@ import path from 'node:path'
 const root = path.resolve(import.meta.dir, '..')
 const dryRun = process.argv.includes('--dry-run')
 const ci = !!process.env.GITHUB_ACTIONS
+// npm rejects provenance from private repositories.
+const provenance = ci && process.env.REPO_VISIBILITY === 'public'
 const out = path.join(tmpdir(), 'lux-release')
 
 /** Publish order: dependencies first. */
@@ -63,7 +65,7 @@ for (const dir of npmPackages) {
   // Prereleases (1.0.0-beta.1) go to the `next` dist-tag, so `latest` stays stable.
   const distTag = pkg.version.includes('-') ? 'next' : 'latest'
   const flags = ['--access', 'public', '--tag', distTag]
-  if (ci) flags.push('--provenance')
+  if (provenance) flags.push('--provenance')
   if (dryRun) flags.push('--dry-run')
   console.log(`[release] publishing ${id} (${distTag})`)
   await $`npm publish ${tarball} ${flags}`.cwd(root)
