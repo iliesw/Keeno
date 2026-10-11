@@ -1,6 +1,6 @@
 {
   "name": "@inflector/lux-check",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Command-line type checker for Lux (.lx) projects",
   "license": "MIT",
   "repository": {
