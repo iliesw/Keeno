@@ -81,6 +81,10 @@ const server = http.createServer((req, res) => {
 })
 
 if (!prod) {
+  // A config change restarts Vite and briefly loads two copies of modules; log what that throws
+  // instead of taking the dev server down.
+  process.on('uncaughtException', (e) => console.error(e))
+  process.on('unhandledRejection', (e) => console.error(e))
   const { createServer } = await import('vite')
   // HMR shares this server's port instead of opening its own WebSocket port.
   vite = await createServer({ root, server: { middlewareMode: true, hmr: { server } }, appType: 'custom' })

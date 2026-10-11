@@ -12,6 +12,8 @@ export interface DocModule {
   html: string
   headings: Heading[]
   raw: string
+  /** Date of the last commit to the page (YYYY-MM-DD), or ''. */
+  updated: string
 }
 
 export interface NavItem {

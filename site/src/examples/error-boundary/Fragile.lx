@@ -1,0 +1,30 @@
+<script lang="ts">
+  const count = state(0)
+
+  // A derived that throws passes the error to whatever renders it.
+  const label = derived(() => {
+    if (count >= 3) throw new Error(`count reached ${count}`)
+    return `${count} / 3`
+  })
+</script>
+
+<div class="box">
+  <span class="value">{label}</span>
+  <button onClick={() => count.set(count + 1)}>Increment</button>
+</div>
+
+<style>
+  .box {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+  .value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+</style>

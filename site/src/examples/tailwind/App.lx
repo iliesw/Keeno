@@ -1,0 +1,50 @@
+<script lang="ts">
+  const plans = [
+    { name: 'Hobby', monthly: 0, features: ['1 project', 'Community support'] },
+    { name: 'Pro', monthly: 12, features: ['Unlimited projects', 'Email support', 'Custom domains'], popular: true },
+    { name: 'Team', monthly: 39, features: ['Everything in Pro', 'SSO', 'Audit log'] },
+  ]
+  const yearly = state(false)
+  const price = (monthly: number) => (yearly ? Math.round(monthly * 12 * 0.8) : monthly)
+</script>
+
+<div class="mx-auto max-w-3xl">
+  <div class="mb-6 flex items-center justify-center gap-3 text-sm">
+    <span class={yearly ? 'opacity-50' : 'font-semibold'}>Monthly</span>
+    <button
+      role="switch"
+      aria-checked={yearly}
+      aria-label="Bill yearly"
+      onClick={() => yearly.set(!yearly)}
+      class={['relative h-6 w-11 rounded-full border-0 p-0 transition-colors', yearly ? 'bg-orange-500' : 'bg-neutral-300 dark:bg-neutral-700']}
+    >
+      <span class={['absolute top-1 left-1 size-4 rounded-full bg-white shadow transition-transform', yearly && 'translate-x-5']}></span>
+    </button>
+    <span class={yearly ? 'font-semibold' : 'opacity-50'}>Yearly <em class="text-orange-500 not-italic">−20%</em></span>
+  </div>
+
+  <div class="grid gap-4 sm:grid-cols-3">
+    {plans.map((p) => (
+      <div
+        key={p.name}
+        class={[
+          'relative flex flex-col rounded-2xl border p-5 transition hover:-translate-y-1 hover:shadow-xl',
+          p.popular ? 'border-orange-500 shadow-lg shadow-orange-500/10' : 'border-neutral-200 dark:border-neutral-800',
+        ]}
+      >
+        {p.popular && <span class="absolute -top-3 left-5 rounded-full bg-orange-500 px-2 py-0.5 text-xs font-semibold text-black">Popular</span>}
+        <h3 class="text-lg font-bold">{p.name}</h3>
+        <p class="mt-2 text-3xl font-black">
+          ${price(p.monthly)}
+          <span class="text-sm font-normal opacity-60">/{yearly ? 'yr' : 'mo'}</span>
+        </p>
+        <ul class="mt-4 flex flex-1 flex-col gap-2 p-0 text-sm">
+          {p.features.map((f) => (
+            <li key={f} class="flex gap-2"><span class="text-orange-500">✓</span>{f}</li>
+          ))}
+        </ul>
+        <button class={['mt-5 w-full rounded-lg py-2 font-semibold', p.popular ? 'border-orange-500 bg-orange-500 text-black' : '']}>Choose {p.name}</button>
+      </div>
+    ))}
+  </div>
+</div>

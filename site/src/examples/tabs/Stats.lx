@@ -1,0 +1,36 @@
+<script lang="ts">
+  const { user } = props<{ user: string }>()
+  const stats = [
+    { label: 'Commits', value: 1284 },
+    { label: 'Reviews', value: 312 },
+    { label: 'Issues', value: 97 },
+  ]
+</script>
+
+<h3>{user}'s year</h3>
+<dl>
+  {stats.map((s) => (
+    <div key={s.label}>
+      <dt>{s.label}</dt>
+      <dd>{s.value.toLocaleString()}</dd>
+    </div>
+  ))}
+</dl>
+
+<style>
+  dl {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+    margin: 0;
+  }
+  dt {
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+  dd {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+  }
+</style>

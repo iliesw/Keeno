@@ -28,3 +28,14 @@ for (const route of routes() as string[]) {
   writeFileSync(file, html)
 }
 console.log(`Prerendered ${routes().length} pages to dist/client`)
+
+// robots.txt, and a sitemap when the deployed origin is known: `SITE_URL=https://… bun run build`.
+const site = process.env.SITE_URL?.replace(/\/+$/, '')
+let robots = 'User-agent: *\nAllow: /\n'
+if (site) {
+  const urls = (routes() as string[]).filter((r) => r !== '/404').map((r) => `  <url><loc>${site}${r === '/' ? '/' : r}</loc></url>`)
+  writeFileSync(dist('client/sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join('\n')}\n</urlset>\n`)
+  robots += `Sitemap: ${site}/sitemap.xml\n`
+  console.log(`Wrote sitemap.xml for ${site}`)
+}
+writeFileSync(dist('client/robots.txt'), robots)

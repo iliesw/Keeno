@@ -1,0 +1,116 @@
+<script lang="ts">
+  import { Await } from '@inflector/lux'
+  import { fetchUser, type User } from './api'
+
+  const id = state(1)
+  const fail = state(false)
+</script>
+
+<div class="bar">
+  <button disabled={id <= 1} onClick={() => id.set(id - 1)}>← Prev</button>
+  <span>User #{id}</span>
+  <button disabled={id >= 5} onClick={() => id.set(id + 1)}>Next →</button>
+  <label><input type="checkbox" bind:checked={fail} /> Make it fail</label>
+</div>
+
+<!-- A new promise whenever `id` or `fail` changes; `pending` shows until it settles. -->
+<Await
+  promise={fetchUser(id, fail)}
+  pending={() => (
+    <div class="card skeleton">
+      <div class="avatar"></div>
+      <div class="lines"><span></span><span></span></div>
+    </div>
+  )}
+  fulfilled={(u: User) => (
+    <div class="card">
+      <div class="avatar" style={`background:${u.color}`}>{u.name[0]}</div>
+      <div>
+        <h3>{u.name}</h3>
+        <p>{u.role} · {u.city}</p>
+      </div>
+    </div>
+  )}
+  rejected={(error) => (
+    <div class="card error">
+      <p>⚠️ {String(error)}</p>
+      <button onClick={() => fail.set(false)}>Retry</button>
+    </div>
+  )}
+/>
+
+<style>
+  .bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+  .bar span {
+    min-width: 5rem;
+    text-align: center;
+    font-weight: 600;
+  }
+  .bar label {
+    margin-left: auto;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+  .card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    min-height: 88px;
+    padding: 1rem;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+  }
+  .card h3 {
+    margin: 0;
+  }
+  .card p {
+    margin: 0;
+    color: var(--muted);
+  }
+  .avatar {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    color: white;
+    font-size: 1.4rem;
+    font-weight: 700;
+    background: var(--surface);
+  }
+  .lines {
+    display: grid;
+    gap: 8px;
+    flex: 1;
+  }
+  .lines span {
+    height: 12px;
+    border-radius: 6px;
+    background: var(--surface);
+  }
+  .lines span:last-child {
+    width: 60%;
+  }
+  .skeleton {
+    animation: pulse 0.8s ease-in-out infinite alternate;
+  }
+  .error {
+    justify-content: space-between;
+    border-color: #ef4444;
+  }
+  .error p {
+    color: #ef4444;
+  }
+  @keyframes pulse {
+    to {
+      opacity: 0.45;
+    }
+  }
+</style>

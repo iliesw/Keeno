@@ -1,0 +1,12 @@
+<script lang="ts">
+  const count = state(0)
+  const doubled = derived(() => count * 2)
+</script>
+
+<button onClick={() => count.set(count + 1)}>
+  Clicked {count} times ({doubled} doubled)
+</button>
+
+<style>
+  button { color: orange }
+</style>

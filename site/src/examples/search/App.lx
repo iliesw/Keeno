@@ -1,0 +1,79 @@
+<script lang="ts">
+  import { frameworks } from './data'
+
+  // The input updates `query` 250 ms after typing stops: one search per pause, not per key.
+  const query = state('', { debounce: 250 })
+  const searches = state(0)
+
+  const results = derived(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return frameworks
+    return frameworks.filter((f) => f.name.toLowerCase().includes(q) || f.tagline.toLowerCase().includes(q))
+  })
+
+  // Runs when `query` changes, which is only once the debounce has settled.
+  update(() => {
+    if (query) searches.set(searches.peek() + 1)
+  })
+
+  /** Split `text` around the first match of the query, for highlighting. */
+  const split = (text: string): [string, string, string] => {
+    const q = query.trim()
+    const i = q ? text.toLowerCase().indexOf(q.toLowerCase()) : -1
+    return i < 0 ? [text, '', ''] : [text.slice(0, i), text.slice(i, i + q.length), text.slice(i + q.length)]
+  }
+</script>
+
+<input type="search" bind:value={query} placeholder="Search frameworks…" />
+<p class="stats">{results.length} results · {searches} searches run</p>
+
+<ul>
+  {results.map((f) => (
+    <li key={f.name}>
+      <strong>{split(f.name)[0]}<mark>{split(f.name)[1]}</mark>{split(f.name)[2]}</strong>
+      <span>{f.tagline}</span>
+      <small>{f.year}</small>
+    </li>
+  ))}
+</ul>
+{results.length === 0 && <p class="empty">No framework matches “{query}”.</p>}
+
+<style>
+  input {
+    width: 100%;
+    font-size: 1rem;
+  }
+  .stats {
+    margin: 0.5rem 0;
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+  ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 2px;
+  }
+  li {
+    display: grid;
+    grid-template-columns: 6.5rem 1fr auto;
+    gap: 0.75rem;
+    align-items: baseline;
+    padding: 0.45rem 0.75rem;
+    border-radius: 8px;
+  }
+  li:hover {
+    background: var(--surface);
+  }
+  span,
+  small,
+  .empty {
+    color: var(--muted);
+  }
+  mark {
+    background: color-mix(in srgb, var(--accent) 35%, transparent);
+    color: inherit;
+    border-radius: 3px;
+  }
+</style>

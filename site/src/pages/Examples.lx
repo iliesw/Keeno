@@ -1,0 +1,82 @@
+<script lang="ts">
+  import { Link } from '@inflector/lux-router'
+  import Footer from '../components/Footer.lx'
+  import Icon from '../components/Icon.lx'
+  import LiveDemo from '../components/LiveDemo.lx'
+  import Navbar from '../components/Navbar.lx'
+  import { categories, exampleComponent, examples } from '../examples'
+
+  const filter = state<string>('All', { url: { param: 'category', replace: true } })
+  const shown = derived(() => (filter === 'All' ? examples : examples.filter((e) => e.category === filter)))
+
+  init(() => {
+    document.title = 'Examples · Lux'
+  })
+</script>
+
+<Navbar />
+<main class="mx-auto w-full max-w-400 px-6 pt-32 md:px-10">
+  <section class="animate-fade-up flex flex-col items-start gap-4">
+    <p class="flex items-center gap-2 font-code text-xs tracking-widest text-orange-500 uppercase"><Icon name="sparkles" /> {examples.length} live examples</p>
+    <h1 class="font-s2 text-5xl leading-none md:text-7xl">Examples</h1>
+    <p class="max-w-2xl font-s2 text-lg text-neutral-600 dark:text-neutral-400">
+      Small, complete apps. Every one below is running right now: click around, then read the source or open it in the playground to change it.
+    </p>
+    <div class="mt-4 flex flex-wrap gap-1.5" role="tablist" aria-label="Category">
+      {['All', ...categories].map((c) => (
+        <button
+          key={c}
+          type="button"
+          role="tab"
+          aria-selected={filter === c}
+          onClick={() => filter.set(c)}
+          class={[
+            'cursor-pointer rounded-full border px-3.5 py-1 text-sm transition',
+            filter === c ? 'border-neutral-900 bg-neutral-900 text-white dark:border-white dark:bg-white dark:text-black' : 'hover:bg-neutral-100 dark:hover:bg-neutral-900',
+          ]}
+        >
+          {c}
+          <span class="ml-1.5 opacity-50">{c === 'All' ? examples.length : examples.filter((e) => e.category === c).length}</span>
+        </button>
+      ))}
+    </div>
+  </section>
+
+  <section class="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+    {shown.map((e) => (
+      <article key={e.slug} class="ex-card group flex flex-col overflow-hidden rounded-2xl border bg-neutral-50 p-1.5 transition hover:border-neutral-300 dark:bg-neutral-900/60 dark:hover:border-neutral-700">
+        <div class="ex-preview relative h-72 overflow-hidden rounded-xl border border-black/5 bg-white p-5 dark:border-white/5 dark:bg-ink">
+          <LiveDemo component={exampleComponent(e.slug)!} class="ex-zoom" />
+          <span class="pointer-events-none absolute right-3 bottom-3 z-10 flex items-center gap-1.5 rounded-full border bg-white/80 px-2 py-0.5 font-code text-[10px] tracking-wider uppercase backdrop-blur dark:bg-black/50">
+            <span class="size-1.5 rounded-full bg-green-500 shadow-[0_0_6px] shadow-green-500"></span> Live
+          </span>
+        </div>
+        <div class="flex flex-1 flex-col gap-2 px-3.5 pt-4 pb-3">
+          <div class="flex items-center justify-between gap-2">
+            <Link href={`/examples/${e.slug}`} class="text-lg font-bold hover:underline">{e.title}</Link>
+            <span class="rounded-full bg-neutral-200/70 px-2 py-0.5 text-[11px] text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400">{e.category}</span>
+          </div>
+          <p class="text-sm leading-relaxed text-neutral-600 dark:text-neutral-400">{e.description}</p>
+          <div class="mt-auto flex flex-wrap items-center gap-1.5 pt-3">
+            {e.concepts.map((c) => (
+              <span key={c.label} class="rounded-md border bg-white px-1.5 py-0.5 font-code text-[11px] text-neutral-600 dark:bg-ink dark:text-neutral-300">{c.label}</span>
+            ))}
+            <div class="ml-auto flex gap-1">
+              <Link href={`/examples/${e.slug}`} class="ex-action" aria-label={`Source of ${e.title}`}><Icon name="code" /></Link>
+              <Link href={`/playground?example=${e.slug}`} class="ex-action" aria-label={`Open ${e.title} in the playground`}><Icon name="play" /></Link>
+            </div>
+          </div>
+        </div>
+      </article>
+    ))}
+  </section>
+
+  <section class="mt-24 flex flex-col items-center gap-4 rounded-3xl border bg-[radial-gradient(circle_at_50%_0%,rgba(255,154,31,0.16),transparent_60%)] px-6 py-16 text-center">
+    <h2 class="font-s2 text-3xl md:text-4xl">Have an idea? Build it in the browser.</h2>
+    <p class="max-w-xl text-neutral-600 dark:text-neutral-400">The playground runs the real Lux compiler as you type. Share your code with a link.</p>
+    <Link href="/playground" class="mt-2 flex items-center gap-2 rounded-lg bg-orange-400 px-4 py-2 font-bold text-black transition hover:bg-orange-300">
+      <Icon name="play" /> Open the playground
+    </Link>
+  </section>
+</main>
+<Footer />

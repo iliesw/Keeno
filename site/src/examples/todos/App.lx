@@ -1,0 +1,102 @@
+<script lang="ts">
+  import TodoItem from './TodoItem.lx'
+
+  type Todo = { id: number; text: string; done: boolean }
+  type Filter = 'all' | 'active' | 'done'
+
+  // Saved to localStorage (and synced across tabs) under "lux-example-todos".
+  const todos = state<Todo[]>(
+    [
+      { id: 1, text: 'Learn state() and derived()', done: true },
+      { id: 2, text: 'Build something with Lux', done: false },
+    ],
+    { persist: 'lux-example-todos' },
+  )
+  const draft = state('')
+  const filter = state<Filter>('all')
+
+  const visible = derived(() => todos.filter((t) => filter === 'all' || (filter === 'done') === t.done))
+  const left = derived(() => todos.filter((t) => !t.done).length)
+
+  function add(e: SubmitEvent) {
+    e.preventDefault()
+    const text = draft.trim()
+    if (!text) return
+    // Updates are immutable: create a new array instead of pushing.
+    todos.set([...todos, { id: Date.now(), text, done: false }])
+    draft.set('')
+  }
+  const toggle = (id: number) => todos.set(todos.map((t) => (t.id === id ? { ...t, done: !t.done } : t)))
+  const remove = (id: number) => todos.set(todos.filter((t) => t.id !== id))
+  const clearDone = () => todos.set(todos.filter((t) => !t.done))
+</script>
+
+<form onSubmit={add}>
+  <input bind:value={draft} placeholder="What needs doing?" />
+  <button type="submit" disabled={!draft.trim()}>Add</button>
+</form>
+
+<ul>
+  {visible.map((todo) => (
+    <TodoItem key={todo.id} todo={todo} onToggle={toggle} onRemove={remove} />
+  ))}
+</ul>
+{visible.length === 0 && <p class="empty">Nothing here.</p>}
+
+<footer>
+  <span>{left} {left === 1 ? 'item' : 'items'} left</span>
+  <div class="filters">
+    {(['all', 'active', 'done'] as const).map((f) => (
+      <button key={f} class={{ selected: filter === f }} onClick={() => filter.set(f)}>{f}</button>
+    ))}
+  </div>
+  <button class="link" onClick={clearDone} disabled={left === todos.length}>Clear done</button>
+</footer>
+
+<style>
+  form {
+    display: flex;
+    gap: 0.5rem;
+  }
+  input {
+    flex: 1;
+  }
+  ul {
+    list-style: none;
+    margin: 1rem 0;
+    padding: 0;
+  }
+  .empty {
+    color: var(--muted);
+    text-align: center;
+  }
+  footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+  .filters {
+    display: flex;
+    gap: 0.25rem;
+  }
+  .filters button {
+    padding: 2px 10px;
+    text-transform: capitalize;
+    border-color: transparent;
+    background: none;
+  }
+  .filters button.selected {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .link {
+    border: none;
+    background: none;
+    padding: 2px 4px;
+    text-decoration: underline;
+  }
+</style>

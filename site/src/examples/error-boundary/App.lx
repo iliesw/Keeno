@@ -1,0 +1,46 @@
+<script lang="ts">
+  import { ErrorBoundary } from '@inflector/lux'
+  import Fragile from './Fragile.lx'
+
+  const caught = state(0)
+</script>
+
+<p class="lead">The counter throws while rendering when it reaches 3. The boundary catches it and shows a fallback; the rest of the page keeps working.</p>
+
+<ErrorBoundary
+  fallback={(error, reset) => (
+    <div class="fallback">
+      <strong>Something broke</strong>
+      <code>{String(error)}</code>
+      <button onClick={reset}>Try again</button>
+    </div>
+  )}
+  onError={(error) => {
+    caught.set(caught.peek() + 1)
+    console.warn('Caught by the boundary:', error)
+  }}
+>
+  <Fragile />
+</ErrorBoundary>
+
+<p class="meta">Errors caught: {caught}</p>
+
+<style>
+  .lead,
+  .meta {
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+  .fallback {
+    display: grid;
+    justify-items: start;
+    gap: 0.5rem;
+    padding: 1rem;
+    border: 1px solid #ef4444;
+    border-radius: 12px;
+    background: color-mix(in srgb, #ef4444 8%, transparent);
+  }
+  .fallback code {
+    color: #ef4444;
+  }
+</style>

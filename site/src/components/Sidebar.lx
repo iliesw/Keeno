@@ -1,22 +1,46 @@
 <script lang="ts">
   import { Link } from '@inflector/lux-router'
+  import Icon from './Icon.lx'
   import { nav } from '../docs'
+  import type { IconName } from '../icons'
+
+  const groupIcons: Record<string, IconName> = {
+    'Getting Started': 'sparkles',
+    'Core Concepts': 'layers',
+    Guides: 'book',
+    Reference: 'code',
+  }
 </script>
 
-<nav class="flex w-50 flex-col gap-2" aria-label="Documentation">
+<nav class="flex w-56 flex-col gap-6 pb-8" aria-label="Documentation">
+  <div class="flex flex-col gap-1">
+    <Link href="/examples" class="group flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm font-bold transition-colors hover:bg-neutral-200/60 dark:hover:bg-neutral-800/60">
+      <span class="grid size-6 place-items-center rounded-md border bg-white text-orange-500 dark:bg-neutral-900"><Icon name="grid" /></span>
+      Examples
+    </Link>
+    <Link href="/playground" class="group flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm font-bold transition-colors hover:bg-neutral-200/60 dark:hover:bg-neutral-800/60">
+      <span class="grid size-6 place-items-center rounded-md border bg-white text-orange-500 dark:bg-neutral-900"><Icon name="play" /></span>
+      Playground
+    </Link>
+  </div>
   {nav.map((group) => (
-    <div key={group.title} class="mb-3 flex flex-col gap-1.5">
-      <p class="px-2 text-sm opacity-70">{group.title}</p>
-      {group.items.map((item) => (
-        <Link
-          key={item.slug}
-          href={`/docs/${item.slug}`}
-          exact
-          class="block w-full rounded-md px-2 py-1.25 text-start text-sm font-black transition-colors hover:bg-neutral-200 dark:hover:bg-neutral-800 [&.active]:bg-neutral-200 [&.active]:text-black dark:[&.active]:bg-neutral-800 dark:[&.active]:text-white"
-        >
-          {item.title}
-        </Link>
-      ))}
+    <div key={group.title} class="flex flex-col">
+      <p class="mb-1.5 flex items-center gap-2 px-2 text-xs font-bold tracking-wider text-neutral-500 uppercase">
+        <span class="opacity-70 [&_svg]:size-3.5"><Icon name={groupIcons[group.title] ?? 'file'} /></span>
+        {group.title}
+      </p>
+      <div class="ml-3.5 flex flex-col border-l border-neutral-200 dark:border-neutral-800">
+        {group.items.map((item) => (
+          <Link
+            key={item.slug}
+            href={`/docs/${item.slug}`}
+            exact
+            class="relative -ml-px block border-l border-transparent py-1.5 pl-3.5 text-sm text-neutral-600 transition-colors hover:border-neutral-400 hover:text-neutral-900 dark:text-neutral-400 dark:hover:border-neutral-500 dark:hover:text-white [&.active]:border-orange-400 [&.active]:font-semibold [&.active]:text-neutral-900 dark:[&.active]:text-white"
+          >
+            {item.title}
+          </Link>
+        ))}
+      </div>
     </div>
   ))}
 </nav>

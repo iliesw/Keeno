@@ -1,0 +1,113 @@
+<script lang="ts">
+  const email = state('')
+  const password = state('')
+  const agree = state(false)
+  const touched = state<Record<string, boolean>>({})
+  const sent = state(false)
+
+  // Validation is just derived state: it recomputes when a field it reads changes.
+  const errors = derived(() => ({
+    email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? '' : 'Enter a valid email address',
+    password: password.length >= 8 ? '' : `At least 8 characters (${8 - password.length} to go)`,
+    agree: agree ? '' : 'Please accept the terms',
+  }))
+  const strength = derived(() => {
+    let s = 0
+    if (password.length >= 8) s++
+    if (/[A-Z]/.test(password) && /[a-z]/.test(password)) s++
+    if (/\d/.test(password)) s++
+    if (/[^A-Za-z0-9]/.test(password)) s++
+    return s
+  })
+  const valid = derived(() => !errors.email && !errors.password && !errors.agree)
+
+  const touch = (field: string) => touched.set({ ...touched, [field]: true })
+  const show = (field: 'email' | 'password' | 'agree') => touched[field] && errors[field]
+
+  function submit(e: SubmitEvent) {
+    e.preventDefault()
+    touched.set({ email: true, password: true, agree: true })
+    if (valid) sent.set(true)
+  }
+</script>
+
+{sent ? (
+  <div class="done">
+    <p>🎉 Welcome aboard, <strong>{email}</strong>!</p>
+    <button onClick={() => sent.set(false)}>Back</button>
+  </div>
+) : (
+  <form onSubmit={submit} novalidate>
+    <label>
+      Email
+      <input type="email" bind:value={email} onBlur={() => touch('email')} class={{ bad: show('email') }} placeholder="you@example.com" />
+      {show('email') && <small>{errors.email}</small>}
+    </label>
+    <label>
+      Password
+      <input type="password" bind:value={password} onBlur={() => touch('password')} class={{ bad: show('password') }} />
+      <div class="meter">
+        {[1, 2, 3, 4].map((n) => <span key={n} class={{ on: strength >= n }} style={`--n:${strength}`}></span>)}
+      </div>
+      {show('password') && <small>{errors.password}</small>}
+    </label>
+    <label class="check">
+      <input type="checkbox" bind:checked={agree} onChange={() => touch('agree')} /> I accept the terms
+    </label>
+    {show('agree') && <small>{errors.agree}</small>}
+    <button type="submit" class="submit">Create account</button>
+  </form>
+)}
+
+<style>
+  form {
+    display: grid;
+    gap: 0.9rem;
+    max-width: 340px;
+  }
+  label {
+    display: grid;
+    gap: 0.3rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+  }
+  .check {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 400;
+  }
+  input.bad {
+    border-color: #ef4444;
+  }
+  small {
+    color: #ef4444;
+    font-size: 0.75rem;
+    font-weight: 400;
+  }
+  .meter {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+  }
+  .meter span {
+    height: 4px;
+    border-radius: 2px;
+    background: var(--border);
+    transition: background 0.2s;
+  }
+  .meter span.on {
+    background: hsl(calc(var(--n) * 30) 80% 50%);
+  }
+  .submit {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: black;
+    font-weight: 600;
+  }
+  .done {
+    display: grid;
+    justify-items: start;
+    gap: 0.5rem;
+  }
+</style>

@@ -1,0 +1,112 @@
+<script lang="ts">
+  import { Transition } from '@inflector/lux'
+
+  type Kind = 'success' | 'info' | 'error'
+  type Toast = { id: number; kind: Kind; text: string }
+
+  const MESSAGES: Record<Kind, string[]> = {
+    success: ['Saved!', 'Deployed to production', 'Invite sent'],
+    info: ['3 new comments', 'Update available', 'Syncing in the background'],
+    error: ['Network error', 'Permission denied', 'Payment failed'],
+  }
+  const ICONS: Record<Kind, string> = { success: '✓', info: 'i', error: '!' }
+
+  const toasts = state<Toast[]>([])
+  let id = 0
+
+  function push(kind: Kind) {
+    const list = MESSAGES[kind]
+    const toast = { id: ++id, kind, text: list[Math.floor(Math.random() * list.length)] }
+    toasts.set([...toasts, toast])
+    setTimeout(() => dismiss(toast.id), 3500)
+  }
+  const dismiss = (id: number) => toasts.set(toasts.filter((t) => t.id !== id))
+</script>
+
+<div class="buttons">
+  <button onClick={() => push('success')}>Success</button>
+  <button onClick={() => push('info')}>Info</button>
+  <button onClick={() => push('error')}>Error</button>
+</div>
+
+<!-- Removed toasts stay until their leave transition ends; the rest slide into place. -->
+<ul class="stack">
+  <Transition name="toast">
+    {toasts.map((t) => (
+      <li key={t.id} class="toast-wrap">
+        <div class={`toast ${t.kind}`}>
+          <span class="icon">{ICONS[t.kind]}</span>
+          <span class="text">{t.text}</span>
+          <button class="close" aria-label="Dismiss" onClick={() => dismiss(t.id)}>✕</button>
+        </div>
+      </li>
+    ))}
+  </Transition>
+</ul>
+
+<style>
+  .buttons {
+    display: flex;
+    gap: 0.5rem;
+  }
+  .stack {
+    display: grid;
+    gap: 0.5rem;
+    margin: 1.25rem 0 0;
+    padding: 0;
+    list-style: none;
+    min-height: 160px;
+  }
+  .toast {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.7rem 0.8rem;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--bg);
+    box-shadow: 0 8px 24px -12px rgb(0 0 0 / 0.35);
+  }
+  .icon {
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    color: white;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .success .icon {
+    background: #16a34a;
+  }
+  .info .icon {
+    background: #3b82f6;
+  }
+  .error .icon {
+    background: #dc2626;
+  }
+  .text {
+    flex: 1;
+  }
+  .close {
+    border: none;
+    background: none;
+    padding: 0 4px;
+    opacity: 0.5;
+  }
+  .toast-enter-active,
+  .toast-leave-active {
+    transition:
+      opacity 0.25s ease,
+      transform 0.25s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+  }
+  .toast-enter-from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+  .toast-leave-to {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+</style>

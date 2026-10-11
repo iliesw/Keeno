@@ -1,0 +1,15 @@
+<script lang="ts">
+  const { user } = props<{ user: string }>()
+  init(() => console.log('Profile mounted'))
+  destroy(() => console.log('Profile destroyed'))
+</script>
+
+<h3>👋 {user}</h3>
+<p>Each tab is a separate component. Switching tabs destroys the old one and creates the new one: watch the console.</p>
+
+<style>
+  p {
+    color: var(--muted);
+    margin: 0;
+  }
+</style>

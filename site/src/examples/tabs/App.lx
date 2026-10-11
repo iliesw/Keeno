@@ -1,0 +1,55 @@
+<script lang="ts">
+  import { Dynamic } from '@inflector/lux'
+  import Profile from './Profile.lx'
+  import Settings from './Settings.lx'
+  import Stats from './Stats.lx'
+
+  const tabs = [
+    { id: 'profile', label: 'Profile', component: Profile },
+    { id: 'stats', label: 'Stats', component: Stats },
+    { id: 'settings', label: 'Settings', component: Settings },
+  ]
+  const active = state('profile')
+  const current = derived(() => tabs.find((t) => t.id === active)!)
+</script>
+
+<nav role="tablist">
+  {tabs.map((t) => (
+    <button key={t.id} role="tab" aria-selected={active === t.id} class={{ on: active === t.id }} onClick={() => active.set(t.id)}>
+      {t.label}
+    </button>
+  ))}
+</nav>
+
+<!-- <Dynamic> renders whichever component is current and passes it the other props. -->
+<div class="panel" role="tabpanel">
+  <Dynamic component={current.component} user="Ada" />
+</div>
+
+<style>
+  nav {
+    display: flex;
+    gap: 2px;
+    padding: 3px;
+    border-radius: 10px;
+    background: var(--surface);
+    width: fit-content;
+  }
+  nav button {
+    border: none;
+    background: none;
+    padding: 4px 14px;
+    border-radius: 8px;
+  }
+  nav button.on {
+    background: var(--bg);
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.15);
+  }
+  .panel {
+    margin-top: 1rem;
+    padding: 1rem;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    min-height: 120px;
+  }
+</style>

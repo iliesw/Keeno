@@ -1,0 +1,100 @@
+<script lang="ts">
+  import { keyedReparentable } from '@inflector/lux'
+  import Card from './Card.lx'
+
+  type Column = 'todo' | 'doing' | 'done'
+  const COLUMNS: { id: Column; title: string }[] = [
+    { id: 'todo', title: 'To do' },
+    { id: 'doing', title: 'Doing' },
+    { id: 'done', title: 'Done' },
+  ]
+
+  const cards = state([
+    { id: 1, title: 'Design the API', column: 'done' as Column },
+    { id: 2, title: 'Write the compiler', column: 'doing' as Column },
+    { id: 3, title: 'Ship the docs', column: 'todo' as Column },
+  ])
+
+  // One live <Card> per id. Moving a card re-creates its <li>, but the Card inside moves with
+  // its state (its timer and its notes) instead of being destroyed and rebuilt.
+  const view = keyedReparentable((id: number) => <Card title={cards.peek().find((c) => c.id === id)!.title} />)
+
+  const move = (id: number, column: Column) => cards.set(cards.map((c) => (c.id === id ? { ...c, column } : c)))
+  const shift = (column: Column, by: number) => COLUMNS[COLUMNS.findIndex((c) => c.id === column) + by]?.id
+
+  let dragged = 0
+  function drop(e: DragEvent, column: Column) {
+    e.preventDefault()
+    if (dragged) move(dragged, column)
+  }
+</script>
+
+<div class="board">
+  {COLUMNS.map((col) => (
+    <section key={col.id} onDragover={(e: DragEvent) => e.preventDefault()} onDrop={(e: DragEvent) => drop(e, col.id)}>
+      <h3>{col.title} <small>{cards.filter((c) => c.column === col.id).length}</small></h3>
+      <ul>
+        {cards.filter((c) => c.column === col.id).map((c) => (
+          <li key={c.id} draggable="true" onDragstart={() => (dragged = c.id)}>
+            {view(c.id)}
+            <div class="moves">
+              <button disabled={!shift(c.column, -1)} onClick={() => move(c.id, shift(c.column, -1)!)}>←</button>
+              <button disabled={!shift(c.column, 1)} onClick={() => move(c.id, shift(c.column, 1)!)}>→</button>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </section>
+  ))}
+</div>
+<p class="hint">Type a note or let a timer run, then move the card: its state comes along.</p>
+
+<style>
+  .board {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+  section {
+    min-height: 220px;
+    padding: 0.6rem;
+    border-radius: 12px;
+    background: var(--surface);
+  }
+  h3 {
+    display: flex;
+    justify-content: space-between;
+    margin: 0 0 0.6rem;
+    font-size: 0.85rem;
+  }
+  small {
+    color: var(--muted);
+  }
+  ul {
+    display: grid;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  li {
+    padding: 0.6rem;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg);
+    cursor: grab;
+  }
+  .moves {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 0.4rem;
+  }
+  .moves button {
+    padding: 0 8px;
+    font-size: 0.8rem;
+  }
+  .hint {
+    color: var(--muted);
+    font-size: 0.8rem;
+  }
+</style>

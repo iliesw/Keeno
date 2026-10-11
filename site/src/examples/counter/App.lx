@@ -1,0 +1,41 @@
+<script lang="ts">
+  // state() creates a signal. Read it like a value; write it with .set().
+  const count = state(0)
+  // derived() recomputes only when what it reads changes.
+  const doubled = derived(() => count * 2)
+  const parity = derived(() => (count % 2 === 0 ? 'even' : 'odd'))
+</script>
+
+<div class="counter">
+  <p class="value">{count}</p>
+  <p class="meta">doubled is {doubled} · {parity}</p>
+  <div class="row">
+    <button onClick={() => count.set(count - 1)}>−1</button>
+    <button onClick={() => count.set(0)} disabled={count === 0}>Reset</button>
+    <button onClick={() => count.set(count + 1)}>+1</button>
+  </div>
+</div>
+
+<style>
+  .counter {
+    display: grid;
+    justify-items: center;
+    gap: 0.5rem;
+    padding: 1rem;
+  }
+  .value {
+    margin: 0;
+    font-size: 4rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    color: var(--accent);
+  }
+  .meta {
+    margin: 0 0 0.75rem;
+    color: var(--muted);
+  }
+  .row {
+    display: flex;
+    gap: 0.5rem;
+  }
+</style>

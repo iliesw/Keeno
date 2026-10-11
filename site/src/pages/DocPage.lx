@@ -1,22 +1,32 @@
 <script lang="ts">
   import Aside from '../components/Aside.lx'
   import CopyPage from '../components/CopyPage.lx'
+  import Icon from '../components/Icon.lx'
   import Navbar from '../components/Navbar.lx'
   import Pager from '../components/Pager.lx'
   import Sidebar from '../components/Sidebar.lx'
   import NotFound from './NotFound.lx'
   import { onContentClick } from '../content'
-  import { findPage, getDoc, loadDoc, pages, type DocModule } from '../docs'
+  import { findPage, getDoc, loadDoc, nav, pages, sourcePath, type DocModule } from '../docs'
+  import { GITHUB } from '../icons'
 
   const { params } = props<{ params: { slug?: string } }>()
 
   const slug = derived(() => params.slug ?? pages[0].slug)
   const page = derived(() => findPage(slug))
+  const group = derived(() => nav.find((g) => g.items.some((i) => i.slug === slug))?.title ?? '')
   // Filled from the cache on the server and while hydrating; loaded on client-side navigation.
   const doc = state<DocModule | undefined>(getDoc(slug))
   const html = derived(() => (doc ? doc.html : ''))
   const headings = derived(() => (doc ? doc.headings : []))
   const raw = derived(() => (doc ? doc.raw : ''))
+  const updated = derived(() => {
+    if (!doc || !doc.updated) return ''
+    const d = new Date(`${doc.updated}T12:00:00Z`)
+    return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' })
+  })
+  const minutes = derived(() => Math.max(1, Math.round((raw.split(/\s+/).length || 0) / 220)))
+  const progress = state(0)
 
   function sync() {
     const s = slug.peek()
@@ -33,24 +43,50 @@
   }
   init(sync)
   update(sync, [slug, page])
+
+  // Reading progress, shown as a thin bar under the navbar.
+  init(() => {
+    const onScroll = () => {
+      const max = document.documentElement.scrollHeight - innerHeight
+      progress.set(max > 0 ? Math.min(1, scrollY / max) : 0)
+    }
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  })
 </script>
 
-<Navbar />
 {page ? (
-  <div class="mx-auto flex min-h-screen max-w-400 justify-between gap-2 px-0 pt-28 md:gap-16 md:px-4">
-    <aside class="sticky top-28 hidden max-h-[calc(100svh-8rem)] self-start overflow-y-auto min-[1080px]:block">
-      <Sidebar />
-    </aside>
-    <main class="relative mx-6 w-full min-w-0 max-w-3xl md:mr-16 xl:mr-0">
-      <article class="doxy pb-48" onClick={onContentClick}>
-        <div class="contents" innerHTML={html}></div>
+  <div>
+    <Navbar />
+    <div class="fixed inset-x-0 top-14 z-40 h-0.5 origin-left bg-gradient-to-r from-amber-300 to-orange-500 transition-transform duration-75" style={`transform:scaleX(${progress})`} aria-hidden="true"></div>
+    <div class="mx-auto flex min-h-screen max-w-400 justify-between gap-2 px-0 pt-24 md:gap-12 md:px-4">
+      <aside class="sticky top-24 hidden max-h-[calc(100svh-7rem)] self-start overflow-y-auto pr-2 pl-2 min-[1080px]:block">
+        <Sidebar />
+      </aside>
+      <main class="relative mx-6 w-full min-w-0 max-w-3xl md:mr-16 xl:mr-0">
+        <p class="mb-3 flex items-center gap-2 text-sm font-medium text-orange-500">
+          {group}
+          <span class="text-neutral-300 dark:text-neutral-700">/</span>
+          <span class="text-neutral-500">{minutes} min read</span>
+        </p>
+        <article class="doxy" onClick={onContentClick}>
+          <div class="contents" innerHTML={html}></div>
+        </article>
+        <div class="mt-12 flex flex-wrap items-center justify-between gap-3 text-sm text-neutral-500">
+          <a href={`${GITHUB}/edit/main/${sourcePath(slug)}`} target="_blank" rel="noreferrer" class="flex items-center gap-1.5 transition hover:text-orange-500">
+            <Icon name="edit" /> Edit this page on GitHub
+          </a>
+          {updated && <span>Last updated {updated}</span>}
+        </div>
         <Pager slug={slug} />
-      </article>
-      <CopyPage raw={raw} slug={slug} />
-    </main>
-    <aside class="sticky top-28 hidden self-start xl:block">
-      <Aside headings={headings} />
-    </aside>
+        <div class="h-32"></div>
+        <CopyPage raw={raw} slug={slug} />
+      </main>
+      <aside class="sticky top-24 hidden self-start xl:block">
+        <Aside headings={headings} />
+      </aside>
+    </div>
   </div>
 ) : (
   <NotFound />

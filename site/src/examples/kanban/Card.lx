@@ -1,0 +1,37 @@
+<script lang="ts">
+  const { title } = props<{ title: string }>()
+
+  // Local state that survives moves between columns.
+  const note = state('')
+  const seconds = state(0)
+  const running = state(false)
+
+  init(() => {
+    const timer = setInterval(() => running.peek() && seconds.set(seconds.peek() + 1), 1000)
+    return () => clearInterval(timer)
+  })
+</script>
+
+<strong>{title}</strong>
+<input bind:value={note} placeholder="Add a note…" />
+<button class="timer" onClick={() => running.set(!running)}>
+  {running ? '⏸' : '▶'} {Math.floor(seconds / 60)}:{String(seconds % 60).padStart(2, '0')}
+</button>
+
+<style>
+  strong {
+    display: block;
+    font-size: 0.85rem;
+  }
+  input {
+    width: 100%;
+    margin: 0.4rem 0;
+    padding: 3px 8px;
+    font-size: 0.8rem;
+  }
+  .timer {
+    padding: 0 8px;
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+  }
+</style>

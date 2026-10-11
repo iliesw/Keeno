@@ -1,0 +1,79 @@
+<script lang="ts">
+  const now = state(new Date())
+
+  // init() runs after mount; the function it returns is the cleanup.
+  init(() => {
+    const timer = setInterval(() => now.set(new Date()), 1000)
+    return () => clearInterval(timer)
+  })
+
+  const seconds = derived(() => now.getSeconds() * 6)
+  const minutes = derived(() => now.getMinutes() * 6 + now.getSeconds() / 10)
+  const hours = derived(() => (now.getHours() % 12) * 30 + now.getMinutes() / 2)
+  const label = derived(() => now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }))
+
+  const ticks = Array.from({ length: 60 }, (_, i) => i)
+</script>
+
+<figure>
+  <svg viewBox="-50 -50 100 100" role="img" aria-label={label}>
+    <circle class="face" r="48" />
+    {ticks.map((i) => (
+      <line key={i} class={i % 5 === 0 ? 'major' : 'minor'} y1={i % 5 === 0 ? -42 : -44} y2="-46" transform={`rotate(${i * 6})`} />
+    ))}
+    <line class="hour" y1="4" y2="-24" transform={`rotate(${hours})`} />
+    <line class="minute" y1="6" y2="-34" transform={`rotate(${minutes})`} />
+    <g transform={`rotate(${seconds})`}>
+      <line class="second" y1="10" y2="-38" />
+      <circle class="second-tip" cy="-38" r="1.6" />
+    </g>
+    <circle class="pin" r="2" />
+  </svg>
+  <figcaption>{label}</figcaption>
+</figure>
+
+<style>
+  figure {
+    display: grid;
+    justify-items: center;
+    gap: 0.75rem;
+    margin: 0;
+  }
+  svg {
+    width: min(100%, 240px);
+  }
+  .face {
+    fill: var(--surface);
+    stroke: var(--border);
+    stroke-width: 1;
+  }
+  line {
+    stroke: var(--fg);
+    stroke-linecap: round;
+  }
+  .minor {
+    stroke-width: 0.5;
+    opacity: 0.4;
+  }
+  .major {
+    stroke-width: 1.2;
+  }
+  .hour {
+    stroke-width: 3;
+  }
+  .minute {
+    stroke-width: 2;
+  }
+  .second {
+    stroke: var(--accent);
+    stroke-width: 0.8;
+  }
+  .second-tip,
+  .pin {
+    fill: var(--accent);
+  }
+  figcaption {
+    font-variant-numeric: tabular-nums;
+    color: var(--muted);
+  }
+</style>

@@ -9,6 +9,8 @@
     <script>
       try {
         if (localStorage.getItem('lux-theme') === 'light') document.documentElement.classList.remove('dark')
+        var pm = localStorage.getItem('lux-pm')
+        if (pm) document.documentElement.dataset.pm = pm
       } catch {}
     </script>
     <!--app-head-->

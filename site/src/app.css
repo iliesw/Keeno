@@ -1,4 +1,6 @@
 @import 'tailwindcss';
+@import './styles/playground.css' layer(components);
+@import './styles/site.css' layer(components);
 
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -44,7 +46,23 @@
   --muted: #737373;
   --border: #e5e5e5;
   --code-bg: #fafafa;
-  --inline-code: #e5e5e5;
+  --inline-code: #ededed;
+  --brand: #ff9a1f;
+  --accent: #f97316;
+  --code-fg: #24292e;
+  --gutter: #00000040;
+  --active-line: #0000000a;
+  --selection: #ff9a1f40;
+  --panel: #ffffff;
+  --surface: #f5f5f5;
+  --hl-comment: #6a737d;
+  --hl-keyword: #d73a49;
+  --hl-string: #032f62;
+  --hl-title: #6f42c1;
+  --hl-attr: #005cc5;
+  --hl-number: #e36209;
+  --hl-tag: #22863a;
+  --hl-deletion: #b31d28;
   color-scheme: light;
 }
 .dark {
@@ -52,8 +70,22 @@
   --fg: #fafafa;
   --muted: #a3a3a3;
   --border: #262626;
-  --code-bg: #222222;
+  --code-bg: #1c1c1b;
   --inline-code: #262626;
+  --code-fg: #d4d4d4;
+  --gutter: #ffffff3a;
+  --active-line: #ffffff08;
+  --selection: #ff9a1f38;
+  --panel: #1b1b1a;
+  --surface: #222221;
+  --hl-comment: #7f848e;
+  --hl-keyword: #c678dd;
+  --hl-string: #98c379;
+  --hl-title: #61afef;
+  --hl-attr: #d19a66;
+  --hl-number: #e5c07b;
+  --hl-tag: #e06c75;
+  --hl-deletion: #e06c75;
   color-scheme: dark;
 }
 
@@ -107,6 +139,29 @@
 }
 .animate-fade-up {
   animation: fade-up 0.6s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.animate-pop {
+  animation: pop 0.15s ease-out both;
+  transform-origin: top left;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* ---------------------------------------------------------------------------------------------
@@ -207,11 +262,6 @@
 .doxy hr {
   border: 0;
   border-top: 1px solid var(--border);
-}
-.doxy .callout {
-  margin: 0.5rem 0;
-  padding: 0.25rem 1rem;
-  border-left: 4px solid var(--fg);
 }
 
 /* Tables */
@@ -506,4 +556,29 @@
 }
 .hljs-strong {
   font-weight: bold;
+}
+
+/* Code blocks inside other chrome (unlayered, like the code-block rules they override) */
+
+.ex-source .code-block {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.ex-source .code-head {
+  display: none;
+}
+.pm-pane .code-block {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+}
+.home-compare .code-block {
+  height: 100%;
+  margin: 0;
+}
+.home-compare .code-body {
+  max-height: 26rem;
+  overflow: auto;
 }

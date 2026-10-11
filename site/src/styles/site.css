@@ -1,0 +1,280 @@
+/* Live examples: the same base styles the playground preview has, in the base layer, so every
+   example's scoped styles and Tailwind utilities win. */
+
+@layer base {
+  .lux-stage {
+    color: var(--fg);
+    font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  .lux-stage button {
+    padding: 6px 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+    cursor: pointer;
+    transition:
+      background 0.15s,
+      transform 0.1s;
+  }
+  .lux-stage button:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--surface), var(--fg) 8%);
+  }
+  .lux-stage button:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+  .lux-stage button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+  .lux-stage input:not([type='checkbox'], [type='radio'], [type='range'], [type='color']),
+  .lux-stage textarea,
+  .lux-stage select {
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg);
+    outline: none;
+  }
+  .lux-stage input:focus-visible,
+  .lux-stage textarea:focus-visible,
+  .lux-stage select:focus-visible {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
+  }
+  .lux-stage input[type='checkbox'],
+  .lux-stage input[type='radio'],
+  .lux-stage input[type='range'] {
+    accent-color: var(--accent);
+  }
+  .lux-stage h1,
+  .lux-stage h2,
+  .lux-stage h3 {
+    margin: 0 0 0.5em;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  .lux-stage h3 {
+    font-size: 1.15em;
+  }
+  .lux-stage p {
+    margin: 0 0 0.75em;
+  }
+  .lux-stage ul,
+  .lux-stage ol {
+    list-style: none;
+  }
+}
+
+/* Gallery cards: previews are scaled down a little so more of each app fits. */
+.ex-zoom {
+  zoom: 0.86;
+}
+.ex-preview::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0;
+  height: 2.5rem;
+  background: linear-gradient(transparent, var(--bg));
+  pointer-events: none;
+}
+.ex-action {
+  display: grid;
+  place-items: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: 0.5rem;
+  color: var(--muted);
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+.ex-action:hover {
+  background: var(--surface);
+  color: var(--fg);
+}
+
+/* Install commands as tabs (rendered by plugins/markdown.ts). */
+.pm-block {
+  margin-top: 0.5rem;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--code-bg);
+}
+.pm-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 0.35rem 0.35rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.pm-tab {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: -1px;
+  padding: 0.3rem 0.7rem 0.45rem;
+  border-bottom: 2px solid transparent;
+  font-family: var(--font-code);
+  font-size: 0.8rem;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.pm-tab img {
+  filter: grayscale(1);
+  opacity: 0.6;
+  transition:
+    filter 0.15s,
+    opacity 0.15s;
+}
+.pm-tab:hover {
+  color: var(--fg);
+}
+.pm-pane {
+  display: none;
+}
+html:not([data-pm]) .pm-pane[data-pm-pane='bun'],
+html[data-pm='bun'] .pm-pane[data-pm-pane='bun'],
+html[data-pm='npm'] .pm-pane[data-pm-pane='npm'],
+html[data-pm='pnpm'] .pm-pane[data-pm-pane='pnpm'],
+html[data-pm='yarn'] .pm-pane[data-pm-pane='yarn'] {
+  display: block;
+}
+html:not([data-pm]) .pm-tab[data-pm='bun'],
+html[data-pm='bun'] .pm-tab[data-pm='bun'],
+html[data-pm='npm'] .pm-tab[data-pm='npm'],
+html[data-pm='pnpm'] .pm-tab[data-pm='pnpm'],
+html[data-pm='yarn'] .pm-tab[data-pm='yarn'] {
+  border-color: var(--brand);
+  color: var(--fg);
+}
+html:not([data-pm]) .pm-tab[data-pm='bun'] img,
+html[data-pm='bun'] .pm-tab[data-pm='bun'] img,
+html[data-pm='npm'] .pm-tab[data-pm='npm'] img,
+html[data-pm='pnpm'] .pm-tab[data-pm='pnpm'] img,
+html[data-pm='yarn'] .pm-tab[data-pm='yarn'] img {
+  filter: none;
+  opacity: 1;
+}
+
+/* Code block actions */
+.code-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.code-play {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  height: 1.85rem;
+  padding: 0 0.6rem;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  z-index: 30;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+.code-play:hover {
+  background: color-mix(in srgb, var(--brand) 15%, transparent);
+  color: var(--brand);
+}
+
+/* Callouts */
+.doxy .callout {
+  --c: #3b82f6;
+  margin: 0.5rem 0;
+  padding: 0.85rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--c) 35%, transparent);
+  border-left-width: 3px;
+  border-radius: 0.6rem;
+  background: color-mix(in srgb, var(--c) 6%, transparent);
+}
+.doxy .callout > :last-child {
+  margin-bottom: 0;
+}
+.doxy .callout-title {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 0.25rem;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--c);
+}
+.doxy .callout-tip {
+  --c: #22c55e;
+}
+.doxy .callout-important {
+  --c: #a855f7;
+}
+.doxy .callout-warning {
+  --c: #eab308;
+}
+.doxy .callout-caution {
+  --c: #ef4444;
+}
+
+/* Search */
+.search-kbd {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.35rem;
+  height: 1.35rem;
+  padding: 0 0.3rem;
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: 0.3rem;
+  font-family: var(--font-code);
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+.search-hit .hit {
+  color: var(--brand);
+  font-weight: 600;
+}
+
+/* Theme switch: the new theme grows from the button (View Transitions API). */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+/* Home */
+.hero-grid {
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--fg) 7%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--fg) 7%, transparent) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, black 20%, transparent 75%);
+}
+.hero-glow {
+  background:
+    radial-gradient(40% 50% at 50% 20%, rgb(255 154 31 / 0.22), transparent 70%),
+    radial-gradient(30% 40% at 70% 10%, rgb(255 216 77 / 0.12), transparent 70%);
+}
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0);
+  }
+  50% {
+    transform: translateY(-10px) rotate(4deg);
+  }
+}
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+.text-gradient {
+  background: linear-gradient(120deg, #ffd84d, #ff9a1f 45%, #ff6a1a);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}

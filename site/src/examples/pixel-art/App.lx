@@ -1,0 +1,146 @@
+<script lang="ts">
+  const SIZE = 12
+  const COLORS = ['#f97316', '#facc15', '#22c55e', '#3b82f6', '#a855f7', '#ec4899', '#0a0a0a', '#ffffff', '#94a3b8']
+
+  // A heart to start with: '#' is orange, '+' is yellow.
+  const HEART = [
+    '............',
+    '..##....##..',
+    '.####..####.',
+    '##++########',
+    '#++#########',
+    '############',
+    '.##########.',
+    '..########..',
+    '...######...',
+    '....####....',
+    '.....##.....',
+    '............',
+  ]
+  const start = HEART.join('').split('').map((c) => (c === '#' ? COLORS[0] : c === '+' ? COLORS[1] : null))
+
+  // `history` keeps the last 200 values, so undo() and redo() come for free.
+  const pixels = state<(string | null)[]>(start, { history: 200 })
+  const color = state(COLORS[0])
+  const drawing = state(false)
+  const filled = derived(() => pixels.filter(Boolean).length)
+
+  function paint(i: number) {
+    const next = color === 'erase' ? null : color
+    if (pixels[i] === next) return
+    pixels.set(pixels.map((p, j) => (j === i ? next : p)))
+  }
+
+  init(() => {
+    const stop = () => drawing.set(false)
+    const keys = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== 'z') return
+      e.preventDefault()
+      if (e.shiftKey) pixels.redo()
+      else pixels.undo()
+    }
+    window.addEventListener('pointerup', stop)
+    window.addEventListener('keydown', keys)
+    return () => {
+      window.removeEventListener('pointerup', stop)
+      window.removeEventListener('keydown', keys)
+    }
+  })
+</script>
+
+<div class="app">
+  <div class="grid" style={`grid-template-columns: repeat(${SIZE}, 1fr)`}>
+    {pixels.map((p, i) => (
+      <button
+        key={i}
+        class="px"
+        style={p ? `background:${p}` : ''}
+        aria-label={`Pixel ${i + 1}`}
+        onPointerdown={(e: PointerEvent) => {
+          e.preventDefault()
+          drawing.set(true)
+          paint(i)
+        }}
+        onPointerenter={() => drawing && paint(i)}
+      ></button>
+    ))}
+  </div>
+
+  <div class="tools">
+    <div class="palette">
+      {COLORS.map((c) => (
+        <button key={c} class={['swatch', color === c && 'active']} style={`background:${c}`} aria-label={c} onClick={() => color.set(c)}></button>
+      ))}
+      <button class={['swatch', 'eraser', color === 'erase' && 'active']} aria-label="Eraser" onClick={() => color.set('erase')}>⌫</button>
+    </div>
+    <div class="actions">
+      <button disabled={!pixels.canUndo} onClick={() => pixels.undo()}>↶ Undo</button>
+      <button disabled={!pixels.canRedo} onClick={() => pixels.redo()}>↷ Redo</button>
+      <button disabled={filled === 0} onClick={() => pixels.set(Array(SIZE * SIZE).fill(null))}>Clear</button>
+    </div>
+    <p class="hint">{filled} pixels · drag to paint · ⌘/Ctrl+Z to undo</p>
+  </div>
+</div>
+
+<style>
+  .app {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.25rem;
+    align-items: flex-start;
+  }
+  .grid {
+    display: grid;
+    width: min(100%, 288px);
+    aspect-ratio: 1;
+    gap: 1px;
+    padding: 1px;
+    background: var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    touch-action: none;
+  }
+  .px {
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: var(--bg);
+    transition: none;
+  }
+  .px:hover {
+    filter: brightness(0.9);
+  }
+  .tools {
+    display: grid;
+    gap: 0.75rem;
+  }
+  .palette {
+    display: grid;
+    grid-template-columns: repeat(5, 32px);
+    gap: 6px;
+  }
+  .swatch {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border-radius: 8px;
+    border: 2px solid var(--border);
+  }
+  .swatch.active {
+    outline: 2px solid var(--fg);
+    outline-offset: 2px;
+  }
+  .eraser {
+    background: var(--surface);
+    font-size: 14px;
+  }
+  .actions {
+    display: flex;
+    gap: 0.4rem;
+  }
+  .hint {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+</style>

@@ -1,8 +1,12 @@
 <script lang="ts">
   import { Router, type RouteDefinition } from '@inflector/lux-router'
+  import Search from './components/Search.lx'
   import DocPage from './pages/DocPage.lx'
   import Home from './pages/Home.lx'
+  import Example from './pages/Example.lx'
+  import Examples from './pages/Examples.lx'
   import NotFound from './pages/NotFound.lx'
+  import Playground from './pages/Playground.lx'
 
   // `url` is only passed on the server; in the browser the router follows the location.
   const { url } = props<{ url?: string }>()
@@ -11,8 +15,12 @@
     { path: '/', component: Home },
     { path: '/docs', component: DocPage },
     { path: '/docs/:slug', component: DocPage },
+    { path: '/examples', component: Examples },
+    { path: '/examples/:slug', component: Example },
+    { path: '/playground', component: Playground },
     { path: '*', component: NotFound },
   ]
 </script>
 
 <Router routes={routes} url={url} />
+<Search />

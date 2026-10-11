@@ -1,0 +1,25 @@
+<script lang="ts">
+  import { provide } from '@inflector/lux'
+  import Panel from './Panel.lx'
+  import Picker from './Picker.lx'
+  import { AccentContext, type Accent } from './theme'
+
+  // Everything rendered inside this component can inject() the accent, however deep.
+  const accent = state<Accent>('orange')
+  provide(AccentContext, accent)
+</script>
+
+<Picker />
+<div class="panels">
+  <Panel title="Inbox" count={12} />
+  <Panel title="Drafts" count={3} />
+</div>
+
+<style>
+  .panels {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 0.75rem;
+    margin-top: 1rem;
+  }
+</style>
