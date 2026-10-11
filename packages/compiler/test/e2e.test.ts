@@ -1,7 +1,7 @@
 // Compile real .lx fixtures, load them through a Bun plugin and mount them in happy-dom.
 import { plugin } from 'bun'
 import { afterEach, beforeAll, describe, expect, test } from 'bun:test'
-import { flush, mount, type MountedApp } from '@inflector/lux'
+import { flush, mount, state, type MountedApp } from '@inflector/lux'
 import { compile } from '../src/index'
 
 beforeAll(() => {
@@ -54,11 +54,11 @@ describe('Counter', () => {
   test('lifecycle: init, auto update, deps update, onUpdate, destroy', async () => {
     const log: string[] = []
     const el = await render('Counter', { title: 't', onSave() {}, log: (s: string) => log.push(s) })
-    expect(log).toEqual(['init', 'auto 0'])
+    expect(log).toEqual(['init']) // update() does not run on mount
     $(el, '.inc').click()
-    expect(log).toEqual(['init', 'auto 0', 'onUpdate 0->1']) // synchronous
+    expect(log).toEqual(['init', 'onUpdate 0->1']) // synchronous
     await tick()
-    expect(log).toEqual(['init', 'auto 0', 'onUpdate 0->1', 'auto 1', 'deps  1'])
+    expect(log).toEqual(['init', 'onUpdate 0->1', 'auto 1', 'deps  1'])
     log.length = 0
     app!.destroy()
     app = undefined
@@ -265,5 +265,40 @@ describe('Shell (built-in components from .lx)', () => {
     app!.destroy()
     app = undefined
     expect(document.querySelector('aside.toast')).toBeNull()
+  })
+})
+
+describe('Refs', () => {
+  test('ref() points at the element, is reactive, and clears when the element goes away', async () => {
+    const log: string[] = []
+    const el = await render('Refs', { log: (s: string) => log.push(s) })
+    expect(log).toEqual(['init INPUT'])
+    expect(document.activeElement).toBe($(el, '.field'))
+    $(el, '.toggle').click()
+    await tick()
+    expect(log).toEqual(['init INPUT', 'current null'])
+    $(el, '.toggle').click()
+    await tick()
+    expect(log.at(-1)).toBe('current set')
+  })
+})
+
+describe('Context', () => {
+  test('provided states and expressions stay reactive, and injected states are writable', async () => {
+    const color = state('red')
+    const el = await render('ThemeApp', {
+      get color() {
+        return color.get()
+      },
+    })
+    expect($(el, '.leaf').textContent).toBe('light Ada red')
+    $(el, '.rename').click()
+    color.set('blue')
+    await tick()
+    expect($(el, '.leaf').textContent).toBe('light Grace blue')
+    $(el, '.dark').click()
+    await tick()
+    expect($(el, '.current').textContent).toBe('dark')
+    expect($(el, '.leaf').textContent).toBe('dark Grace blue')
   })
 })

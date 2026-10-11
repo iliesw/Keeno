@@ -86,6 +86,22 @@ Attribute values: `null`, `undefined` and `false` remove the attribute, and `tru
 
 Number and range inputs store numbers. Binding a prop or a derived is a compile error.
 
+## Element refs
+
+`ref()` creates a reference; `ref={myRef}` points it at an element. `myRef.current` is the element, or `null` before mount and after the element is removed. Reading `current` is reactive, so `update` re-runs when the element appears or goes away:
+
+```html Search.lx
+<script lang="ts">
+  const input = ref<HTMLInputElement>()
+
+  init(() => input.current?.focus())
+</script>
+
+<input ref={input} />
+```
+
+`ref` also takes a function, called with the element on mount and with `null` on removal: `<canvas ref={(el) => (canvas = el)} />`. Refs work on DOM elements only.
+
 ## class
 
 `class` accepts a string, an array (falsy entries skipped, nested arrays allowed) or an object of `name: condition`:

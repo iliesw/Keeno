@@ -1,7 +1,7 @@
 // compile(source, { filename }) -> { js, css, map }
 import * as t from '@babel/types'
 import { CompileContext, RUNTIME, generate } from './context'
-import { analyze, buildComponentAst, findAutoImports, rewrite } from './script'
+import { analyze, buildComponentAst, findAutoImports, inferUpdateDeps, rewrite } from './script'
 import { split } from './split'
 import { scopeStyle } from './style'
 import { compileTemplates } from './template'
@@ -82,6 +82,7 @@ export function compile(source: string, options: CompileOptions): CompileResult 
 
   const file = buildComponentAst(parts, ctx, name)
   analyze(file, ctx)
+  inferUpdateDeps(file, ctx)
   rewrite(file, ctx)
   compileTemplates(file, ctx)
   const autoImports = findAutoImports(file)

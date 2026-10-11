@@ -4,9 +4,9 @@ Context passes a value from a component to everything rendered inside it, howeve
 
 ```ts
 // theme.ts
-import { createContext, state, type State } from '@inflector/lux'
+import { createContext } from '@inflector/lux'
 
-export const Theme = createContext<State<'light' | 'dark'>>(state('light'))
+export const Theme = createContext<'light' | 'dark'>('light')
 ```
 
 A component provides a value with `provide(context, value)`:
@@ -33,10 +33,14 @@ Any component inside it reads the value with `inject(context)`:
   const theme = inject(Theme)
 </script>
 
-<nav class={theme.get()}>…</nav>
+<nav class={theme}>…</nav>
 ```
 
 - `inject` returns the value from the closest component that provided one, or else the context's default value. `createContext()` without a default gives `undefined`.
 - Call `provide` and `inject` in the `<script>` block, while the component is being created. Event handlers, timers and promise callbacks run outside the component tree, so `inject` there only sees the default.
-- Context values are not reactive by themselves. To share something that changes, provide a state (as above) or an object of states. An injected state is a plain object, like a state imported from a `.ts` file, so read it with `.get()` and write it with `.set()`.
+- Context values are reactive. In a `.lx` file:
+  - `provide(Theme, theme)` with a state or a derived provides the state itself, not its current value.
+  - `provide(User, { name, role })`, or any other expression that reads states or props, is provided as `derived(() => …)`, so it follows them.
+  - `const theme = inject(Theme)` reads like a state: `{theme}` and `theme.foo` are tracked. When a state was provided, `theme.set(…)` writes to it. Other values are read-only.
+- In a `.ts` file, `inject` returns exactly what was provided: a state or derived (call `.get()`), or a plain value.
 - Context reaches everything a component renders: children passed as markup, keyed list rows, `<Portal>` content and components loaded with `lazy()`.

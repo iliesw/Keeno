@@ -10,7 +10,7 @@ export const generate: typeof _generate = (_generate as any).default ?? _generat
 /** Module the runtime APIs are imported from. */
 export const RUNTIME = '@inflector/lux'
 /** Names injected from `@inflector/lux` when used without an import. */
-export const LUX_APIS = ['state', 'derived', 'props', 'init', 'update', 'destroy'] as const
+export const LUX_APIS = ['state', 'derived', 'props', 'init', 'update', 'destroy', 'ref'] as const
 /** Members of a state (or derived) that are not unwrapped. */
 export const RESERVED_MEMBERS = new Set(['set', 'onUpdate', 'get', 'peek', 'undo', 'redo', 'canUndo', 'canRedo'])
 /** Callee name of the placeholder that pass 1 emits for keyed `.map()` calls. */
@@ -32,6 +32,8 @@ export class CompileContext {
   /** Declaring identifiers of destructured props. */
   propIds = new WeakMap<t.Identifier, PropBinding>()
   propDeclarators = new WeakSet<t.VariableDeclarator>()
+  /** State references passed as the state itself instead of being read (`provide(ctx, theme)`). */
+  rawStateRefs = new WeakSet<t.Identifier>()
   /** `@inflector/lux/internal` helpers used by the generated code: name -> local identifier name. */
   helpers = new Map<string, string>()
   /** Hoisted templates, keyed by html (prefixed with `svg:` for SVG fragments). */

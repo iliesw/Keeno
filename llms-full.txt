@@ -12,7 +12,7 @@ Rules that differ from React, Svelte and Vue, which models get wrong most often:
 - **Props:** `const { a, b = 1 } = props()` stays reactive. No `...rest`; use `const p = props()` instead.
 - **Markup:** `class`, not `className` (both work). Use `onClick={fn}`, not `@click` or `on:click`. Two-way binding is `bind:value={state}`.
 - **Lists:** `{list.map(item => <li key={item.id}>…</li>)}` is keyed. The callback must return JSX directly.
-- **Lifecycle:** `init(fn)` runs after mount and its return value is cleanup. `update(fn)` is an auto-tracked effect. `update(fn, [a, b])` runs only when `a` or `b` changes, not on mount. `destroy(fn)` runs on unmount.
+- **Lifecycle:** `init(fn)` runs after mount and its return value is cleanup. `update(fn)` runs when a value read inside `fn` changes (deps inferred by the compiler), and `update(fn, [a, b])` only when `a` or `b` changes; neither runs on mount. `destroy(fn)` runs on unmount.
 - **State options:** `persist`, `url`, `history`, `equals`, `validate`, `debounce` and `throttle`.
 - **Built-ins:** `ErrorBoundary`, `Await`, `Dynamic`, `Portal`, `Transition`, `lazy()` and `reparentable()` are imported from `@inflector/lux`. Render props such as `fallback={(error, reset) => <p>…</p>}` and `fulfilled={(value) => …}` are functions.
 - **Reparenting:** to move content between places without re-creating it, `const player = reparentable(() => <Video />)` and render `{player}` wherever it should be now. Use `keyedReparentable((id) => <Card id={id} />)` for items moving between lists. Imperatively: `player.moveTo(el)`, `player.remove()`, and `moveNode(node, parent)` for any DOM node.
@@ -197,7 +197,7 @@ The parent writes `children` as nested markup, any number of nodes. Declare it a
 | Helper | When it runs |
 |---|---|
 | `init(fn)` | Once, after the component's DOM is inserted. If `fn` returns a function, that runs on destroy. |
-| `update(fn)` | After mount, then whenever a state or derived read inside `fn` changes. A returned function is cleanup before the next run and on destroy. |
+| `update(fn)` | Whenever a state, derived, prop or other reactive value read inside `fn` changes, not on mount (the compiler infers the deps; use `init` for the first run). A returned function is cleanup before the next run and on destroy. |
 | `update(fn, [a, b])` | Only when `a` or `b` changes, not on mount. The array holds the states themselves. A returned function is cleanup. |
 | `destroy(fn)` | When the component unmounts. |
 | `x.onUpdate((old, next) => …)` | Synchronously on every real change of `x`. Removed automatically on destroy; also returns an unsubscribe function. |
@@ -514,6 +514,22 @@ Attribute values: `null`, `undefined` and `false` remove the attribute, and `tru
 
 Number and range inputs store numbers. Binding a prop or a derived is a compile error.
 
+## Element refs
+
+`ref()` creates a reference; `ref={myRef}` points it at an element. `myRef.current` is the element, or `null` before mount and after the element is removed. Reading `current` is reactive, so `update` re-runs when the element appears or goes away:
+
+```html Search.lx
+<script lang="ts">
+  const input = ref<HTMLInputElement>()
+
+  init(() => input.current?.focus())
+</script>
+
+<input ref={input} />
+```
+
+`ref` also takes a function, called with the element on mount and with `null` on removal: `<canvas ref={(el) => (canvas = el)} />`. Refs work on DOM elements only.
+
 ## class
 
 `class` accepts a string, an array (falsy entries skipped, nested arrays allowed) or an object of `name: condition`:
@@ -625,7 +641,7 @@ The `<style>` block of a component is scoped to it.
 </style>
 ```
 
-Styles don't leak between components, and parent styles don't reach into children. Dynamic `class` values keep the scope class.
+Styles don't leak between components, and parent styles don't reach into children. Dynamic `class` values keep the scope class. The router's `<Link>` is an exception: its `<a>` gets the scope class of the component that renders it, as if you had written the `<a>` yourself.
 
 ## Tailwind CSS
 
@@ -688,9 +704,9 @@ Context passes a value from a component to everything rendered inside it, howeve
 
 ```ts
 // theme.ts
-import { createContext, state, type State } from '@inflector/lux'
+import { createContext } from '@inflector/lux'
 
-export const Theme = createContext<State<'light' | 'dark'>>(state('light'))
+export const Theme = createContext<'light' | 'dark'>('light')
 ```
 
 A component provides a value with `provide(context, value)`:
@@ -717,12 +733,16 @@ Any component inside it reads the value with `inject(context)`:
   const theme = inject(Theme)
 </script>
 
-<nav class={theme.get()}>…</nav>
+<nav class={theme}>…</nav>
 ```
 
 - `inject` returns the value from the closest component that provided one, or else the context's default value. `createContext()` without a default gives `undefined`.
 - Call `provide` and `inject` in the `<script>` block, while the component is being created. Event handlers, timers and promise callbacks run outside the component tree, so `inject` there only sees the default.
-- Context values are not reactive by themselves. To share something that changes, provide a state (as above) or an object of states. An injected state is a plain object, like a state imported from a `.ts` file, so read it with `.get()` and write it with `.set()`.
+- Context values are reactive. In a `.lx` file:
+  - `provide(Theme, theme)` with a state or a derived provides the state itself, not its current value.
+  - `provide(User, { name, role })`, or any other expression that reads states or props, is provided as `derived(() => …)`, so it follows them.
+  - `const theme = inject(Theme)` reads like a state: `{theme}` and `theme.foo` are tracked. When a state was provided, `theme.set(…)` writes to it. Other values are read-only.
+- In a `.ts` file, `inject` returns exactly what was provided: a state or derived (call `.get()`), or a plain value.
 - Context reaches everything a component renders: children passed as markup, keyed list rows, `<Portal>` content and components loaded with `lazy()`.
 
 ---
@@ -1009,7 +1029,8 @@ A route component receives `params`:
 ## Navigation
 
 - `<Link href="/users/1">` renders an `<a>` that navigates without reloading. While its path is active, it gets the class `active` (change it with `activeClass`) and `aria-current="page"`. A link is active on its own path and on the paths below it, and `exact` limits it to its own path. `replace` replaces the history entry instead of adding one.
-- Component-scoped styles don't reach the `<a>` that `<Link>` renders. To style links with scoped CSS, write your own anchor with the `link` click handler: `<a href="/about" onClick={link}>About</a>`. With a `base`, write `href={href('/about')}`. `isActive('/about')` tells you whether to mark it.
+- The scoped styles of the component that renders a `<Link>` apply to its `<a>`: `a { … }` and `.active { … }` in that component's `<style>` reach it.
+- To write your own anchor, use the `link` click handler: `<a href="/about" onClick={link}>About</a>`. With a `base`, write `href={href('/about')}`. `isActive('/about')` tells you whether to mark it.
 - `navigate('/users/2')` navigates from code. `navigate('/login', { replace: true })` replaces the current entry, and `{ scroll: false }` keeps the scroll position. Relative URLs such as `navigate('?tab=2')` work too.
 - Clicks with a modifier key, a middle click, `target="_blank"`, `download` and links to other sites are left to the browser.
 - Query parameters synced with `state(v, { url: 'tab' })` follow navigation, including back and forward.
@@ -1212,7 +1233,7 @@ Use `bun test` with happy-dom registered in a preload (`bunfig.toml`: `[test] pr
 
 # API reference
 
-Everything below is exported from `@inflector/lux`. In `.lx` files, `state`, `derived`, `props`, `init`, `update` and `destroy` are available without importing.
+Everything below is exported from `@inflector/lux`. In `.lx` files, `state`, `derived`, `props`, `init`, `update`, `destroy` and `ref` are available without importing.
 
 ## Reactivity
 
@@ -1238,6 +1259,16 @@ isSignal(v): v is Signal<unknown>   // State or Derived
 | `canUndo`, `canRedo` | Reactive booleans |
 
 `Derived<T>` (extends `Signal<T>`): `get()`, `peek()`, `onUpdate()`. Read-only.
+
+## Refs
+
+```ts
+ref<T extends Element = HTMLElement>(): Ref<T>
+isRef(v): v is Ref<Element>
+type RefTarget<T> = Ref<T> | ((el: T | null) => void) | null | undefined
+```
+
+`Ref<T>`: `current: T | null` (tracked read), `peek(): T | null` (untracked).
 
 `StateOptions<T>`:
 
@@ -1271,8 +1302,8 @@ type Children = () => unknown                    // the `children` prop: renders
 ```ts
 createContext<T>(defaultValue: T, name?: string): Context<T>
 createContext<T>(): Context<T | undefined>
-provide<T>(context: Context<T>, value: T): void   // while a component is being created
-inject<T>(context: Context<T>): T                 // closest provided value, or the default
+provide<T>(context: Context<T>, value: T): void   // while a component is being created; in .lx, states stay states
+inject<T>(context: Context<T>): T                 // closest provided value, or the default; in .lx, reads like a state
 ```
 
 See [Context](context.md).
@@ -1338,6 +1369,7 @@ See [Routing](routing.md).
 | `x.foo` | `x.get().foo` |
 | `update(fn, [x, y])` | deps passed as the states themselves |
 | `bind:value={x}` | the state itself |
+| `ref={x}` | `setRef(el, x)`: `x.current` is the element |
 | `const { a } = props()`, then `a` | `$$props.a` (a getter) |
 | `{expr}` | a tracked text node / attribute |
 | `{a && <X/>}`, `{a ? <X/> : <Y/>}`, `{a \|\| <X/>}` | conditional regions that re-render only on truthiness changes |

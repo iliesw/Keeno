@@ -58,7 +58,8 @@ A route component receives `params`:
 ## Navigation
 
 - `<Link href="/users/1">` renders an `<a>` that navigates without reloading. While its path is active, it gets the class `active` (change it with `activeClass`) and `aria-current="page"`. A link is active on its own path and on the paths below it, and `exact` limits it to its own path. `replace` replaces the history entry instead of adding one.
-- Component-scoped styles don't reach the `<a>` that `<Link>` renders. To style links with scoped CSS, write your own anchor with the `link` click handler: `<a href="/about" onClick={link}>About</a>`. With a `base`, write `href={href('/about')}`. `isActive('/about')` tells you whether to mark it.
+- The scoped styles of the component that renders a `<Link>` apply to its `<a>`: `a { … }` and `.active { … }` in that component's `<style>` reach it.
+- To write your own anchor, use the `link` click handler: `<a href="/about" onClick={link}>About</a>`. With a `base`, write `href={href('/about')}`. `isActive('/about')` tells you whether to mark it.
 - `navigate('/users/2')` navigates from code. `navigate('/login', { replace: true })` replaces the current entry, and `{ scroll: false }` keeps the scroll position. Relative URLs such as `navigate('?tab=2')` work too.
 - Clicks with a modifier key, a middle click, `target="_blank"`, `download` and links to other sites are left to the browser.
 - Query parameters synced with `state(v, { url: 'tab' })` follow navigation, including back and forward.

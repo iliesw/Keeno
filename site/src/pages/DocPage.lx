@@ -18,9 +18,9 @@
   const headings = derived(() => (doc ? doc.headings : []))
   const raw = derived(() => (doc ? doc.raw : ''))
 
-  update(() => {
-    const s = slug
-    const p = page
+  function sync() {
+    const s = slug.peek()
+    const p = page.peek()
     if (p) document.title = `${p.title} · Lux`
     const cached = getDoc(s)
     if (cached) {
@@ -30,7 +30,9 @@
     loadDoc(s).then((d) => {
       if (slug.peek() === s) doc.set(d)
     })
-  })
+  }
+  init(sync)
+  update(sync, [slug, page])
 </script>
 
 <Navbar />

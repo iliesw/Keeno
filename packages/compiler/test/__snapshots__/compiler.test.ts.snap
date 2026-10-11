@@ -236,7 +236,7 @@ export default function Counter($$props) {
   const name = state('');
   init(() => console.log('mounted'));
   destroy(() => console.log('bye'));
-  update(() => localStorage.setItem('n', String(count.get()))); // auto-tracked
+  update(() => localStorage.setItem('n', String(count.get())), [count]); // auto-tracked
   update(() => console.log('name or count changed'), [name, count]); // explicit deps
   count.onUpdate((old, next) => console.log(old, '->', next));
   function add() {
@@ -266,7 +266,7 @@ export default function Counter($$props) {
       get text() {
         return t.get().text;
       }
-    })));
+    }, "lux-f6a61950")));
     return _el$6;
   })(), (() => {
     const _el$7 = _tmpl$6();

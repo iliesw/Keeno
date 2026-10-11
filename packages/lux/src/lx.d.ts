@@ -1,7 +1,7 @@
 // Editor-only types for code inside `.lx` files (used by @inflector/lux-language-server, never at runtime).
 // In a .lx file a local state reads as its value, so `state(v)` is typed as the value plus the
 // reserved members. `x.foo` on anything else is `x.get().foo`, which is what the intersection gives.
-import type { Component, Dep, DerivedOptions, State, StateOptions, UpdateListener } from './index'
+import type { Component, Context, Dep, DerivedOptions, RefTarget, Signal, State, StateOptions, UpdateListener } from './index'
 
 export * from './index'
 
@@ -29,6 +29,16 @@ export declare function state<T>(value: T, options?: StateOptions<NoInfer<T>>): 
 export declare function state<T = undefined>(): LxState<T | undefined>
 
 export declare function derived<T>(fn: () => T, options?: DerivedOptions<NoInfer<T>>): LxDerived<NoInfer<T>>
+
+type SignalValue<T> = T extends Signal<infer V> ? V : T
+
+/** In a .lx file, a state or derived is provided as itself, and other values stay reactive. */
+export declare function provide<T>(context: Context<T>, value: T | SignalValue<T> | LxDerived<SignalValue<T>>): void
+
+/** In a .lx file, an injected value reads like a state: writable if a state was provided, else read-only. */
+export declare function inject<T>(
+  context: Context<T>,
+): [T] extends [State<infer V>] ? LxState<V> : [T] extends [Signal<infer V>] ? LxDerived<V> : LxDerived<T>
 
 type MaybeCleanup = void | (() => void) | undefined
 export declare function update(fn: () => MaybeCleanup, deps?: readonly (Dep | LxState<any> | unknown)[]): void
@@ -126,6 +136,7 @@ export type LxAttributes<T> = ElementProps<T> &
     htmlFor?: any
     style?: any
     key?: any
+    ref?: RefTarget<T extends Element ? T : Element>
     'bind:value'?: Bindable
     'bind:checked'?: Bindable
     children?: any

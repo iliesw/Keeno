@@ -287,7 +287,10 @@ export class TemplateCompiler {
       }
     }
     const props = this.propsExpression(node.openingElement.attributes, node.children)
-    return t.callExpression(this.ctx.helper('createComponent'), [componentRef(node.openingElement.name), props])
+    const args: t.Expression[] = [componentRef(node.openingElement.name), props]
+    // Lets components that render their own elements (like the router's <Link>) apply our scoped styles.
+    if (this.ctx.scope) args.push(t.stringLiteral(this.ctx.scope))
+    return t.callExpression(this.ctx.helper('createComponent'), args)
   }
 
   // -------------------------------------------------------------------------
@@ -337,10 +340,16 @@ export class TemplateCompiler {
       for (const attr of node.openingElement.attributes) {
         if (t.isJSXSpreadAttribute(attr)) continue
         let name = attrName(attr)
-        if (hasSpread && !name.startsWith('bind:')) continue
+        if (hasSpread && !name.startsWith('bind:') && name !== 'ref') continue
         if (name === 'key') continue
         const v = attr.value
         const expr = t.isJSXExpressionContainer(v) ? (t.isJSXEmptyExpression(v.expression) ? null : v.expression) : v
+
+        if (name === 'ref') {
+          if (!expr || !t.isExpression(expr) || t.isStringLiteral(expr)) throw this.error('ref needs a ref() or a function: ref={myRef}')
+          call('setRef', [ref(path), expr])
+          continue
+        }
 
         if (name.startsWith('bind:')) {
           const prop = name.slice(5)

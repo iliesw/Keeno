@@ -127,6 +127,16 @@ describe('links', () => {
     expect(e.defaultPrevented).toBe(false)
   })
 
+  test("<Link> gets the scope class of the component that renders it", () => {
+    const el = render(() => [
+      createComponent(Link, { href: '/', class: 'nav', children: () => 'home' }, 'lux-abc'),
+      createComponent(Link, { href: '/x', children: () => 'x' }, 'lux-abc'),
+    ])
+    const [home, x] = [...el.querySelectorAll('a')]
+    expect(home.className).toBe('nav active lux-abc')
+    expect(x.className).toBe('lux-abc')
+  })
+
   test('the link handler works on plain anchors', async () => {
     const el = render(() => {
       const a = document.createElement('a')

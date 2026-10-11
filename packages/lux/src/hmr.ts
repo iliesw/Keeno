@@ -1,5 +1,6 @@
 // Hot module replacement: a stable wrapper per component file whose implementation can be swapped.
 import { createComponent, type Component } from './component'
+import { callerScope } from './lifecycle'
 import { State } from './state'
 
 interface HotRecord {
@@ -23,7 +24,10 @@ export function hot(Comp: Component, id: string): Component {
   }
   const impl = new State(Comp)
   // Returns a function, so the caller's insert tracks `impl` and re-creates the instance on swap.
-  const wrapper: Component = (props) => () => createComponent(impl.get(), props)
+  const wrapper: Component = (props) => {
+    const scope = callerScope() ?? undefined
+    return () => createComponent(impl.get(), props, scope)
+  }
   Object.defineProperty(wrapper, 'name', { value: `Hot(${Comp.name})` })
   registry.set(id, { impl, wrapper })
   return wrapper

@@ -2,6 +2,7 @@
 import { isDev, warn } from './dev'
 import { Owner, createComputation, memo, queueMount, runWithOwner, untrack } from './signal'
 import { State } from './state'
+import { setRef } from './ref'
 
 let serverDocument: Document | null = null
 
@@ -561,7 +562,7 @@ export function spread(el: Element, props: Record<string, unknown>, scope?: stri
   })
 
   function apply(key: string, old: unknown, value: unknown) {
-    if (key === 'children' || key === 'key') return
+    if (key === 'children' || key === 'key' || key === 'ref') return
     if (/^on[A-Z]/.test(key)) {
       const type = key.slice(2).toLowerCase()
       if (typeof old === 'function') el.removeEventListener(type, old as EventListener)

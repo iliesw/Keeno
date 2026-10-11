@@ -71,7 +71,7 @@ The parent writes `children` as nested markup, any number of nodes. Declare it a
 | Helper | When it runs |
 |---|---|
 | `init(fn)` | Once, after the component's DOM is inserted. If `fn` returns a function, that runs on destroy. |
-| `update(fn)` | After mount, then whenever a state or derived read inside `fn` changes. A returned function is cleanup before the next run and on destroy. |
+| `update(fn)` | Whenever a state, derived, prop or other reactive value read inside `fn` changes, not on mount (the compiler infers the deps; use `init` for the first run). A returned function is cleanup before the next run and on destroy. |
 | `update(fn, [a, b])` | Only when `a` or `b` changes, not on mount. The array holds the states themselves. A returned function is cleanup. |
 | `destroy(fn)` | When the component unmounts. |
 | `x.onUpdate((old, next) => …)` | Synchronously on every real change of `x`. Removed automatically on destroy; also returns an unsubscribe function. |

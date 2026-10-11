@@ -20,14 +20,28 @@ export class ComponentOwner extends Owner {
   props: Record<string, any>
   /** The component function (used by dev tools). */
   component: Function | null
+  /** Scope class of the `.lx` component whose markup created this one, if it has a <style>. */
+  scope: string | null
   mounted = false
   mountJobs: (() => void)[] = []
 
-  constructor(parent: Owner | null, props: Record<string, any>, component: Function | null = null) {
+  constructor(parent: Owner | null, props: Record<string, any>, component: Function | null = null, scope: string | null = null) {
     super(parent)
     this.props = props
     this.component = component
+    this.scope = scope
   }
+}
+
+/**
+ * The scope class of the `.lx` component that rendered the current component, or null. Call it
+ * while the component is being created. Built-in components that render their own elements
+ * (like `<Link>`) add it so the caller's scoped styles reach them.
+ */
+export function callerScope(): string | null {
+  let o = getOwner()
+  while (o && !(o instanceof ComponentOwner)) o = o.parent
+  return o?.scope ?? null
 }
 
 /** Run a mount job, sending what it throws to the nearest error boundary. */
@@ -73,8 +87,9 @@ export function init(fn: () => MaybeCleanup): void {
 }
 
 /**
- * `update(fn)`: runs after mount, then whenever a state read inside `fn` changes.
  * `update(fn, deps)`: runs only when one of `deps` changes (not on mount).
+ * `update(fn)`: runs after mount, then whenever a state read inside `fn` changes. In .lx files the
+ * compiler passes the deps `fn` reads, so there it does not run on mount either.
  * A returned function is used as cleanup before the next run and on destroy.
  */
 export function update(fn: () => MaybeCleanup, deps?: readonly Dep[]): void {

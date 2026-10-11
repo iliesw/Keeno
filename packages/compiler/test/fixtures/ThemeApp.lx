@@ -1,0 +1,14 @@
+<script lang="ts">
+  import { provide, state } from '@inflector/lux'
+  import { Theme, User } from './theme'
+  import ThemeLeaf from './ThemeLeaf.lx'
+  const { color } = props<{ color: string }>()
+  const theme = state('light')
+  const name = state('Ada')
+  provide(Theme, theme)
+  provide(User, { name, color })
+</script>
+
+<span class="current">{theme}</span>
+<button class="rename" onClick={() => name.set('Grace')}>rename</button>
+<ThemeLeaf />

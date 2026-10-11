@@ -17,7 +17,7 @@ The `<style>` block of a component is scoped to it.
 </style>
 ```
 
-Styles don't leak between components, and parent styles don't reach into children. Dynamic `class` values keep the scope class.
+Styles don't leak between components, and parent styles don't reach into children. Dynamic `class` values keep the scope class. The router's `<Link>` is an exception: its `<a>` gets the scope class of the component that renders it, as if you had written the `<a>` yourself.
 
 ## Tailwind CSS
 

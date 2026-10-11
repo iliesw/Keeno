@@ -18,7 +18,7 @@ import { split, type SplitResult } from '@inflector/lux-compiler/split'
 import type { CodeInformation, CodeMapping, VirtualCode } from '@volar/language-core'
 import type * as TS from 'typescript'
 
-const LUX_APIS = ['state', 'derived', 'props', 'init', 'update', 'destroy']
+const LUX_APIS = ['state', 'derived', 'props', 'init', 'update', 'destroy', 'ref']
 
 export const FEATURES: CodeInformation = {
   completion: true,

@@ -1,5 +1,5 @@
 // Context: values a component provides to all of its descendants, found through the owner tree.
-import { getOwner } from './signal'
+import { Derived, getOwner, isSignal, type Signal } from './signal'
 
 export interface Context<T> {
   readonly id: symbol
@@ -30,4 +30,13 @@ export function inject<T>(ctx: Context<T>): T {
     if (o.context?.has(ctx.id)) return o.context.get(ctx.id) as T
   }
   return ctx.defaultValue
+}
+
+/**
+ * `.lx` files: the value of `const x = inject(ctx)` as a signal, so `x` reads like a state. A
+ * provided state or derived is returned as is (writes to a state reach the provider); any other
+ * value is wrapped in a read-only signal.
+ */
+export function toSignal<T>(value: T): Signal<T> {
+  return isSignal(value) ? (value as Signal<T>) : new Derived(() => value)
 }

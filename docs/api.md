@@ -1,6 +1,6 @@
 # API reference
 
-Everything below is exported from `@inflector/lux`. In `.lx` files, `state`, `derived`, `props`, `init`, `update` and `destroy` are available without importing.
+Everything below is exported from `@inflector/lux`. In `.lx` files, `state`, `derived`, `props`, `init`, `update`, `destroy` and `ref` are available without importing.
 
 ## Reactivity
 
@@ -26,6 +26,16 @@ isSignal(v): v is Signal<unknown>   // State or Derived
 | `canUndo`, `canRedo` | Reactive booleans |
 
 `Derived<T>` (extends `Signal<T>`): `get()`, `peek()`, `onUpdate()`. Read-only.
+
+## Refs
+
+```ts
+ref<T extends Element = HTMLElement>(): Ref<T>
+isRef(v): v is Ref<Element>
+type RefTarget<T> = Ref<T> | ((el: T | null) => void) | null | undefined
+```
+
+`Ref<T>`: `current: T | null` (tracked read), `peek(): T | null` (untracked).
 
 `StateOptions<T>`:
 
@@ -59,8 +69,8 @@ type Children = () => unknown                    // the `children` prop: renders
 ```ts
 createContext<T>(defaultValue: T, name?: string): Context<T>
 createContext<T>(): Context<T | undefined>
-provide<T>(context: Context<T>, value: T): void   // while a component is being created
-inject<T>(context: Context<T>): T                 // closest provided value, or the default
+provide<T>(context: Context<T>, value: T): void   // while a component is being created; in .lx, states stay states
+inject<T>(context: Context<T>): T                 // closest provided value, or the default; in .lx, reads like a state
 ```
 
 See [Context](context.md).
@@ -126,6 +136,7 @@ See [Routing](routing.md).
 | `x.foo` | `x.get().foo` |
 | `update(fn, [x, y])` | deps passed as the states themselves |
 | `bind:value={x}` | the state itself |
+| `ref={x}` | `setRef(el, x)`: `x.current` is the element |
 | `const { a } = props()`, then `a` | `$$props.a` (a getter) |
 | `{expr}` | a tracked text node / attribute |
 | `{a && <X/>}`, `{a ? <X/> : <Y/>}`, `{a \|\| <X/>}` | conditional regions that re-render only on truthiness changes |

@@ -1,6 +1,6 @@
 // Component instantiation, props merging and mounting.
 import { isDev } from './dev'
-import { ComponentOwner, mountComponent } from './lifecycle'
+import { ComponentOwner, callerScope, mountComponent } from './lifecycle'
 import { insert, isStatic, region } from './dom'
 import { Owner, flush, getOwner, handleError, queueMount, runWithOwner, untrack } from './signal'
 
@@ -13,10 +13,11 @@ export type Children = () => unknown
  * Create a component instance owned by the current owner. The component function runs
  * untracked; `init`/`update` jobs run once its DOM has been inserted (children before parents).
  * Reactive output (a function, or an array containing one) is rendered under the component's
- * owner, so context and error boundaries reach everything it renders.
+ * owner, so context and error boundaries reach everything it renders. `scope` is the scope class
+ * of the `.lx` component whose markup contains this one (see `callerScope`).
  */
-export function createComponent<P extends Record<string, any>>(Comp: Component<P>, props: P): unknown {
-  const owner = new ComponentOwner(getOwner(), props, Comp)
+export function createComponent<P extends Record<string, any>>(Comp: Component<P>, props: P, scope?: string): unknown {
+  const owner = new ComponentOwner(getOwner(), props, Comp, scope ?? null)
   let out: unknown
   try {
     out = runWithOwner(owner, () => {
@@ -75,9 +76,10 @@ export function Dynamic<P extends Record<string, any>>(props: DynamicProps<P>): 
     has: (target, key) => key !== 'component' && Reflect.has(target, key),
     ownKeys: (target) => Reflect.ownKeys(target).filter((k) => k !== 'component'),
   }) as unknown as P
+  const scope = callerScope() ?? undefined
   return () => {
     const C = props.component
-    return C ? untrack(() => createComponent(C, rest)) : null
+    return C ? untrack(() => createComponent(C, rest, scope)) : null
   }
 }
 

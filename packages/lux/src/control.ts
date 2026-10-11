@@ -1,6 +1,7 @@
 // Built-in control components: ErrorBoundary, Portal, Await and lazy().
 import { createComponent, type Children, type Component } from './component'
 import { getDocument, insert } from './dom'
+import { callerScope } from './lifecycle'
 import { createComputation, getOwner, onCleanup, untrack } from './signal'
 import { State } from './state'
 
@@ -158,11 +159,12 @@ export function lazy<P extends Record<string, any> = Record<string, any>>(
   const Lazy = ((props: P) => {
     if (failed.peek()) failed.set(null)
     if (!loaded.peek()) preload().catch(() => {})
+    const scope = callerScope() ?? undefined
     return () => {
       const f = failed.get()
       if (f) throw f.error
       const C = loaded.get()
-      return C ? untrack(() => createComponent(C, props)) : untrack(() => options.pending?.())
+      return C ? untrack(() => createComponent(C, props, scope)) : untrack(() => options.pending?.())
     }
   }) as LazyComponent<P>
   Lazy.preload = preload

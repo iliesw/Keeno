@@ -1,6 +1,6 @@
 // Client-side router for Lux: <Router>, <Link>, the `link` click handler, navigate() and useRoute().
 import { State, createContext, derived, inject, provide, untrack, type Children, type Component } from '@inflector/lux'
-import { attr, createComponent, insert, on, template } from '@inflector/lux/internal'
+import { attr, callerScope, createComponent, insert, on, template } from '@inflector/lux/internal'
 
 export type Params = Record<string, string>
 
@@ -125,8 +125,8 @@ function isExternalClick(e: MouseEvent, a: HTMLAnchorElement): boolean {
 }
 
 /**
- * Click handler for your own `<a>` elements: `<a href="/about" onClick={link}>About</a>`. Keeps
- * component-scoped styles on the link. With a `base`, write `href={href('/about')}`.
+ * Click handler for your own `<a>` elements: `<a href="/about" onClick={link}>About</a>`. With a
+ * `base`, write `href={href('/about')}`.
  */
 export function link(e: MouseEvent): void {
   const a = (e.currentTarget as Element | null)?.closest('a') as HTMLAnchorElement | null
@@ -289,11 +289,11 @@ const anchor = template('<a></a>')
 
 /**
  * A link that navigates without reloading the page, with `aria-current="page"` and `activeClass`
- * while active. Component-scoped styles don't reach it: style it with a class and `:global()`,
- * or use your own `<a onClick={link}>`.
+ * while active. The scoped styles of the component that renders it apply to its `<a>`.
  */
 export function Link(props: LinkProps): unknown {
   const a = anchor() as HTMLAnchorElement
+  const scope = callerScope()
   // Inside a <Router>, follow its location (which is the request URL when rendering on the server).
   const route = inject(RouteContext)
   if (!route) sync()
@@ -302,7 +302,7 @@ export function Link(props: LinkProps): unknown {
     return route ? pathIsActive(route.path, path, !!props.exact) : isActive(path, props.exact)
   })
   attr(a, 'href', () => href(props.href))
-  attr(a, 'class', () => [props.class, active.get() && (props.activeClass ?? 'active')])
+  attr(a, 'class', () => [props.class, active.get() && (props.activeClass ?? 'active')], scope ?? undefined)
   attr(a, 'aria-current', () => (active.get() ? 'page' : null))
   on(a, 'click', (e: MouseEvent) => {
     if (isExternalClick(e, a)) return

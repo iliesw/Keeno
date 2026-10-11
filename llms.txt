@@ -12,7 +12,7 @@ Rules that differ from React, Svelte and Vue, which models get wrong most often:
 - **Props:** `const { a, b = 1 } = props()` stays reactive. No `...rest`; use `const p = props()` instead.
 - **Markup:** `class`, not `className` (both work). Use `onClick={fn}`, not `@click` or `on:click`. Two-way binding is `bind:value={state}`.
 - **Lists:** `{list.map(item => <li key={item.id}>…</li>)}` is keyed. The callback must return JSX directly.
-- **Lifecycle:** `init(fn)` runs after mount and its return value is cleanup. `update(fn)` is an auto-tracked effect. `update(fn, [a, b])` runs only when `a` or `b` changes, not on mount. `destroy(fn)` runs on unmount.
+- **Lifecycle:** `init(fn)` runs after mount and its return value is cleanup. `update(fn)` runs when a value read inside `fn` changes (deps inferred by the compiler), and `update(fn, [a, b])` only when `a` or `b` changes; neither runs on mount. `destroy(fn)` runs on unmount.
 - **State options:** `persist`, `url`, `history`, `equals`, `validate`, `debounce` and `throttle`.
 - **Built-ins:** `ErrorBoundary`, `Await`, `Dynamic`, `Portal`, `Transition`, `lazy()` and `reparentable()` are imported from `@inflector/lux`. Render props such as `fallback={(error, reset) => <p>…</p>}` and `fulfilled={(value) => …}` are functions.
 - **Reparenting:** to move content between places without re-creating it, `const player = reparentable(() => <Video />)` and render `{player}` wherever it should be now. Use `keyedReparentable((id) => <Card id={id} />)` for items moving between lists. Imperatively: `player.moveTo(el)`, `player.remove()`, and `moveNode(node, parent)` for any DOM node.

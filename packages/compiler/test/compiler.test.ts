@@ -82,6 +82,34 @@ describe('script rewrite', () => {
     expect(body('', 'const { title } = props()\nupdate(() => {}, [title])')).toContain('[() => $$props.title]')
   })
 
+  test('update(fn) gets the deps it reads, so it does not run on mount', () => {
+    const out = body(
+      '',
+      [
+        'const a = state(1)',
+        'const b = state(2)',
+        'const { title } = props()',
+        'const el = ref()',
+        'const route = useRoute()',
+        'update(() => {',
+        '  const local = 1',
+        '  console.log(a, a, b.length, title.trim(), el.current?.tagName, route.path, local)',
+        '  b.set(b.peek() + 1)',
+        '})',
+      ].join('\n'),
+    )
+    expect(out).toContain('[a, b, () => $$props.title, () => el.current, () => route.path]')
+  })
+
+  test('update(fn) skips locals, called functions and written targets', () => {
+    const out = body('', 'const a = state(1)\nconst o = { n: 0 }\nconst f = () => {}\nupdate(() => { f(); o.n = a; o.list.push(1) })')
+    expect(out).toContain('[() => o, a, () => o.list]')
+  })
+
+  test('update(fn) with nothing to react to is a compile error', () => {
+    expect(() => body('', 'update(() => console.log(1))')).toThrow(/update\(\) reads nothing to react to/)
+  })
+
   test('reassigning a state is a compile error', () => {
     expect(() => body('', 'let a = state(1)\na = 2')).toThrow(/Cannot reassign state "a"; use a.set/)
     expect(() => body('', 'let a = state(1)\na++')).toThrow(/Cannot reassign state/)
@@ -195,6 +223,12 @@ describe('template codegen', () => {
     const out = body('<input bind:value={name} /><input type="checkbox" bind:checked={done} />', 'const name = state("")\nconst done = state(false)')
     expect(out).toContain('_$bind(_el$1, "value", name)')
     expect(out).toContain('_$bind(_el$2, "checked", done)')
+  })
+
+  test('ref={x} passes the ref itself', () => {
+    const out = body('<div><input ref={field} /></div>', 'const field = ref()')
+    expect(out).toContain('_$setRef(_el$2, field)')
+    expect(() => body('<div ref="x" />', '')).toThrow(/ref needs/)
   })
 
   test('bind on a prop or with an unsupported property is an error', () => {

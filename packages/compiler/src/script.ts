@@ -9,6 +9,7 @@ import {
   RESERVED_MEMBERS,
   RUNTIME,
   codeFrameError,
+  generate,
   traverse,
   type PropBinding,
 } from './context'
@@ -212,11 +213,110 @@ export function analyze(file: t.File, ctx: CompileContext) {
         ctx.derivedIds.add(path.node.id)
       }
       else if (path.node.id.type === 'ObjectPattern' && isLuxApi(callee, 'props')) recordProps(path, ctx)
+      else if (path.node.id.type === 'Identifier' && isLuxApi(callee, 'inject')) {
+        // `const theme = inject(Theme)` reads like a state: a provided state or derived is used as
+        // is, and any other value is wrapped in a read-only signal.
+        ctx.stateIds.add(path.node.id)
+        path.node.init = t.callExpression(ctx.helper('toSignal'), [init.node])
+      }
+    },
+    CallExpression(path) {
+      if (isLuxApi(path.get('callee'), 'provide')) prepareProvide(path, ctx)
     },
   })
 }
 
+/** True if `path` reads a state or a destructured prop. */
+function readsReactive(path: NodePath, ctx: CompileContext): boolean {
+  let found = false
+  const check = (p: NodePath<t.Identifier>) => {
+    const id = p.scope.getBinding(p.node.name)?.identifier
+    if (id && (ctx.stateIds.has(id) || ctx.propIds.has(id)) && !isInType(p)) found = true
+  }
+  if (path.isIdentifier()) check(path)
+  else path.traverse({ ReferencedIdentifier: (p) => p.isIdentifier() && check(p) })
+  return found
+}
+
+/**
+ * `provide(ctx, value)` keeps the value reactive: a state or derived is passed as itself, and an
+ * expression that reads states or props becomes `derived(() => value)`.
+ */
+function prepareProvide(path: NodePath<t.CallExpression>, ctx: CompileContext) {
+  const value = path.get('arguments')[1]
+  if (!value || !value.isExpression()) return
+  if (value.isIdentifier()) {
+    const id = value.scope.getBinding(value.node.name)?.identifier
+    if (id && ctx.stateIds.has(id)) {
+      ctx.rawStateRefs.add(value.node)
+      return
+    }
+  }
+  if (readsReactive(value, ctx)) {
+    value.replaceWith(t.callExpression(ctx.helper('derived'), [t.arrowFunctionExpression([], value.node)]))
+  }
+}
+
 // ---------------------------------------------------------------------------
+
+function isInsideScope(scope: NodePath['scope'] | undefined, inner: NodePath['scope']): boolean {
+  for (let s = scope; s; s = s.parent) if (s === inner) return true
+  return false
+}
+
+/**
+ * The value a reference to an outer binding reads inside an `update` callback: the longest
+ * `a.b.c` chain, without a called method (`a.b.push()` reads `a.b`) or an assigned property
+ * (`a.b = 1` reads `a`). `x.get()` is kept whole. Null when nothing is read (calling `f()`).
+ */
+function readChain(ref: NodePath<t.Identifier>): t.Expression | null {
+  let cur: NodePath = ref
+  while (cur.parentPath?.isMemberExpression() && cur.key === 'object' && !cur.parentPath.node.computed) cur = cur.parentPath
+  const parent = cur.parentPath!
+  const called = parent.isCallExpression() && cur.key === 'callee'
+  if (called && cur.isMemberExpression() && t.isIdentifier(cur.node.property, { name: 'get' }) && !parent.node.arguments.length) {
+    return parent.node as t.CallExpression
+  }
+  const written = (parent.isAssignmentExpression() && cur.key === 'left') || parent.isUpdateExpression()
+  if (!called && !written) return cur.node as t.Expression
+  return cur.isMemberExpression() ? (cur.node.object as t.Expression) : null
+}
+
+/**
+ * Give each `update(fn)` the deps `fn` reads, so it runs when they change and not on mount:
+ * states and deriveds themselves, and getters for props and other outer values (refs, routes).
+ */
+export function inferUpdateDeps(file: t.File, ctx: CompileContext) {
+  traverse.cache.clear()
+  traverse(file, {
+    CallExpression(call) {
+      if (call.node.arguments.length !== 1 || !isLuxApi(call.get('callee'), 'update')) return
+      const fn = call.get('arguments')[0]
+      if (!fn.isArrowFunctionExpression() && !fn.isFunctionExpression()) return
+      const deps = new Map<string, t.Expression>()
+      fn.traverse({
+        ReferencedIdentifier(ref) {
+          if (!ref.isIdentifier() || isInType(ref)) return
+          const binding = ref.scope.getBinding(ref.node.name)
+          if (!binding || binding.kind === 'hoisted' || isInsideScope(binding.scope, fn.scope)) return
+          if (ctx.stateIds.has(binding.identifier)) {
+            const parent = ref.parentPath
+            const member = parent.isMemberExpression() && ref.key === 'object' && !parent.node.computed ? parent.node.property : null
+            if (t.isIdentifier(member) && member.name !== 'get' && RESERVED_MEMBERS.has(member.name)) return
+            deps.set(ref.node.name, t.identifier(ref.node.name))
+            return
+          }
+          const read = readChain(ref)
+          if (read) deps.set(generate(read).code, t.arrowFunctionExpression([], t.cloneNode(read, true)))
+        },
+      })
+      if (!deps.size) {
+        throw codeFrameError(call, 'update() reads nothing to react to: pass deps (update(fn, [a, b])) or use init() to run once')
+      }
+      call.node.arguments.push(t.arrayExpression([...deps.values()]))
+    },
+  })
+}
 
 function isInType(path: NodePath): boolean {
   return !!path.findParent((p) => p.isTSType() || p.isTSTypeAnnotation() || p.isTSTypeQuery())
@@ -242,7 +342,7 @@ function isBindTarget(path: NodePath): boolean {
   )
 }
 
-function rewriteStateRef(path: NodePath<t.Identifier>, isDerived: boolean) {
+function rewriteStateRef(path: NodePath<t.Identifier>, isDerived: boolean, ctx: CompileContext) {
   if (isDerived && isBindTarget(path)) {
     throw codeFrameError(path, `bind: needs a writable state, but "${path.node.name}" is derived (read-only)`)
   }
@@ -256,7 +356,7 @@ function rewriteStateRef(path: NodePath<t.Identifier>, isDerived: boolean) {
   ) {
     return
   }
-  if (isUpdateDep(path) || isBindTarget(path)) return
+  if (isUpdateDep(path) || isBindTarget(path) || ctx.rawStateRefs.has(path.node)) return
   replaceRef(path, t.callExpression(t.memberExpression(t.identifier(path.node.name), t.identifier('get')), []))
 }
 
@@ -310,7 +410,7 @@ export function rewrite(file: t.File, ctx: CompileContext) {
       if (!isState && !prop) return
       if (isInType(path)) return
       checkViolations(path, isState ? 'state' : 'prop')
-      if (isState) rewriteStateRef(path, ctx.derivedIds.has(id))
+      if (isState) rewriteStateRef(path, ctx.derivedIds.has(id), ctx)
       else rewritePropRef(path, prop!)
     },
   })

@@ -1,0 +1,18 @@
+<script lang="ts">
+  const { log } = props<{ log: (s: string) => void }>()
+  const field = ref<HTMLInputElement>()
+  const show = state(true)
+  let seen: Element | null = null
+
+  init(() => {
+    log(`init ${field.current?.tagName}`)
+    field.current!.focus()
+  })
+  update(() => log(`current ${field.current ? 'set' : 'null'}`))
+</script>
+
+<div>
+  {show && <input class="field" ref={field} />}
+  <span class="cb" ref={(el) => (seen = el)}></span>
+  <button class="toggle" onClick={() => show.set(!show)}>toggle</button>
+</div>
