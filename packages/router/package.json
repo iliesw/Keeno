@@ -39,7 +39,7 @@
     "prepack": "bun run build"
   },
   "peerDependencies": {
-    "@inflector/lux": ">=0.1.0 <1.0.0"
+    "@inflector/lux": ">=0.2.0 <1.0.0"
   },
   "devDependencies": {
     "@inflector/lux": "workspace:*"

@@ -2,7 +2,7 @@
   "name": "inflector-lux",
   "displayName": "Lux Framework",
   "description": "Syntax highlighting and IntelliSense for Lux (.lx) components",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "publisher": "inflector",
   "private": true,
   "license": "MIT",

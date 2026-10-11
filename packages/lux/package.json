@@ -1,6 +1,6 @@
 {
   "name": "@inflector/lux",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Compiled, signal-based UI runtime for Lux (.lx) components",
   "license": "MIT",
   "repository": {
