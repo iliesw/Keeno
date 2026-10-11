@@ -1,0 +1,113 @@
+<script lang="ts">
+  // The selected component (props, states, errors), the stores, or a hint.
+  import IconButton from './IconButton.kn'
+  import Section from './Section.kn'
+  import SignalRow from './SignalRow.kn'
+  import Value from './Value.kn'
+  import { STORES, useActions, type DevDetails, type DevSignal } from '../shared'
+
+  const { selected, details, stores } = props<{ selected: number | null; details: DevDetails | null; stores: DevSignal[] }>()
+  const actions = useActions()
+
+  const view = derived(() => (selected === STORES ? 'stores' : details ? 'component' : 'empty'))
+  const propKeys = derived(() =>
+    details ? Object.keys(details.props).filter((k) => k !== 'children' || details!.props[k] !== undefined) : [],
+  )
+  const errors = derived(() => (details?.errors ?? []).map((error, i) => ({ i, error })))
+</script>
+
+<div class="inspector">
+  {view === 'empty' && (
+    <div class="hint">
+      <div class="hint-title">Select a component</div>
+      <div>
+        Click one in the tree, or <button class="link" onClick={() => actions.startPicker()}>pick it on the page</button>.
+      </div>
+      <div class="keys">
+        <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd> panel · <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>C</kbd> pick
+      </div>
+    </div>
+  )}
+  {view === 'stores' && (
+    <div>
+      <div class="insp-head">
+        <span class="store-mark">◆</span>
+        <span class="insp-name">Stores</span>
+      </div>
+      <div class="meta muted">States and deriveds created outside components.</div>
+      <Section title="State" count={stores.length}>
+        {stores.map((s) => <SignalRow key={s.id} signal={s} />)}
+      </Section>
+    </div>
+  )}
+  {view === 'component' && (
+    <div>
+      <div class="insp-head">
+        <span class="tag big">
+          {'<'}
+          <span class="name">{details!.name}</span>
+          {'>'}
+        </span>
+        <div class="spacer" />
+        <IconButton icon="eye" title="Scroll into view" onClick={() => actions.scrollTo(details!.id)} />
+        <IconButton icon="log" title="Log to console as $keeno" onClick={() => actions.api.expose(details!.id)} />
+        {details!.file && (
+          <IconButton icon="open" title={`Open ${details!.file} in your editor`} onClick={() => actions.openFile(details!.file!)} />
+        )}
+      </div>
+      <div class="meta">
+        {details!.file ? (
+          <button class="link file" title="Open in editor" onClick={() => actions.openFile(details!.file!)}>
+            {details!.file}
+          </button>
+        ) : (
+          <span class="muted">built-in</span>
+        )}
+        <span class="muted">
+          {' · '}
+          {details!.updates} update{details!.updates === 1 ? '' : 's'}
+        </span>
+      </div>
+      <Section title="Props" count={propKeys.length}>
+        {propKeys.map((k) => (
+          <div key={k} class="kv">
+            <span class="key">{k}</span>
+            <span class="colon">:</span>
+            <span class="val">
+              <Value value={details!.props[k]} />
+            </span>
+          </div>
+        ))}
+        {propKeys.length === 0 && <div class="muted small pad">None</div>}
+      </Section>
+      <Section title="State" count={details!.states.length}>
+        {details!.states.map((s) => <SignalRow key={s.id} signal={s} />)}
+        {details!.states.length === 0 && <div class="muted small pad">None</div>}
+      </Section>
+      {errors.length > 0 && (
+        <Section title="Errors" count={errors.length}>
+          {errors.map((e) => (
+            <div key={e.i} class="kv err-row">
+              <span class="val">
+                <Value value={e.error} />
+              </span>
+            </div>
+          ))}
+        </Section>
+      )}
+    </div>
+  )}
+</div>
+
+<style>
+  .inspector { flex: 1; overflow: auto; padding: 8px 10px 24px; min-height: 0; }
+  .insp-head { display: flex; align-items: center; gap: 6px; min-height: 28px; }
+  .insp-name { font-weight: 700; }
+  .meta { margin: 2px 0 10px; word-break: break-all; }
+  .file { color: var(--muted); }
+  .file:hover { color: var(--tag); }
+  .hint { padding: 28px 8px; color: var(--muted); display: grid; gap: 8px; text-align: center; }
+  .hint-title { color: var(--text); font-weight: 700; font-size: 13px; }
+  .keys { margin-top: 6px; }
+  .err-row { padding-left: 0; }
+</style>

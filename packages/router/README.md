@@ -1,16 +1,16 @@
-# @inflector/lux-router
+# @inflector/keeno-router
 
-Client-side router for [Lux](https://github.com/iliesw/Lux): `<Router>`, `<Link>`, `navigate()`, `useRoute()` and the `link` click handler. It also supports a base path, lazy routes and server rendering.
+Client-side router for [Keeno](https://github.com/iliesw/Keeno): `<Router>`, `<Link>`, `navigate()`, `useRoute()` and the `link` click handler. It also supports a base path, lazy routes and server rendering.
 
 ```bash
-bun add @inflector/lux-router
+bun add @inflector/keeno-router
 ```
 
 ```html
 <script lang="ts">
-  import { Link, Router } from '@inflector/lux-router'
-  import Home from './Home.lx'
-  import User from './User.lx'
+  import { Link, Router } from '@inflector/keeno-router'
+  import Home from './Home.kn'
+  import User from './User.kn'
   const routes = [
     { path: '/', component: Home },
     { path: '/users/:id', component: User },
@@ -21,4 +21,4 @@ bun add @inflector/lux-router
 <Router routes={routes} />
 ```
 
-See [Routing](https://github.com/iliesw/Lux/blob/main/docs/routing.md). MIT license.
+See [Routing](https://github.com/iliesw/Keeno/blob/main/docs/routing.md). MIT license.

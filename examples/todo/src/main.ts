@@ -1,4 +1,4 @@
-import { mount } from '@inflector/lux'
-import App from './App.lx'
+import { mount } from '@inflector/keeno'
+import App from './App.kn'
 
 mount(App, document.getElementById('app')!)

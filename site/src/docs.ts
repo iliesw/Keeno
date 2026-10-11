@@ -94,5 +94,10 @@ export async function loadDoc(slug: string): Promise<DocModule | undefined> {
 export function slugFromPath(pathname: string): string | null {
   const m = pathname.match(/^\/docs(?:\/([^/]+))?\/?$/)
   if (!m) return null
-  return m[1] ? decodeURIComponent(m[1]) : pages[0].slug
+  if (!m[1]) return pages[0].slug
+  try {
+    return decodeURIComponent(m[1])
+  } catch {
+    return null
+  }
 }

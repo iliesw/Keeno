@@ -12,10 +12,12 @@ export { scopeStyle } from './style'
 export interface CompileOptions {
   /** Used for the scope hash, the component name, error messages and source maps. */
   filename: string
-  /** Module the runtime is imported from (default `@inflector/lux`). */
+  /** Module the runtime is imported from (default `@inflector/keeno`). */
   runtime?: string
-  /** Dev only: export a hot-swappable wrapper registered under this id (see `@inflector/lux/internal` `hot`). */
+  /** Dev only: export a hot-swappable wrapper registered under this id (see `@inflector/keeno/internal` `hot`). */
   hmrId?: string
+  /** Development build: name states for the dev tools and record the source file on the component. */
+  dev?: boolean
 }
 
 export interface CompileResult {
@@ -24,7 +26,7 @@ export interface CompileResult {
   /** Scoped CSS, or '' when there is no <style>. */
   css: string
   map: any
-  /** The scope class, e.g. `lux-1a2b3c4d`. */
+  /** The scope class, e.g. `keeno-1a2b3c4d`. */
   scope: string
   /** Name of the generated component function. */
   name: string
@@ -41,7 +43,7 @@ export function hash(s: string): string {
 }
 
 export function scopeClass(filename: string): string {
-  return `lux-${hash(filename.replace(/\\/g, '/'))}`
+  return `keeno-${hash(filename.replace(/\\/g, '/'))}`
 }
 
 function componentName(filename: string): string {
@@ -78,6 +80,7 @@ export function compile(source: string, options: CompileOptions): CompileResult 
   const scope = scopeClass(filename)
   const css = parts.style ? scopeStyle(parts.style.content, scope, filename) : ''
   const ctx = new CompileContext(filename, parts.style ? scope : null)
+  if (options.dev) ctx.labels = []
   const name = componentName(filename)
 
   const file = buildComponentAst(parts, ctx, name)
@@ -91,14 +94,23 @@ export function compile(source: string, options: CompileOptions): CompileResult 
   const exported = program.body[program.body.length - 1] as t.ExportDefaultDeclaration
   const fn = exported.declaration as t.FunctionDeclaration
   inlineReturn(fn)
-  if (options.hmrId) {
-    // `function Name() {}` + `export default _$hot(Name, id)`
-    program.body.splice(
-      program.body.length - 1,
-      1,
-      fn,
-      t.exportDefaultDeclaration(t.callExpression(ctx.helper('hot'), [t.identifier(name), t.stringLiteral(options.hmrId)])),
-    )
+  if (options.dev) {
+    // `const count = state(0)` -> `const count = _$label(state(0), "count")`
+    for (const decl of ctx.labels!) {
+      decl.init = t.callExpression(ctx.helper('label'), [decl.init!, t.stringLiteral((decl.id as t.Identifier).name)])
+    }
+  }
+  if (options.hmrId || options.dev) {
+    // `function Name() {}` (+ `Name.__keenoFile = "src/Name.kn"`) + `export default _$hot(Name, id)`
+    const tail: t.Statement[] = [fn]
+    if (options.dev) {
+      const file = t.stringLiteral(filename.replace(/\\/g, '/'))
+      tail.push(t.expressionStatement(t.assignmentExpression('=', t.memberExpression(t.identifier(name), t.identifier('__keenoFile')), file)))
+    }
+    const value = options.hmrId
+      ? t.callExpression(ctx.helper('hot'), [t.identifier(name), t.stringLiteral(options.hmrId)])
+      : t.identifier(name)
+    program.body.splice(program.body.length - 1, 1, ...tail, t.exportDefaultDeclaration(value))
   }
 
   const templates = [...ctx.templates.values()].map(({ id, html, svg }) =>

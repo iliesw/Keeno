@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { compile, scopeStyle, split } from '../src/index'
 
-const js = (source: string, filename = 'src/Test.lx') => compile(source, { filename }).js
+const js = (source: string, filename = 'src/Test.kn') => compile(source, { filename }).js
 const body = (markup: string, script = '') => js(`<script lang="ts">\n${script}\n</script>\n${markup}`)
 
 describe('split', () => {
@@ -135,24 +135,24 @@ describe('script rewrite', () => {
     expect(() => body('', 'const { a, ...rest } = props()')).toThrow(/Rest props/)
   })
 
-  test('lux APIs are auto-imported only when used and not imported', () => {
+  test('keeno APIs are auto-imported only when used and not imported', () => {
     const out = body('', 'const a = state(0)\ninit(() => {})')
-    expect(out).toContain('import { state, init } from "@inflector/lux"')
-    const out2 = js('<script>import { state as s } from "@inflector/lux"\nconst a = s(0)\nconsole.log(a)</script>')
-    expect(out2.match(/from "@inflector\/lux"/g)).toHaveLength(1)
+    expect(out).toContain('import { state, init } from "@inflector/keeno"')
+    const out2 = js('<script>import { state as s } from "@inflector/keeno"\nconst a = s(0)\nconsole.log(a)</script>')
+    expect(out2.match(/from "@inflector\/keeno"/g)).toHaveLength(1)
     expect(out2).toContain('console.log(a.get())')
   })
 
   test('a local function named like an API is not treated as one', () => {
     const out = body('', 'function state(v) { return v }\nconst a = state(1)\nconsole.log(a)')
     expect(out).toContain('console.log(a)')
-    expect(out).not.toContain('from "@inflector/lux"')
+    expect(out).not.toContain('from "@inflector/keeno"')
   })
 
   test('imports and types are hoisted; the rest runs per instance', () => {
     const out = js(
       '<script lang="ts">\nimport X from "./X"\ntype T = { a: number }\ninterface I { b: string }\nconst v: T = { a: 1 }\n</script>',
-      'src/my-widget.lx',
+      'src/my-widget.kn',
     )
     expect(out).toMatch(/import X from "\.\/X";\ntype T = \{/)
     expect(out).toContain('export default function MyWidget($$props)')
@@ -281,7 +281,7 @@ describe('template codegen', () => {
   test('components get getters for dynamic props and plain values otherwise', () => {
     const out = body(
       '<Item text={t.text} count={n} label="x" n={1} onSave={(v) => save(v)} handler={save} on />',
-      'import Item from "./Item.lx"\nconst t = state({ text: "" })\nconst n = state(0)\nfunction save(v) {}',
+      'import Item from "./Item.kn"\nconst t = state({ text: "" })\nconst n = state(0)\nfunction save(v) {}',
     )
     expect(out).toContain('get text() {\n      return t.get().text;')
     expect(out).toContain('get count() {\n      return n.get();')
@@ -294,24 +294,24 @@ describe('template codegen', () => {
   })
 
   test('component children arrive as a children function', () => {
-    const out = body('<Card title="t"><p>{n}</p>text</Card>', 'import Card from "./Card.lx"\nconst n = state(0)')
+    const out = body('<Card title="t"><p>{n}</p>text</Card>', 'import Card from "./Card.kn"\nconst n = state(0)')
     expect(out).toContain('children: () => [(() => {')
     expect(out).toMatchSnapshot()
   })
 
   test('spread props use mergeProps', () => {
-    const out = body('<Item {...rest} a={1} />', 'import Item from "./Item.lx"\nconst rest = state({})')
+    const out = body('<Item {...rest} a={1} />', 'import Item from "./Item.kn"\nconst rest = state({})')
     expect(out).toContain('_$mergeProps(() => rest.get(), {\n    a: 1\n  })')
   })
 
   test('components inside elements are inserted', () => {
-    const out = body('<div><Item /><span /></div>', 'import Item from "./Item.lx"')
+    const out = body('<div><Item /><span /></div>', 'import Item from "./Item.kn"')
     expect(out).toContain('"<div><!----><span></span></div>"')
     expect(out).toContain('_$insert(_el$1, _$createComponent(Item, {}), _el$2)')
   })
 
   test('multiple roots return an array', () => {
-    const out = body('<h1>a</h1>\ntext\n{n}\n<Item />', 'import Item from "./Item.lx"\nconst n = state(0)')
+    const out = body('<h1>a</h1>\ntext\n{n}\n<Item />', 'import Item from "./Item.kn"\nconst n = state(0)')
     expect(out).toContain('return [_tmpl$1(), "text", () => n.get(), _$createComponent(Item, {})]')
   })
 
@@ -325,7 +325,7 @@ describe('template codegen', () => {
 
   test('the plan example compiles', () => {
     const src = planExample()
-    const r = compile(src, { filename: 'src/Counter.lx' })
+    const r = compile(src, { filename: 'src/Counter.kn' })
     expect(r.js).toMatchSnapshot()
     expect(r.css).toMatchSnapshot()
   })
@@ -334,7 +334,7 @@ describe('template codegen', () => {
 describe('derived, history members, spread, class arrays', () => {
   test('derived reads unwrap like states and derived is auto-imported', () => {
     const out = body('<p>{total}</p>', 'const n = state(2)\nconst total = derived(() => n * 10)\nconsole.log(total + 1, total.peek())')
-    expect(out).toContain('import { state, derived } from "@inflector/lux"')
+    expect(out).toContain('import { state, derived } from "@inflector/keeno"')
     expect(out).toContain('derived(() => n.get() * 10)')
     expect(out).toContain('console.log(total.get() + 1, total.peek())')
     expect(out).toContain('() => total.get()')
@@ -378,7 +378,7 @@ describe('derived, history members, spread, class arrays', () => {
   })
 
   test('spread on a scoped element passes the scope class', () => {
-    const r = compile('<script>const a = state({})</script><div {...a} /><style>div {}</style>', { filename: 'src/S.lx' })
+    const r = compile('<script>const a = state({})</script><div {...a} /><style>div {}</style>', { filename: 'src/S.kn' })
     expect(r.js).toContain(`_$spread(_el$1, _$mergeProps(() => a.get()), "${r.scope}")`)
     expect(r.js).toContain(`"<div class=\\"${r.scope}\\"></div>"`)
   })
@@ -386,41 +386,71 @@ describe('derived, history members, spread, class arrays', () => {
 
 describe('hmr', () => {
   test('hmrId exports a hot wrapper instead of the bare component', () => {
-    const out = compile('<p />', { filename: 'src/A.lx', hmrId: 'src/A.lx' }).js
+    const out = compile('<p />', { filename: 'src/A.kn', hmrId: 'src/A.kn' }).js
     expect(out).toContain('hot as _$hot')
     expect(out).toContain('function A($$props) {')
-    expect(out).toContain('export default _$hot(A, "src/A.lx");')
+    expect(out).toContain('export default _$hot(A, "src/A.kn");')
     expect(out).not.toContain('export default function')
   })
 })
 
+describe('dev', () => {
+  const src = `<script>
+  const count = state(0)
+  const double = derived(() => count * 2)
+</script>
+<p>{double}</p>`
+
+  test('names states and deriveds for the dev tools and tags the source file', () => {
+    const out = compile(src, { filename: 'src/Counter.kn', dev: true }).js
+    expect(out).toContain('label as _$label')
+    expect(out).toContain('const count = _$label(state(0), "count");')
+    expect(out).toContain('const double = _$label(derived(() => count.get() * 2), "double");')
+    expect(out).toContain('Counter.__keenoFile = "src/Counter.kn";')
+    expect(out).toContain('export default Counter;')
+  })
+
+  test('works with hmr', () => {
+    const out = compile(src, { filename: 'src/Counter.kn', dev: true, hmrId: 'src/Counter.kn' }).js
+    expect(out.match(/function Counter\(/g)).toHaveLength(1)
+    expect(out).toContain('Counter.__keenoFile = "src/Counter.kn";')
+    expect(out).toContain('export default _$hot(Counter, "src/Counter.kn");')
+  })
+
+  test('is off by default', () => {
+    const out = compile(src, { filename: 'src/Counter.kn' }).js
+    expect(out).not.toContain('_$label')
+    expect(out).not.toContain('__keenoFile')
+  })
+})
+
 describe('scoped styles', () => {
-  const s = (css: string) => scopeStyle(css, 'lux-x').trim()
+  const s = (css: string) => scopeStyle(css, 'keeno-x').trim()
 
   test('every compound selector gets the scope class', () => {
-    expect(s('h1 { color: teal }')).toBe('h1.lux-x { color: teal }')
-    expect(s('ul > li.done + p, .a .b {}')).toBe('ul.lux-x > li.done.lux-x + p.lux-x, .a.lux-x .b.lux-x {}')
+    expect(s('h1 { color: teal }')).toBe('h1.keeno-x { color: teal }')
+    expect(s('ul > li.done + p, .a .b {}')).toBe('ul.keeno-x > li.done.keeno-x + p.keeno-x, .a.keeno-x .b.keeno-x {}')
   })
 
   test('the class goes before pseudo-classes and pseudo-elements', () => {
-    expect(s('a:hover::before {}')).toBe('a.lux-x:hover::before {}')
-    expect(s(':not(.x) {}')).toBe('.lux-x:not(.x) {}')
+    expect(s('a:hover::before {}')).toBe('a.keeno-x:hover::before {}')
+    expect(s(':not(.x) {}')).toBe('.keeno-x:not(.x) {}')
   })
 
   test(':global() is unwrapped and left unscoped', () => {
     expect(s(':global(body) { margin: 0 }')).toBe('body { margin: 0 }')
-    expect(s(':global(.dark) h1 {}')).toBe('.dark h1.lux-x {}')
-    expect(s('div :global(p.x) {}')).toBe('div.lux-x p.x {}')
+    expect(s(':global(.dark) h1 {}')).toBe('.dark h1.keeno-x {}')
+    expect(s('div :global(p.x) {}')).toBe('div.keeno-x p.x {}')
   })
 
   test('at-rules: @media is scoped, @keyframes steps are not', () => {
-    expect(s('@media (min-width: 1px) { p { x: y } }')).toBe('@media (min-width: 1px) { p.lux-x { x: y } }')
+    expect(s('@media (min-width: 1px) { p { x: y } }')).toBe('@media (min-width: 1px) { p.keeno-x { x: y } }')
     expect(s('@keyframes k { from { a: b } 50% { a: c } }')).toBe('@keyframes k { from { a: b } 50% { a: c } }')
   })
 
   test('Tailwind: @apply and @variant are kept; @utility, @theme and @custom-variant bodies are not scoped', () => {
     expect(s('.btn { @apply px-4 hover:bg-red-500/50; @variant dark { @apply text-white } }')).toBe(
-      '.btn.lux-x { @apply px-4 hover:bg-red-500/50; @variant dark { @apply text-white } }',
+      '.btn.keeno-x { @apply px-4 hover:bg-red-500/50; @variant dark { @apply text-white } }',
     )
     expect(s('@utility tab { tab-size: 4; &:hover { a: b } }')).toBe('@utility tab { tab-size: 4; &:hover { a: b } }')
     expect(s('@theme { --color-x: red }')).toBe('@theme { --color-x: red }')
@@ -430,35 +460,35 @@ describe('scoped styles', () => {
   })
 
   test('compile() returns scoped css and adds the class to every element', () => {
-    const r = compile('<div><p>x</p></div><style>p { color: red }</style>', { filename: 'src/A.lx' })
+    const r = compile('<div><p>x</p></div><style>p { color: red }</style>', { filename: 'src/A.kn' })
     expect(r.css.trim()).toBe(`p.${r.scope} { color: red }`)
     expect(r.js).toContain(`<div class=\\"${r.scope}\\"><p class=\\"${r.scope}\\">x</p></div>`)
   })
 
   test('static and dynamic class keep the scope class', () => {
     const r = compile('<script>const c = state("a")</script><p class="x" /><i class={c} /><style>p {}</style>', {
-      filename: 'src/A.lx',
+      filename: 'src/A.kn',
     })
     expect(r.js).toContain(`class=\\"x ${r.scope}\\"`)
     expect(r.js).toContain(`_$attr(_el$2, "class", () => c.get(), "${r.scope}")`)
   })
 
   test('no style block: no scope class in the markup', () => {
-    expect(compile('<p />', { filename: 'src/A.lx' }).js).toContain('"<p></p>"')
+    expect(compile('<p />', { filename: 'src/A.kn' }).js).toContain('"<p></p>"')
   })
 
   test('the scope hash depends on the file path only', () => {
-    const a = compile('<p/>', { filename: 'src/A.lx' }).scope
-    expect(compile('<b/>', { filename: 'src\\A.lx' }).scope).toBe(a)
-    expect(compile('<p/>', { filename: 'src/B.lx' }).scope).not.toBe(a)
-    expect(a).toMatch(/^lux-[0-9a-f]{8}$/)
+    const a = compile('<p/>', { filename: 'src/A.kn' }).scope
+    expect(compile('<b/>', { filename: 'src\\A.kn' }).scope).toBe(a)
+    expect(compile('<p/>', { filename: 'src/B.kn' }).scope).not.toBe(a)
+    expect(a).toMatch(/^keeno-[0-9a-f]{8}$/)
   })
 })
 
 function planExample() {
-  return `<!-- Counter.lx -->
+  return `<!-- Counter.kn -->
 <script lang="ts">
-  import Item from './Item.lx'
+  import Item from './Item.kn'
   const { title, onSave } = props()
   const count = state(0)
   const todos = state<{ id: number; text: string }[]>([])

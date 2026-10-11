@@ -1,4 +1,4 @@
-// Build, then package the extension as lux-vscode.vsix.
+// Build, then package the extension as keeno-vscode.vsix.
 import path from 'node:path'
 
 const root = path.resolve(import.meta.dir, '..')
@@ -8,4 +8,4 @@ const run = (cmd: string[]) => {
 }
 
 run(['bun', 'run', 'scripts/build.ts', '--production'])
-run(['bun', 'x', 'vsce', 'package', '--no-dependencies', '-o', 'lux-vscode.vsix'])
+run(['bun', 'x', 'vsce', 'package', '--no-dependencies', '-o', 'keeno-vscode.vsix'])

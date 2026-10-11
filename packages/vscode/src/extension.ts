@@ -1,4 +1,4 @@
-// VS Code client: starts the Lux language server for .lx files.
+// VS Code client: starts the Keeno language server for .kn files.
 import { getTsdk } from '@volar/vscode'
 import { LanguageClient, TransportKind, type LanguageClientOptions, type ServerOptions } from '@volar/vscode/node'
 import * as vscode from 'vscode'
@@ -13,14 +13,14 @@ export async function activate(context: vscode.ExtensionContext) {
   }
   const tsdk = await getTsdk(context)
   if (!tsdk) {
-    void vscode.window.showErrorMessage('Lux: could not find a TypeScript installation for IntelliSense.')
+    void vscode.window.showErrorMessage('Keeno: could not find a TypeScript installation for IntelliSense.')
     return
   }
   const clientOptions: LanguageClientOptions = {
-    documentSelector: [{ language: 'lux' }],
+    documentSelector: [{ language: 'keeno' }],
     initializationOptions: { typescript: { tsdk: tsdk.tsdk } },
   }
-  client = new LanguageClient('lux', 'Lux Language Server', serverOptions, clientOptions)
+  client = new LanguageClient('keeno', 'Keeno Language Server', serverOptions, clientOptions)
   await client.start()
 }
 

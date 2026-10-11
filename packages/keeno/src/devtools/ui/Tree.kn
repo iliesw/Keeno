@@ -1,0 +1,139 @@
+<script lang="ts">
+  // The flattened component tree: select, collapse, hover to outline, arrow keys to move.
+  import { STORES, useActions, type TreeRow } from '../shared'
+
+  const { rows, selected, storesCount, query, pulses } = props<{
+    rows: TreeRow[]
+    selected: number | null
+    storesCount: number
+    query: string
+    pulses: Record<number, number>
+  }>()
+  const actions = useActions()
+  const el = ref<HTMLDivElement>()
+
+  const showStores = derived(() => storesCount > 0 && !query.trim())
+
+  /** The name split around the search match: [before, match, after]. */
+  function parts(name: string): [string, string, string] {
+    const q = query.trim().toLowerCase()
+    const i = q ? name.toLowerCase().indexOf(q) : -1
+    return i < 0 ? [name, '', ''] : [name.slice(0, i), name.slice(i, i + q.length), name.slice(i + q.length)]
+  }
+
+  function move(id: number) {
+    actions.select(id)
+    actions.highlight(id === STORES ? null : id)
+  }
+
+  function onKey(e: KeyboardEvent) {
+    const ids = [...(showStores ? [STORES] : []), ...rows.map((r) => r.id)]
+    const i = selected === null ? -1 : ids.indexOf(selected)
+    const row = rows.find((r) => r.id === selected)
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault()
+      const next = ids[Math.max(0, Math.min(ids.length - 1, i + (e.key === 'ArrowDown' ? 1 : -1)))]
+      if (next !== undefined) move(next)
+    } else if (e.key === 'ArrowRight' && row) {
+      e.preventDefault()
+      if (row.collapsed) actions.toggle(row.id)
+    } else if (e.key === 'ArrowLeft' && row) {
+      e.preventDefault()
+      if (row.hasKids && !row.collapsed) actions.toggle(row.id)
+      else {
+        const parent = actions.api.path(row.id).at(-2)
+        if (parent !== undefined) move(parent)
+      }
+    } else if (e.key === 'Enter' && row) actions.scrollTo(row.id)
+  }
+
+  // Keep the selected row in view (selection also changes from the picker and the timeline).
+  update(() => {
+    const id = selected
+    setTimeout(() => el.current?.querySelector(`[data-id="${id}"]`)?.scrollIntoView({ block: 'nearest' }))
+  })
+</script>
+
+<div class="tree" tabindex="0" ref={el} onKeyDown={onKey} onMouseLeave={() => actions.highlight(null)}>
+  {showStores && (
+    <div class={['row', 'stores', selected === STORES && 'sel']} data-id={STORES} onClick={() => actions.select(STORES)}>
+      <span class="caret none" />
+      <span class="store-mark">◆</span>
+      <span>Stores</span>
+      <span class="count">{storesCount}</span>
+    </div>
+  )}
+  {rows.map((r) => (
+    <div
+      key={r.id}
+      class={['row', selected === r.id && 'sel', pulses[r.id] && `pulse-${pulses[r.id] % 2}`]}
+      style={`padding-left:${r.depth * 12 + 4}px`}
+      data-id={r.id}
+      title={r.file ?? undefined}
+      onClick={() => actions.select(r.id)}
+      onDblClick={() => actions.scrollTo(r.id)}
+      onMouseEnter={() => actions.highlight(r.id)}
+    >
+      <span
+        class={['caret', !r.hasKids && 'none']}
+        onClick={(e) => {
+          e.stopPropagation()
+          actions.toggle(r.id)
+        }}
+      >
+        {r.hasKids ? (r.collapsed ? '▸' : '▾') : ''}
+      </span>
+      <span class={['tag', !r.file && 'builtin']}>
+        {'<'}
+        <span class="name">
+          {parts(r.name)[0]}
+          {parts(r.name)[1] && <mark>{parts(r.name)[1]}</mark>}
+          {parts(r.name)[2]}
+        </span>
+        {'>'}
+      </span>
+      {r.errors > 0 && (
+        <span class="err-badge" title={`${r.errors} error(s)`}>
+          !
+        </span>
+      )}
+      {r.updates > 0 && (
+        <span class="renders" title={`Updated ${r.updates} time${r.updates === 1 ? '' : 's'}`}>
+          ×{r.updates}
+        </span>
+      )}
+    </div>
+  ))}
+  {rows.length === 0 && <div class="empty">{query ? 'No component matches.' : 'No mounted components.'}</div>}
+</div>
+
+<style>
+  .tree { flex: 1; overflow: auto; padding: 4px 0; outline: none; }
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    height: 22px;
+    padding-right: 8px;
+    white-space: nowrap;
+    cursor: default;
+    border-left: 2px solid transparent;
+  }
+  .row:hover { background: var(--hover); }
+  .row.sel { background: var(--accent-dim); border-left-color: var(--accent); }
+  .tree:focus .row.sel { background: rgba(245, 185, 66, 0.22); }
+  /* The class alternates between pulse-0 and pulse-1 on each update, which restarts the animation. */
+  .row.pulse-0 { animation: pulse-0 0.8s ease-out; }
+  .row.pulse-1 { animation: pulse-1 0.8s ease-out; }
+  @keyframes pulse-0 { from { background: rgba(245, 185, 66, 0.35); } }
+  @keyframes pulse-1 { from { background: rgba(245, 185, 66, 0.35); } }
+  .caret.none { visibility: hidden; }
+  mark { background: var(--accent); color: #000; border-radius: 2px; }
+  .renders { color: var(--muted); font-size: 10px; margin-left: 2px; }
+  .err-badge { background: var(--err); color: #fff; border-radius: 3px; padding: 0 4px; font-size: 10px; font-weight: 700; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .row.pulse-0,
+    .row.pulse-1 { animation-duration: 0.01s; }
+  }
+</style>

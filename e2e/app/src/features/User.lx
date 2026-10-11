@@ -1,8 +1,0 @@
-<script lang="ts">
-  import { useRoute } from '@inflector/lux-router'
-  const { params } = props<{ params: { id: string } }>()
-  const route = useRoute()
-  const created = Date.now()
-</script>
-
-<p class="user" data-created={created}>user {params.id} {route.query.get('tab') ?? ''}</p>

@@ -1,0 +1,68 @@
+<script lang="ts">
+  // Boxes drawn over the page: the hovered or picked component, and update flashes.
+  import type { Box } from '../shared'
+
+  const { highlight, flashes } = props<{
+    highlight: { box: Box; label: string } | null
+    flashes: { key: number; box: Box }[]
+  }>()
+
+  const at = (b: Box) => `left:${b.left}px;top:${b.top}px;width:${b.width}px;height:${b.height}px`
+  const labelAt = (b: Box) =>
+    `left:${Math.max(0, Math.min(b.left, innerWidth - 220))}px;top:${b.top > 24 ? b.top - 22 : Math.min(innerHeight - 22, b.top + b.height + 2)}px`
+</script>
+
+<div class="overlay">
+  {highlight && <div class="hl" style={at(highlight.box)} />}
+  {highlight && (
+    <div class="hl-label" style={labelAt(highlight.box)}>
+      <span class="name">{highlight.label}</span>
+      <span class="dim">
+        {' '}
+        {Math.round(highlight.box.width)}×{Math.round(highlight.box.height)}
+      </span>
+    </div>
+  )}
+  {flashes.map((f) => <div key={f.key} class="flash" style={at(f.box)} />)}
+</div>
+
+<style>
+  .overlay {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    corner-shape: squircle;
+  }
+  .hl {
+    position: fixed;
+    background: rgba(108, 182, 255, 0.18);
+    outline: 1.5px solid #6cb6ff;
+    border-radius: 2px;
+    transition: all 0.06s ease-out;
+  }
+  .hl-label {
+    position: fixed;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 1px 7px;
+    white-space: nowrap;
+    font-size: 11px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  }
+  .hl-label .name { color: var(--tag); font-weight: 700; }
+  .hl-label .dim { color: var(--muted); }
+  .flash {
+    position: fixed;
+    border-radius: 3px;
+    outline: 2px solid var(--accent);
+    background: rgba(245, 185, 66, 0.12);
+    animation: flash 0.7s ease-out forwards;
+  }
+  @keyframes flash { from { opacity: 1; } to { opacity: 0; } }
+
+  @media (prefers-reduced-motion: reduce) {
+    .flash { animation-duration: 0.01s; }
+    .hl { transition: none; }
+  }
+</style>

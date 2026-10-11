@@ -5,7 +5,7 @@ export interface Framework {
 }
 
 export const frameworks: Framework[] = [
-  { name: 'Lux', tagline: 'Compiled signals, HTML-first components', year: 2025 },
+  { name: 'Keeno', tagline: 'Compiled signals, HTML-first components', year: 2025 },
   { name: 'React', tagline: 'Components with a virtual DOM', year: 2013 },
   { name: 'Vue', tagline: 'The progressive framework', year: 2014 },
   { name: 'Svelte', tagline: 'Compiled, with runes for reactivity', year: 2016 },

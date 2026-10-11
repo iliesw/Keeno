@@ -45,7 +45,7 @@ function scopeSelector(sel: selectorParser.Selector, scope: string) {
     }
     if (compound.every((n) => n.type === 'nesting' || n.type === 'comment')) continue
     const cls = selectorParser.className({ value: scope })
-    // Put the class before the first pseudo (`a:hover` -> `a.lux-x:hover`, `p::before` -> `p.lux-x::before`).
+    // Put the class before the first pseudo (`a:hover` -> `a.keeno-x:hover`, `p::before` -> `p.keeno-x::before`).
     const firstPseudo = compound.find((n) => n.type === 'pseudo')
     if (firstPseudo) sel.insertBefore(firstPseudo, cls)
     else sel.insertAfter(compound[compound.length - 1], cls)

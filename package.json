@@ -1,5 +1,5 @@
 {
-  "name": "lux-monorepo",
+  "name": "keeno-monorepo",
   "private": true,
   "workspaces": [
     "packages/*",
@@ -15,6 +15,7 @@
     "bench": "bun run scripts/bench.ts",
     "typecheck": "tsc --noEmit -p .",
     "build": "bun run scripts/build.ts",
+    "devtools": "bun run scripts/build-devtools.ts",
     "predev": "bun run build",
     "dev": "bun run --cwd examples/todo dev",
     "docs:llms": "bun run scripts/build-llms.ts",

@@ -2,13 +2,13 @@
    example's scoped styles and Tailwind utilities win. */
 
 @layer base {
-  .lux-stage {
+  .keeno-stage {
     color: var(--fg);
     font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
     font-size: 15px;
     line-height: 1.5;
   }
-  .lux-stage button {
+  .keeno-stage button {
     padding: 6px 14px;
     border: 1px solid var(--border);
     border-radius: 8px;
@@ -18,51 +18,51 @@
       background 0.15s,
       transform 0.1s;
   }
-  .lux-stage button:hover:not(:disabled) {
+  .keeno-stage button:hover:not(:disabled) {
     background: color-mix(in srgb, var(--surface), var(--fg) 8%);
   }
-  .lux-stage button:active:not(:disabled) {
+  .keeno-stage button:active:not(:disabled) {
     transform: scale(0.97);
   }
-  .lux-stage button:disabled {
+  .keeno-stage button:disabled {
     opacity: 0.45;
     cursor: not-allowed;
   }
-  .lux-stage input:not([type='checkbox'], [type='radio'], [type='range'], [type='color']),
-  .lux-stage textarea,
-  .lux-stage select {
+  .keeno-stage input:not([type='checkbox'], [type='radio'], [type='range'], [type='color']),
+  .keeno-stage textarea,
+  .keeno-stage select {
     padding: 6px 10px;
     border: 1px solid var(--border);
     border-radius: 8px;
     background: var(--bg);
     outline: none;
   }
-  .lux-stage input:focus-visible,
-  .lux-stage textarea:focus-visible,
-  .lux-stage select:focus-visible {
+  .keeno-stage input:focus-visible,
+  .keeno-stage textarea:focus-visible,
+  .keeno-stage select:focus-visible {
     border-color: var(--accent);
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
   }
-  .lux-stage input[type='checkbox'],
-  .lux-stage input[type='radio'],
-  .lux-stage input[type='range'] {
+  .keeno-stage input[type='checkbox'],
+  .keeno-stage input[type='radio'],
+  .keeno-stage input[type='range'] {
     accent-color: var(--accent);
   }
-  .lux-stage h1,
-  .lux-stage h2,
-  .lux-stage h3 {
+  .keeno-stage h1,
+  .keeno-stage h2,
+  .keeno-stage h3 {
     margin: 0 0 0.5em;
     font-weight: 700;
     line-height: 1.2;
   }
-  .lux-stage h3 {
+  .keeno-stage h3 {
     font-size: 1.15em;
   }
-  .lux-stage p {
+  .keeno-stage p {
     margin: 0 0 0.75em;
   }
-  .lux-stage ul,
-  .lux-stage ol {
+  .keeno-stage ul,
+  .keeno-stage ol {
     list-style: none;
   }
 }

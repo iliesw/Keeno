@@ -12,7 +12,7 @@ import path from 'node:path'
 const root = path.resolve(import.meta.dir, '..')
 const runs = Number(process.argv.find((a) => a.startsWith('--runs='))?.slice(7) ?? 10)
 const jsonOut = process.argv.find((a) => a.startsWith('--json='))?.slice(7)
-const outDir = path.join(tmpdir(), 'lux-bench')
+const outDir = path.join(tmpdir(), 'keeno-bench')
 
 console.log('[bench] building the fixture app for production')
 rmSync(outDir, { recursive: true, force: true })

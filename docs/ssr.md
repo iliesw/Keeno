@@ -1,6 +1,6 @@
 # Server rendering
 
-Lux renders components to HTML on the server (Node, Bun or Deno) with `renderToString`. In the browser, `hydrate` then takes over that markup.
+Keeno renders components to HTML on the server (Node, Bun or Deno) with `renderToString`. In the browser, `hydrate` then takes over that markup.
 
 ```bash
 bun add linkedom
@@ -12,8 +12,8 @@ bun add linkedom
 
 ```ts
 // src/entry-server.ts
-import { renderToString } from '@inflector/lux/server'
-import App from './App.lx'
+import { renderToString } from '@inflector/keeno/server'
+import App from './App.kn'
 
 export async function render(url: string) {
   return renderToString(App, { url })
@@ -22,8 +22,8 @@ export async function render(url: string) {
 
 ```ts
 // src/entry-client.ts
-import { hydrate } from '@inflector/lux'
-import App from './App.lx'
+import { hydrate } from '@inflector/keeno'
+import App from './App.kn'
 
 hydrate(App, document.getElementById('app')!)
 ```
@@ -47,7 +47,7 @@ What runs on the server:
 
 ## With Vite
 
-Set up Vite's SSR mode as the [Vite SSR guide](https://vite.dev/guide/ssr) describes. `@inflector/vite-plugin-lux` needs no extra options.
+Set up Vite's SSR mode as the [Vite SSR guide](https://vite.dev/guide/ssr) describes. `@inflector/vite-plugin-keeno` needs no extra options.
 
 - **In development**, load your server entry with `vite.ssrLoadModule('/src/entry-server.ts')`. Don't import `renderToString` directly in your Node server file. The components and `renderToString` must come from the same copy of the runtime, and the runtime warns when two copies are loaded.
 - **In production**, build the client with `vite build`, then the server entry with `vite build --ssr src/entry-server.ts`, and import the server bundle from Node.

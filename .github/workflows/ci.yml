@@ -42,7 +42,7 @@ jobs:
           bun run --cwd examples/todo build
           bun run --cwd examples/counter build
 
-      - name: Type-check the todo example with lux-check
+      - name: Type-check the todo example with keeno-check
         run: bun run --cwd examples/todo check
 
   e2e:

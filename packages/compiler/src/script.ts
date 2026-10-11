@@ -4,7 +4,7 @@ import type { NodePath } from '@babel/traverse'
 import * as t from '@babel/types'
 import {
   CompileContext,
-  LUX_APIS,
+  KEENO_APIS,
   MAP_PLACEHOLDER,
   RESERVED_MEMBERS,
   RUNTIME,
@@ -41,7 +41,7 @@ export function buildComponentAst(parts: SplitResult, ctx: CompileContext, name:
   for (const node of script.program.body) {
     if (isModuleLevel(node)) moduleLevel.push(node)
     else if (t.isExportDeclaration(node)) {
-      const err: any = new SyntaxError('Exports are not supported in an .lx <script> (it runs once per instance)')
+      const err: any = new SyntaxError('Exports are not supported in an .kn <script> (it runs once per instance)')
       err.loc = node.loc?.start
       throw err
     } else body.push(node)
@@ -57,8 +57,8 @@ export function buildComponentAst(parts: SplitResult, ctx: CompileContext, name:
 
 // ---------------------------------------------------------------------------
 
-/** True if `callee` refers to `name` from `@inflector/lux` (imported, or unbound and auto-injected). */
-export function isLuxApi(callee: NodePath, name: string): boolean {
+/** True if `callee` refers to `name` from `@inflector/keeno` (imported, or unbound and auto-injected). */
+export function isKeenoApi(callee: NodePath, name: string): boolean {
   if (!callee.isIdentifier()) return false
   const binding = callee.scope.getBinding(callee.node.name)
   if (!binding) return callee.node.name === name
@@ -176,6 +176,19 @@ function transformMaps(path: NodePath<t.Node>, ctx: CompileContext) {
   path.replaceWith(t.callExpression(t.identifier(MAP_PLACEHOLDER), [list, keyFn, cb.node]))
 }
 
+/** Expressions that evaluate to a new object every time. */
+function createsObject(e: t.Expression): boolean {
+  if (t.isTSAsExpression(e) || t.isTSSatisfiesExpression(e) || t.isParenthesizedExpression(e)) return createsObject(e.expression)
+  return (
+    t.isArrayExpression(e) ||
+    t.isObjectExpression(e) ||
+    t.isArrowFunctionExpression(e) ||
+    t.isFunctionExpression(e) ||
+    t.isNewExpression(e) ||
+    t.isClassExpression(e)
+  )
+}
+
 function recordProps(path: NodePath<t.VariableDeclarator>, ctx: CompileContext) {
   const pattern = path.node.id as t.ObjectPattern
   for (const prop of pattern.properties) {
@@ -188,6 +201,13 @@ function recordProps(path: NodePath<t.VariableDeclarator>, ctx: CompileContext) 
     let id: t.Node = prop.value
     if (t.isAssignmentPattern(id)) {
       binding = { key, default: id.right }
+      // `items = []` must give the same array on every read, not a new one (which would make
+      // everything depending on it look changed): evaluate it once, where props() is called.
+      if (createsObject(id.right)) {
+        const ref = path.scope.generateUidIdentifier(`${key}Default`)
+        path.parentPath.insertBefore(t.variableDeclaration('const', [t.variableDeclarator(ref, id.right)]))
+        binding.defaultRef = ref
+      }
       id = id.left
     } else binding = { key }
     if (!t.isIdentifier(id)) throw codeFrameError(path, 'Nested destructuring is not supported in props()')
@@ -207,13 +227,16 @@ export function analyze(file: t.File, ctx: CompileContext) {
       const init = path.get('init')
       if (!init.isCallExpression()) return
       const callee = init.get('callee')
-      if (path.node.id.type === 'Identifier' && isLuxApi(callee, 'state')) ctx.stateIds.add(path.node.id)
-      else if (path.node.id.type === 'Identifier' && isLuxApi(callee, 'derived')) {
+      if (path.node.id.type === 'Identifier' && isKeenoApi(callee, 'state')) {
+        ctx.stateIds.add(path.node.id)
+        ctx.labels?.push(path.node)
+      } else if (path.node.id.type === 'Identifier' && isKeenoApi(callee, 'derived')) {
         ctx.stateIds.add(path.node.id)
         ctx.derivedIds.add(path.node.id)
+        ctx.labels?.push(path.node)
       }
-      else if (path.node.id.type === 'ObjectPattern' && isLuxApi(callee, 'props')) recordProps(path, ctx)
-      else if (path.node.id.type === 'Identifier' && isLuxApi(callee, 'inject')) {
+      else if (path.node.id.type === 'ObjectPattern' && isKeenoApi(callee, 'props')) recordProps(path, ctx)
+      else if (path.node.id.type === 'Identifier' && isKeenoApi(callee, 'inject')) {
         // `const theme = inject(Theme)` reads like a state: a provided state or derived is used as
         // is, and any other value is wrapped in a read-only signal.
         ctx.stateIds.add(path.node.id)
@@ -221,7 +244,7 @@ export function analyze(file: t.File, ctx: CompileContext) {
       }
     },
     CallExpression(path) {
-      if (isLuxApi(path.get('callee'), 'provide')) prepareProvide(path, ctx)
+      if (isKeenoApi(path.get('callee'), 'provide')) prepareProvide(path, ctx)
     },
   })
 }
@@ -290,7 +313,7 @@ export function inferUpdateDeps(file: t.File, ctx: CompileContext) {
   traverse.cache.clear()
   traverse(file, {
     CallExpression(call) {
-      if (call.node.arguments.length !== 1 || !isLuxApi(call.get('callee'), 'update')) return
+      if (call.node.arguments.length !== 1 || !isKeenoApi(call.get('callee'), 'update')) return
       const fn = call.get('arguments')[0]
       if (!fn.isArrowFunctionExpression() && !fn.isFunctionExpression()) return
       const deps = new Map<string, t.Expression>()
@@ -327,7 +350,7 @@ function isUpdateDep(path: NodePath): boolean {
   const arr = path.parentPath
   if (!arr?.isArrayExpression() || path.listKey !== 'elements') return false
   const call = arr.parentPath
-  return !!call?.isCallExpression() && call.node.arguments[1] === arr.node && isLuxApi(call.get('callee'), 'update')
+  return !!call?.isCallExpression() && call.node.arguments[1] === arr.node && isKeenoApi(call.get('callee'), 'update')
 }
 
 /** `x` is the target of `bind:value={x}`. */
@@ -363,7 +386,7 @@ function rewriteStateRef(path: NodePath<t.Identifier>, isDerived: boolean, ctx: 
 function rewritePropRef(path: NodePath<t.Identifier>, prop: PropBinding) {
   if (isBindTarget(path)) throw codeFrameError(path, `bind: needs a state, but "${path.node.name}" is a prop`)
   let expr: t.Expression = memberFor('$$props', prop.key)
-  if (prop.default) expr = t.logicalExpression('??', expr, t.cloneNode(prop.default, true))
+  if (prop.default) expr = t.logicalExpression('??', expr, t.cloneNode(prop.defaultRef ?? prop.default, true))
   if (isUpdateDep(path)) expr = t.arrowFunctionExpression([], expr)
   replaceRef(path, expr)
 }
@@ -416,14 +439,14 @@ export function rewrite(file: t.File, ctx: CompileContext) {
   })
 }
 
-/** The `@inflector/lux` APIs the module uses without importing them. */
+/** The `@inflector/keeno` APIs the module uses without importing them. */
 export function findAutoImports(file: t.File): string[] {
   traverse.cache.clear()
   const found: string[] = []
   traverse(file, {
     Program(path) {
       const globals = (path.scope as any).globals as Record<string, unknown>
-      for (const name of LUX_APIS) if (globals[name]) found.push(name)
+      for (const name of KEENO_APIS) if (globals[name]) found.push(name)
       path.stop()
     },
   })

@@ -1,14 +1,14 @@
-// Compile real .lx fixtures, load them through a Bun plugin and mount them in happy-dom.
+// Compile real .kn fixtures, load them through a Bun plugin and mount them in happy-dom.
 import { plugin } from 'bun'
 import { afterEach, beforeAll, describe, expect, test } from 'bun:test'
-import { flush, mount, state, type MountedApp } from '@inflector/lux'
+import { flush, mount, state, type MountedApp } from '@inflector/keeno'
 import { compile } from '../src/index'
 
 beforeAll(() => {
   plugin({
-    name: 'lux-test',
+    name: 'keeno-test',
     setup(build) {
-      build.onLoad({ filter: /\.lx$/ }, async ({ path }) => ({
+      build.onLoad({ filter: /\.kn$/ }, async ({ path }) => ({
         contents: compile(await Bun.file(path).text(), { filename: path }).js,
         loader: 'ts',
       }))
@@ -25,7 +25,7 @@ afterEach(() => {
 })
 
 async function render(fixture: string, props: Record<string, any> = {}) {
-  const Comp = (await import(`./fixtures/${fixture}.lx`)).default
+  const Comp = (await import(`./fixtures/${fixture}.kn`)).default
   const target = document.createElement('div')
   document.body.appendChild(target)
   app = mount(Comp, target, props)
@@ -86,7 +86,7 @@ describe('Counter', () => {
   })
 
   test('props stay reactive', async () => {
-    const { state } = await import('@inflector/lux')
+    const { state } = await import('@inflector/keeno')
     const title = state('A')
     const el = await render('Counter', {
       get title() {
@@ -241,7 +241,7 @@ describe('children and ternaries', () => {
   })
 })
 
-describe('Shell (built-in components from .lx)', () => {
+describe('Shell (built-in components from .kn)', () => {
   test('ErrorBoundary, Await, Transition and Portal', async () => {
     let resolve!: (v: string) => void
     const el = await render('Shell', { load: () => new Promise<string>((r) => (resolve = r)) })

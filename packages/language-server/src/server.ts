@@ -10,7 +10,7 @@ import { create as createCssService } from 'volar-service-css'
 import { create as createTypeScriptServices } from 'volar-service-typescript'
 import { newCSSDataProvider, type ICSSDataProvider } from 'vscode-css-languageservice'
 import { Utils } from 'vscode-uri'
-import { createLuxLanguagePlugin } from './index'
+import { createKeenoLanguagePlugin } from './index'
 import { tailwindCssData } from './tailwind'
 
 const tailwindData = newCSSDataProvider(tailwindCssData)
@@ -41,12 +41,12 @@ connection.listen()
 
 connection.onInitialize((params) => {
   const tsdkPath = params.initializationOptions?.typescript?.tsdk
-  if (!tsdkPath) throw new Error('[lux] initializationOptions.typescript.tsdk is required')
+  if (!tsdkPath) throw new Error('[keeno] initializationOptions.typescript.tsdk is required')
   const tsdk = loadTsdkByPath(tsdkPath, params.locale)
   return server.initialize(
     params,
     createTypeScriptProject(tsdk.typescript, tsdk.diagnosticMessages, () => ({
-      languagePlugins: [createLuxLanguagePlugin(tsdk.typescript)],
+      languagePlugins: [createKeenoLanguagePlugin(tsdk.typescript)],
     })),
     [createCssService({ getCustomData }), ...createTypeScriptServices(tsdk.typescript)],
   )

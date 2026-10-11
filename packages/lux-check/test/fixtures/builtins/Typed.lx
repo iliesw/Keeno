@@ -1,8 +1,0 @@
-<script lang="ts">
-  import { Await, ErrorBoundary } from '@inflector/lux'
-  const p = Promise.resolve(42)
-</script>
-
-<Await promise={p} fulfilled={(n) => <b>{n.toFixed(1)}</b>} />
-<ErrorBoundary fallback={(e) => <p>{String(e)}</p>}><i /></ErrorBoundary>
-<ErrorBoundary fallback="failed">plain text child</ErrorBoundary>

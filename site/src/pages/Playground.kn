@@ -1,0 +1,447 @@
+<script lang="ts">
+  import Icon from '../components/Icon.kn'
+  import Navbar from '../components/Navbar.kn'
+  import { categories, examples, findExample, playgroundFiles } from '../examples'
+  import type { Editor } from '../playground/editor'
+  import type { Compiler } from '../playground/compiler'
+  import type { CompiledFile, ConsoleEntry, PlaygroundFile } from '../playground/types'
+
+  type OutputTab = 'result' | 'js' | 'css' | 'console'
+
+  const START = 'counter'
+  const FILE_NAME = /^[A-Za-z_][\w.-]*\.(kn|ts|js|css)$/
+
+  const files = state<PlaygroundFile[]>([])
+  const active = state('App.kn')
+  const example = state<string | null>(START)
+  const tailwind = state(false)
+  const dark = state(true)
+
+  const tab = state<OutputTab>('result')
+  const mobileView = state<'code' | 'output'>('code')
+  const split = state(50, { persist: 'keeno-playground-split', validate: (v, prev) => (v >= 20 && v <= 80 ? v : prev) })
+  const dragging = state(false)
+
+  const compiled = state<CompiledFile[]>([])
+  const doc = state('')
+  const logs = state<ConsoleEntry[]>([])
+  const compileMs = state<number | null>(null)
+  const mountMs = state<number | null>(null)
+  const busy = state(true)
+  const ready = state(false)
+
+  const menu = state(false)
+  const naming = state<{ mode: 'add' | 'rename'; from?: string } | null>(null)
+  const draftName = state('')
+  const nameError = state('')
+  const toast = state('')
+
+  const errors = derived(() => compiled.filter((f) => f.error))
+  const activeOutput = derived(() => compiled.find((f) => f.name === active))
+  const errorCount = derived(() => logs.filter((l) => l.level === 'error').length)
+  const exampleTitle = derived(() => (example ? findExample(example)?.title ?? 'Examples' : 'Your code'))
+
+  const editorHost = ref<HTMLDivElement>()
+  const outputHost = ref<HTMLDivElement>()
+  const frame = ref<HTMLIFrameElement>()
+  const splitHost = ref<HTMLDivElement>()
+
+  let editor: Editor | undefined
+  let output: Editor | undefined
+  let compiler: Compiler | undefined
+  let build: ((files: CompiledFile[], o: { dark: boolean; tailwind: boolean }) => string) | undefined
+  let share: typeof import('../playground/share') | undefined
+  let timer: ReturnType<typeof setTimeout> | undefined
+  let hashTimer: ReturnType<typeof setTimeout> | undefined
+  let run = 0
+
+  // -------------------------------------------------------------------------------------------
+  // Compile → run
+
+  async function recompile() {
+    if (!compiler || !build) return
+    const id = ++run
+    busy.set(true)
+    const t0 = performance.now()
+    const out = await compiler.compile(files.peek())
+    if (id !== run) return
+    compileMs.set(performance.now() - t0)
+    compiled.set(out)
+    busy.set(false)
+    if (out.some((f) => f.error)) return
+    logs.set([])
+    mountMs.set(null)
+    doc.set(build(out, { dark: dark.peek(), tailwind: tailwind.peek() }))
+  }
+
+  function schedule(delay = 300) {
+    clearTimeout(timer)
+    timer = setTimeout(recompile, delay)
+    clearTimeout(hashTimer)
+    hashTimer = setTimeout(saveToUrl, 800)
+  }
+
+  // An example keeps its short ?example= URL until it is edited; edited code goes in the hash.
+  let pristine = ''
+  const snapshotKey = () => JSON.stringify([files.peek(), tailwind.peek()])
+
+  async function saveToUrl() {
+    if (!share) return
+    const ex = example.peek()
+    if (ex && snapshotKey() === pristine) return history.replaceState(history.state, '', `/playground?example=${ex}`)
+    const code = await share.encode({ files: files.peek(), tailwind: tailwind.peek() || undefined })
+    history.replaceState(history.state, '', `/playground#code=${code}`)
+  }
+
+  function showOutputFile() {
+    if (!output) return
+    const f = compiled.peek().find((x) => x.name === active.peek())
+    const t = tab.peek()
+    const text = !f ? '' : f.error ? `// ${f.error.split('\n').join('\n// ')}` : t === 'css' ? f.css || '/* No <style> in this file */' : f.js
+    output.open(`${active.peek()}.${t === 'css' ? 'css' : 'js'}`, text)
+  }
+
+  update(() => schedule(), [files, tailwind, dark])
+  update(showOutputFile, [compiled, active, tab])
+
+  // -------------------------------------------------------------------------------------------
+  // Files
+
+  function openFile(name: string) {
+    active.set(name)
+    editor?.open(name, files.peek().find((f) => f.name === name)?.code ?? '')
+  }
+
+  function load(next: PlaygroundFile[], ex: string | null, tw = false) {
+    for (const f of files.peek()) editor?.forget(f.name)
+    files.set(next)
+    example.set(ex)
+    tailwind.set(tw)
+    menu.set(false)
+    pristine = snapshotKey()
+    openFile(next.some((f) => f.name === 'App.kn') ? 'App.kn' : next[0].name)
+  }
+
+  async function loadExample(slug: string) {
+    const ex = findExample(slug)
+    if (ex) load(await playgroundFiles(slug), slug, !!ex.tailwind)
+  }
+
+  function startNaming(mode: 'add' | 'rename', from?: string) {
+    naming.set({ mode, from })
+    draftName.set(from ?? '')
+    nameError.set('')
+    requestAnimationFrame(() => document.querySelector<HTMLInputElement>('#pg-name')?.focus())
+  }
+
+  // Built from pieces: literal script or style tags would end this component's own blocks.
+  function newComponent(component: string) {
+    const open = (tag: string, attrs = '') => '<' + tag + attrs + '>'
+    const close = (tag: string) => '</' + tag + '>'
+    return [
+      open('script', ' lang="ts"'),
+      `  const { label = '${component}' } = props<{ label?: string }>()`,
+      close('script'),
+      '',
+      '<p>{label}</p>',
+      '',
+      open('style'),
+      '  p {',
+      '    color: var(--accent);',
+      '  }',
+      close('style'),
+      '',
+    ].join('\n')
+  }
+
+  function commitName() {
+    const n = naming.peek()
+    if (!n) return
+    const name = draftName.peek().trim()
+    if (!name || name === n.from) return naming.set(null)
+    if (!FILE_NAME.test(name)) return nameError.set('Use a name like Button.kn, store.ts or styles.css')
+    if (files.peek().some((f) => f.name === name)) return nameError.set(`${name} already exists`)
+    if (n.mode === 'add') {
+      const component = name.replace(/\.\w+$/, '')
+      const code = name.endsWith('.kn')
+        ? newComponent(component)
+        : name.endsWith('.css')
+          ? `/* Global styles: imported files apply to the whole preview. */\n`
+          : `import { state } from '@inflector/keeno'\n\nexport const count = state(0)\n`
+      files.set([...files.peek(), { name, code }])
+      naming.set(null)
+      openFile(name)
+    } else if (n.from) {
+      if (n.from === 'App.kn') return nameError.set('App.kn is the entry point and keeps its name')
+      editor?.forget(n.from)
+      files.set(files.peek().map((f) => (f.name === n.from ? { ...f, name } : f)))
+      naming.set(null)
+      openFile(name)
+    }
+  }
+
+  function removeFile(name: string) {
+    if (name === 'App.kn' || !confirm(`Delete ${name}?`)) return
+    editor?.forget(name)
+    files.set(files.peek().filter((f) => f.name !== name))
+    if (active.peek() === name) openFile('App.kn')
+  }
+
+  function reset() {
+    loadExample(example.peek() ?? START)
+  }
+
+  async function copyLink() {
+    await saveToUrl()
+    try {
+      await navigator.clipboard.writeText(location.href)
+      flash('Link copied to the clipboard')
+    } catch {
+      flash('Copy the URL from the address bar')
+    }
+  }
+
+  function flash(text: string) {
+    toast.set(text)
+    setTimeout(() => toast.peek() === text && toast.set(''), 2200)
+  }
+
+  function rerun() {
+    logs.set([])
+    const d = doc.peek()
+    doc.set('')
+    requestAnimationFrame(() => doc.set(d))
+  }
+
+  // -------------------------------------------------------------------------------------------
+  // Split view
+
+  function startDrag(e: PointerEvent) {
+    e.preventDefault()
+    dragging.set(true)
+    const box = splitHost.current!.getBoundingClientRect()
+    const move = (ev: PointerEvent) => split.set(Math.round(((ev.clientX - box.left) / box.width) * 1000) / 10)
+    const up = () => {
+      dragging.set(false)
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+    }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+  }
+
+  // -------------------------------------------------------------------------------------------
+  // Setup (browser only: the editor and the compiler are loaded on demand)
+
+  init(() => {
+    document.title = 'Playground · Keeno'
+    let disposed = false
+    dark.set(document.documentElement.classList.contains('dark'))
+    const themeObserver = new MutationObserver(() => dark.set(document.documentElement.classList.contains('dark')))
+    themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
+
+    const onMessage = (e: MessageEvent) => {
+      if (!e.data?.__keeno || e.source !== frame.current?.contentWindow) return
+      if (e.data.type === 'mounted') return mountMs.set(e.data.ms)
+      if (e.data.type !== 'console') return
+      const list = logs.peek()
+      const last = list[list.length - 1]
+      if (last && last.level === e.data.level && last.text === e.data.text) {
+        logs.set([...list.slice(0, -1), { ...last, count: last.count + 1 }])
+      } else logs.set([...list.slice(-199), { level: e.data.level, text: e.data.text, count: 1 }])
+    }
+    window.addEventListener('message', onMessage)
+
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault()
+        saveToUrl().then(() => flash('Saved to the URL: bookmark or share it'))
+      }
+    }
+    window.addEventListener('keydown', onKey)
+
+    Promise.all([import('../playground/editor'), import('../playground/compiler'), import('../playground/runner'), import('../playground/share')]).then(
+      async ([ed, comp, runner, sh]) => {
+        if (disposed) return
+        share = sh
+        build = runner.buildDocument
+        compiler = comp.createCompiler()
+        // Starting files: a shared link, then ?example=, then the default.
+        const hash = new URLSearchParams(location.hash.slice(1)).get('code')
+        const query = new URLSearchParams(location.search).get('example')
+        const snapshot = hash ? await sh.decode(hash) : null
+        if (disposed) return
+        editor = ed.createEditor(editorHost.current!, (name, code) => {
+          files.set(files.peek().map((f) => (f.name === name ? { ...f, code } : f)))
+        })
+        output = ed.createEditor(outputHost.current!, () => {}, true)
+        if (snapshot) load(snapshot.files, null, !!snapshot.tailwind)
+        else await loadExample(query && findExample(query) ? query : START)
+        if (disposed) return
+        ready.set(true)
+        recompile()
+      },
+    )
+
+    return () => {
+      disposed = true
+      clearTimeout(timer)
+      clearTimeout(hashTimer)
+      themeObserver.disconnect()
+      window.removeEventListener('message', onMessage)
+      window.removeEventListener('keydown', onKey)
+      editor?.destroy()
+      output?.destroy()
+      compiler?.terminate()
+    }
+  })
+
+  init(() => {
+    const close = (e: MouseEvent) => {
+      if (!(e.target as Element).closest('#pg-examples')) menu.set(false)
+    }
+    document.addEventListener('click', close)
+    return () => document.removeEventListener('click', close)
+  })
+
+  const icon = (name: string) => (name.endsWith('.kn') ? '/icons/kn.svg' : name.endsWith('.css') ? '/icons/css.svg' : name.endsWith('.ts') ? '/icons/typescript.svg' : '/icons/javascript.svg')
+  const levelIcon: Record<string, string> = { error: '✕', warn: '!', info: 'i', log: '›', debug: '·' }
+</script>
+
+<Navbar />
+<div class={['pg', dragging && 'pg-dragging']}>
+  <!-- Toolbar -->
+  <div class="pg-toolbar">
+    <div id="pg-examples" class="relative">
+      <button type="button" class="pg-btn pg-btn-strong" aria-expanded={menu} onClick={() => menu.set(!menu)}>
+        <Icon name="grid" />
+        <span class="max-w-40 truncate">{exampleTitle}</span>
+        <span class={['inline-flex transition-transform', menu && 'rotate-180']}><Icon name="chevronDown" /></span>
+      </button>
+      {menu && (
+        <div class="pg-menu animate-pop">
+          {categories.map((c) => (
+            <div key={c} class="pg-menu-group">
+              <p>{c}</p>
+              {examples.filter((e) => e.category === c).map((e) => (
+                <button key={e.slug} type="button" class={['pg-menu-item', example === e.slug && 'is-active']} onClick={() => loadExample(e.slug)}>
+                  <span class="font-medium">{e.title}</span>
+                  <span class="truncate text-xs opacity-60">{e.description}</span>
+                </button>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+    <div class="pg-segment md:hidden" role="tablist">
+      <button type="button" class={{ on: mobileView === 'code' }} onClick={() => mobileView.set('code')}>Code</button>
+      <button type="button" class={{ on: mobileView === 'output' }} onClick={() => mobileView.set('output')}>Preview</button>
+    </div>
+    <div class="ml-auto flex items-center gap-1.5">
+      <label class="pg-btn hidden cursor-pointer sm:flex" title="Load Tailwind CSS in the preview">
+        <input type="checkbox" bind:checked={tailwind} class="accent-orange-500" />
+        <img src="/icons/tailwindcss.svg" width="14" height="14" alt="" /> Tailwind
+      </label>
+      <button type="button" class="pg-btn" onClick={reset} title="Reset to the example's original code">
+        <Icon name="refresh" /><span class="hidden sm:inline">Reset</span>
+      </button>
+      <button type="button" class="pg-btn pg-btn-brand" onClick={copyLink} title="Copy a link to this code (⌘S saves it to the URL)">
+        <Icon name="share" /><span class="hidden sm:inline">Share</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="pg-split" ref={splitHost} style={`--split:${split}%`}>
+    <!-- Editor -->
+    <section class={['pg-pane pg-editor', mobileView !== 'code' && 'max-md:hidden']}>
+      <div class="pg-tabs" role="tablist" aria-label="Files">
+        {files.map((f) => (
+          <div key={f.name} class={['pg-file', active === f.name && 'is-active', errors.some((e) => e.name === f.name) && 'has-error']}>
+            <button type="button" role="tab" aria-selected={active === f.name} onClick={() => openFile(f.name)} onDblclick={() => startNaming('rename', f.name)} title="Double-click to rename">
+              <img src={icon(f.name)} width="14" height="14" alt="" />
+              {f.name}
+            </button>
+            {f.name !== 'App.kn' && (
+              <button type="button" class="pg-file-x" aria-label={`Delete ${f.name}`} onClick={() => removeFile(f.name)}>
+                <Icon name="closeSm" />
+              </button>
+            )}
+          </div>
+        ))}
+        {naming ? (
+          <div class="pg-naming">
+            <input
+              id="pg-name"
+              bind:value={draftName}
+              placeholder="Component.kn"
+              spellcheck="false"
+              onKeyDown={(e: KeyboardEvent) => {
+                if (e.key === 'Enter') commitName()
+                if (e.key === 'Escape') naming.set(null)
+              }}
+              onBlur={() => !nameError && commitName()}
+            />
+            {nameError && <span class="pg-name-error">{nameError}</span>}
+          </div>
+        ) : (
+          <button type="button" class="pg-add" aria-label="New file" title="New file" onClick={() => startNaming('add')}>
+            <Icon name="plus" />
+          </button>
+        )}
+      </div>
+      <div class="pg-code-wrap">
+        <div class="pg-code" ref={editorHost}></div>
+        {!ready && <div class="pg-loading"><span class="pg-spinner"></span> Loading the editor…</div>}
+      </div>
+    </section>
+
+    <div class="pg-handle max-md:hidden" role="separator" aria-orientation="vertical" aria-label="Resize" onPointerdown={startDrag} onDblclick={() => split.set(50)}></div>
+
+    <!-- Output -->
+    <section class={['pg-pane pg-output', mobileView !== 'output' && 'max-md:hidden']}>
+      <div class="pg-tabs" role="tablist" aria-label="Output">
+        {(['result', 'js', 'css', 'console'] as OutputTab[]).map((t) => (
+          <button key={t} type="button" role="tab" aria-selected={tab === t} class={['pg-out-tab', tab === t && 'is-active']} onClick={() => tab.set(t)}>
+            {t === 'result' ? 'Result' : t === 'js' ? 'JS output' : t === 'css' ? 'CSS output' : 'Console'}
+            {t === 'console' && logs.length > 0 && <span class={['pg-badge', errorCount > 0 && 'is-error']}>{logs.length}</span>}
+          </button>
+        ))}
+        <div class="ml-auto flex items-center gap-2 pr-2">
+          <span class="pg-status hidden lg:flex">
+            <span class={['pg-dot', busy ? 'is-busy' : errors.length ? 'is-error' : 'is-ok']}></span>
+            {busy ? 'Compiling…' : errors.length ? `${errors.length} error${errors.length > 1 ? 's' : ''}` : compileMs != null ? `Compiled in ${Math.round(compileMs)} ms${mountMs != null ? ` · mounted in ${Math.round(mountMs)} ms` : ''}` : ''}
+          </span>
+          <button type="button" class="pg-icon-btn" aria-label="Run again" title="Run again" onClick={rerun}><Icon name="refresh" /></button>
+        </div>
+      </div>
+      <div class="pg-out-body">
+        <div class={['pg-result', tab !== 'result' && 'hidden']}>
+          <iframe ref={frame} title="Preview" srcdoc={doc} sandbox="allow-scripts allow-modals allow-forms allow-popups allow-pointer-lock"></iframe>
+          {errors.length > 0 && (
+            <div class="pg-error animate-fade-up">
+              <p class="pg-error-title">Compile error</p>
+              {errors.map((e) => (
+                <pre key={e.name}>{e.error}</pre>
+              ))}
+            </div>
+          )}
+        </div>
+        <div class={['pg-code', (tab === 'result' || tab === 'console') && 'hidden']} ref={outputHost}></div>
+        <div class={['pg-console', tab !== 'console' && 'hidden']}>
+          {logs.length === 0 && <p class="pg-console-empty">Nothing logged yet. Output from <code>console.log</code> and runtime errors shows up here.</p>}
+          {logs.map((l, i) => (
+            <div key={i} class={`pg-log is-${l.level}`}>
+              <span class="pg-log-icon">{levelIcon[l.level]}</span>
+              <pre>{l.text}</pre>
+              {l.count > 1 && <span class="pg-badge">{l.count}</span>}
+            </div>
+          ))}
+          {logs.length > 0 && <button type="button" class="pg-clear" onClick={() => logs.set([])}>Clear console</button>}
+        </div>
+      </div>
+    </section>
+  </div>
+
+  {toast && <div class="pg-toast animate-fade-up">{toast}</div>}
+</div>

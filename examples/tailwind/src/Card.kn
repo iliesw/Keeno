@@ -1,0 +1,18 @@
+<script lang="ts">
+  import type { Children } from '@inflector/keeno'
+
+  const { title, children } = props<{ title: string; children: Children }>()
+</script>
+
+<section class="mt-6 max-w-sm rounded-xl p-6 shadow-lg ring-1 ring-black/5">
+  <h2>{title}</h2>
+  {children}
+</section>
+
+<style>
+  h2 {
+    margin-bottom: --spacing(3);
+    color: var(--color-slate-500);
+    @apply text-xs font-semibold tracking-wide uppercase;
+  }
+</style>

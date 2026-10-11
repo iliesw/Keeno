@@ -1,7 +1,0 @@
-<script lang="ts">
-  import Chart from './Chart.lx'
-  import Stock from './Stock.lx'
-</script>
-
-<Chart />
-<Stock />

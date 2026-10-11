@@ -3,4 +3,4 @@ import { GlobalRegistrator } from '@happy-dom/global-registrator'
 GlobalRegistrator.register({ url: 'http://localhost/' })
 
 // Development warnings on, as during `vite dev`.
-;(globalThis as any).__LUX_DEV__ = true
+;(globalThis as any).__KEENO_DEV__ = true

@@ -1,0 +1,7 @@
+<script lang="ts">
+  import Chart from './Chart.kn'
+  import Stock from './Stock.kn'
+</script>
+
+<Chart />
+<Stock />

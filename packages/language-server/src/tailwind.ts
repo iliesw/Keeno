@@ -15,7 +15,7 @@ export const tailwindCssData: CSSDataV1 = {
     {
       name: '@reference',
       description:
-        'Import a stylesheet for its theme and utilities without emitting its CSS. In `.lx` files the Vite plugin adds it for you.',
+        'Import a stylesheet for its theme and utilities without emitting its CSS. In `.kn` files the Vite plugin adds it for you.',
       references: docs('functions-and-directives#reference-directive'),
     },
     {

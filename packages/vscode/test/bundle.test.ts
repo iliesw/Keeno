@@ -57,10 +57,10 @@ describe.skipIf(!hasNode)('bundled language server (Node)', () => {
 
   afterAll(() => proc?.kill())
 
-  test('completes state members in an .lx file', async () => {
-    const uri = pathToFileURL(path.join(repo, 'examples/todo/src/__bundle.lx')).href
+  test('completes state members in an .kn file', async () => {
+    const uri = pathToFileURL(path.join(repo, 'examples/todo/src/__bundle.kn')).href
     const text = '<script lang="ts">\nconst n = state(1)\nn.\n</script>\n'
-    send({ method: 'textDocument/didOpen', params: { textDocument: { uri, languageId: 'lux', version: 1, text } } })
+    send({ method: 'textDocument/didOpen', params: { textDocument: { uri, languageId: 'keeno', version: 1, text } } })
     const list = await request('textDocument/completion', { textDocument: { uri }, position: { line: 2, character: 2 } })
     const labels = (list?.items ?? list ?? []).map((i: any) => i.label)
     expect(labels).toContain('set')

@@ -1,8 +1,8 @@
-# Lux
+# Keeno
 
-Lux is a compiled, signal-based frontend framework. Components are `.lx` files that hold HTML-first markup with JSX-style `{expressions}`, a `<script>` block and a scoped `<style>` block. The compiler turns each component into direct DOM code with fine-grained updates. There is no virtual DOM, and components never re-render.
+Keeno is a compiled, signal-based frontend framework. Components are `.kn` files that hold HTML-first markup with JSX-style `{expressions}`, a `<script>` block and a scoped `<style>` block. The compiler turns each component into direct DOM code with fine-grained updates. There is no virtual DOM, and components never re-render.
 
-```html Counter.lx
+```html Counter.kn
 <script lang="ts">
   const count = state(0)
   const doubled = derived(() => count * 2)
@@ -19,22 +19,22 @@ Lux is a compiled, signal-based frontend framework. Components are `.lx` files t
 ## Quick start
 
 ```bash
-bun add @inflector/lux
-bun add -d vite @inflector/vite-plugin-lux
+bun add @inflector/keeno
+bun add -d vite @inflector/vite-plugin-keeno
 ```
 
 ```ts
 // vite.config.ts
 import { defineConfig } from 'vite'
-import lux from '@inflector/vite-plugin-lux'
+import keeno from '@inflector/vite-plugin-keeno'
 
-export default defineConfig({ plugins: [lux()] })
+export default defineConfig({ plugins: [keeno()] })
 ```
 
 ```ts
 // src/main.ts
-import { mount } from '@inflector/lux'
-import App from './App.lx'
+import { mount } from '@inflector/keeno'
+import App from './App.kn'
 
 mount(App, document.getElementById('app')!)
 ```
@@ -48,19 +48,19 @@ npm, pnpm and yarn work too. Continue with [Getting started](docs/getting-starte
 - **Scoped CSS** per component, with a `:global()` escape hatch, and first-class [Tailwind CSS](docs/styles.md#tailwind-css) (utilities in markup, `@apply` in `<style>`).
 - **Built-in components:** error boundaries, `<Await>` for promises, `lazy()` code splitting, portals, state-preserving reparenting (native `moveBefore`), enter/leave transitions and `<Dynamic>`. See [Built-in components](docs/built-ins.md).
 - **Context**, server rendering with `hydrate`, and a router.
-- **Tooling:** a Vite plugin with HMR, a VS Code extension with full TypeScript IntelliSense in `.lx` files, and `lux-check` for type-checking in CI.
+- **Tooling:** a Vite plugin with HMR, a VS Code extension with full TypeScript IntelliSense in `.kn` files, and `keeno-check` for type-checking in CI.
 
 ## Packages
 
 | Package | |
 |---|---|
-| [`@inflector/lux`](packages/lux) | Runtime: reactivity, lifecycle, built-in components, `mount`/`hydrate`, `renderToString` (`/server`) |
-| [`@inflector/vite-plugin-lux`](packages/vite-plugin-lux) | Vite plugin: compiles `.lx` files, scoped CSS, HMR |
-| [`@inflector/lux-router`](packages/router) | Client-side router |
-| [`@inflector/lux-check`](packages/lux-check) | Type-checks `.lx` and `.ts` files from the command line |
-| [`@inflector/lux-compiler`](packages/compiler) | The `.lx` compiler (used by the Vite plugin) |
-| [`@inflector/lux-language-server`](packages/language-server) | Volar-based language server (used by the editor extension and `lux-check`) |
-| [Lux for VS Code](packages/vscode) | Syntax highlighting and IntelliSense (`inflector.inflector-lux`) |
+| [`@inflector/keeno`](packages/keeno) | Runtime: reactivity, lifecycle, built-in components, `mount`/`hydrate`, `renderToString` (`/server`) |
+| [`@inflector/vite-plugin-keeno`](packages/vite-plugin-keeno) | Vite plugin: compiles `.kn` files, scoped CSS, HMR |
+| [`@inflector/keeno-router`](packages/router) | Client-side router |
+| [`@inflector/keeno-check`](packages/keeno-check) | Type-checks `.kn` and `.ts` files from the command line |
+| [`@inflector/keeno-compiler`](packages/compiler) | The `.kn` compiler (used by the Vite plugin) |
+| [`@inflector/keeno-language-server`](packages/language-server) | Volar-based language server (used by the editor extension and `keeno-check`) |
+| [Keeno for VS Code](packages/vscode) | Syntax highlighting and IntelliSense (`inflector.inflector-keeno`) |
 
 ## Documentation
 

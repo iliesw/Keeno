@@ -3,8 +3,8 @@
 // same code-block chrome on the server and the client, so pages ship no parser.
 //
 // It also serves `?highlight` (a source file and its highlighted code block), `?compiled` (what
-// the Lux compiler emits for a component) and `?search` (a page's sections, for the search box).
-import { compile } from '@inflector/lux-compiler'
+// the Keeno compiler emits for a component) and `?search` (a page's sections, for the search box).
+import { compile } from '@inflector/keeno-compiler'
 import hljs from 'highlight.js'
 import { Marked, type Tokens } from 'marked'
 import { execFileSync } from 'node:child_process'
@@ -25,10 +25,10 @@ export interface Section {
   text: string
 }
 
-const REPO = 'https://github.com/iliesw/Lux'
+const REPO = 'https://github.com/iliesw/Keeno'
 
 const LANG_ALIASES: Record<string, string> = {
-  lx: 'html',
+  kn: 'html',
   ts: 'typescript',
   tsx: 'typescript',
   js: 'javascript',
@@ -134,7 +134,7 @@ function renderInstallTabs(code: string): string {
   return `<div class="pm-block"><div class="pm-tabs" role="tablist">${tabs}</div>${panes}</div>`
 }
 
-/** Render a fenced code block (`info` is e.g. `html App.lx`) to the site's code-block markup. */
+/** Render a fenced code block (`info` is e.g. `html App.kn`) to the site's code-block markup. */
 export function renderCode(code: string, info = '', options: { bare?: boolean } = {}): string {
   const [rawLang = '', ...rest] = info.trim().split(/\s+/)
   const filename = rest.join(' ')
@@ -147,11 +147,11 @@ export function renderCode(code: string, info = '', options: { bare?: boolean } 
     highlighted = escapeHtml(code)
   }
   const lines = code.split('\n').length
-  const icon = fileExt === 'lx' ? 'lx' : ICONS[LANG_ALIASES[fileExt ?? ''] ?? fileExt ?? ''] ?? ICONS[lang] ?? 'terminal'
+  const icon = fileExt === 'kn' ? 'kn' : ICONS[LANG_ALIASES[fileExt ?? ''] ?? fileExt ?? ''] ?? ICONS[lang] ?? 'terminal'
   const label = filename || rawLang || 'text'
   const copy = `<button type="button" class="code-copy" data-copy aria-label="Copy code">${COPY_ICON}${CHECK_ICON}</button>`
   // A self-contained component (no imports of sibling files) can be opened in the playground.
-  const playable = fileExt === 'lx' && !/from\s+['"]\.\.?\//.test(code)
+  const playable = fileExt === 'kn' && !/from\s+['"]\.\.?\//.test(code)
   const play = playable
     ? `<button type="button" class="code-play" data-playground title="Open in the playground">${PLAY_ICON}<span>Try it</span></button>`
     : ''
@@ -269,9 +269,9 @@ function lastUpdated(file: string): string {
   }
 }
 
-const EXT_LANG: Record<string, string> = { lx: 'html', ts: 'ts', js: 'js', css: 'css', json: 'json' }
+const EXT_LANG: Record<string, string> = { kn: 'html', ts: 'ts', js: 'js', css: 'css', json: 'json' }
 
-/** What the Lux compiler emits for a component, with types stripped. */
+/** What the Keeno compiler emits for a component, with types stripped. */
 export function compiledOutput(source: string, filename: string): string {
   const out = compile(source, { filename })
   return sucrase(out.js, { transforms: ['typescript'], disableESTransforms: true, keepUnusedImports: true }).code.trim()
@@ -279,7 +279,7 @@ export function compiledOutput(source: string, filename: string): string {
 
 export default function markdown(): Plugin {
   return {
-    name: 'lux-docs-markdown',
+    name: 'keeno-docs-markdown',
     enforce: 'pre',
     load(id) {
       const [file, query = ''] = id.split('?', 2)
@@ -291,7 +291,7 @@ export default function markdown(): Plugin {
       if (mode === 'search') return `export default ${JSON.stringify(searchSections(raw))}`
       if (mode === 'compiled') {
         const js = compiledOutput(raw, name)
-        return `export default ${JSON.stringify({ raw: js, html: renderCode(js, `js ${name.replace(/\.lx$/, '.js')}`) })}`
+        return `export default ${JSON.stringify({ raw: js, html: renderCode(js, `js ${name.replace(/\.kn$/, '.js')}`) })}`
       }
       const lang = EXT_LANG[name.split('.').pop() ?? ''] ?? ''
       return `export default ${JSON.stringify({ raw, html: renderCode(raw.trimEnd(), `${lang} ${name}`) })}`

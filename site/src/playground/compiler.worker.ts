@@ -1,7 +1,7 @@
-// Compiles playground files off the main thread: `.lx` with the real Lux compiler, then
+// Compiles playground files off the main thread: `.kn` with the real Keeno compiler, then
 // TypeScript is stripped with sucrase (the same job esbuild/Oxc do in the Vite plugin).
 import './process-shim'
-import { compile } from '@inflector/lux-compiler'
+import { compile } from '@inflector/keeno-compiler'
 import { transform } from 'sucrase'
 import type { CompiledFile, CompileRequest, CompileResponse } from './types'
 
@@ -17,7 +17,7 @@ function message(err: any, filename: string): string {
 function compileFile(name: string, source: string): CompiledFile {
   const t0 = performance.now()
   try {
-    if (name.endsWith('.lx')) {
+    if (name.endsWith('.kn')) {
       const out = compile(source, { filename: name })
       return { name, js: stripTypes(out.js, name), css: out.css, ms: performance.now() - t0 }
     }

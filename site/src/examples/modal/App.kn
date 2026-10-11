@@ -1,0 +1,38 @@
+<script lang="ts">
+  import Modal from './Modal.kn'
+
+  const open = state(false)
+  const name = state('Ada')
+</script>
+
+<p>Hello, <strong>{name}</strong>.</p>
+<button onClick={() => open.set(true)}>Edit profile</button>
+
+<Modal open={open} title="Edit profile" onClose={() => open.set(false)}>
+  <label>
+    Display name
+    <input bind:value={name} />
+  </label>
+  <p class="hint">Changes apply as you type. Press Esc or click outside to close.</p>
+</Modal>
+
+<style>
+  label {
+    display: grid;
+    gap: 0.35rem;
+    font-size: 0.85rem;
+  }
+  /* The modal renders in <body>, outside any page styles: style what goes in it here. */
+  input {
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg);
+    color: inherit;
+    font: inherit;
+  }
+  .hint {
+    color: var(--muted);
+    font-size: 0.8rem;
+  }
+</style>

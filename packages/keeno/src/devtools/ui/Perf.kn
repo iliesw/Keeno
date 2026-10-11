@@ -1,0 +1,135 @@
+<script lang="ts">
+  // The Perf tab: counters, recent flush times and the components that update most.
+  import { formatMs, useActions, type DevStats } from '../shared'
+
+  const { stats } = props<{ stats: DevStats | null }>()
+  const actions = useActions()
+
+  const W = 360
+  const H = 64
+  const BUDGET = 16.7
+
+  const recent = derived(() => stats?.recent ?? [])
+  const peak = derived(() => Math.max(0.5, ...recent))
+  // Scaled to the data, so sub-millisecond flushes are visible; the budget line shows once it fits.
+  const scale = derived(() => peak * 1.25)
+  const bars = derived(() =>
+    recent.map((v, i) => {
+      const h = Math.max(1, (v / scale) * (H - 4))
+      return { i, x: i * (W / 80) + 0.5, y: H - h, w: Math.max(1, W / 80 - 1), h, slow: v > BUDGET, label: `${v.toFixed(2)}ms` }
+    }),
+  )
+  const budgetY = derived(() => (BUDGET <= scale ? H - (BUDGET / scale) * (H - 4) : null))
+  const cards = derived(() =>
+    stats
+      ? [
+          { label: 'components', value: String(stats.components), warn: false },
+          { label: 'signals created', value: String(stats.signals), warn: false },
+          { label: 'flushes', value: String(stats.flushes), warn: false },
+          { label: 'component updates', value: String(stats.updates), warn: false },
+          { label: 'last flush', value: formatMs(stats.lastFlush), warn: stats.lastFlush > BUDGET },
+          { label: 'avg flush', value: formatMs(stats.avgFlush), warn: stats.avgFlush > BUDGET },
+          { label: 'slowest flush', value: formatMs(stats.maxFlush), warn: stats.maxFlush > BUDGET },
+        ]
+      : [],
+  )
+  const top = derived(() => stats?.top ?? [])
+  const most = derived(() => top[0]?.updates ?? 1)
+
+  function reset() {
+    actions.api.resetStats()
+    actions.refresh()
+  }
+</script>
+
+<div class="view">
+  <div class="perf">
+    <div class="cards">
+      {cards.map((c) => (
+        <div key={c.label} class={['card', c.warn && 'warn']}>
+          <div class="card-value">{c.value}</div>
+          <div class="card-label">{c.label}</div>
+        </div>
+      ))}
+    </div>
+    <div class="perf-title">
+      Recent flushes
+      <span class="muted small">
+        {' '}
+        (peak {formatMs(recent.length ? peak : 0)}
+        {budgetY !== null ? ', dashed line: 16.7ms frame budget' : ''})
+      </span>
+    </div>
+    <svg class="spark" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
+      {bars.map((b) => (
+        <rect key={b.i} x={b.x} y={b.y} width={b.w} height={b.h} class={b.slow ? 'slow' : 'ok'}>
+          <title>{b.label}</title>
+        </rect>
+      ))}
+      {budgetY !== null && <line x1="0" x2={W} y1={budgetY} y2={budgetY} class="budget" />}
+    </svg>
+    <div class="perf-title">
+      Most updated
+      <div class="spacer" />
+      <button class="btn" onClick={reset}>
+        Reset
+      </button>
+    </div>
+    {top.map((t) => (
+      <div
+        key={t.id}
+        class="bar-row"
+        onClick={() => actions.select(t.id, true)}
+        onMouseEnter={() => actions.highlight(t.id)}
+        onMouseLeave={() => actions.highlight(null)}
+      >
+        <span class="tag">
+          {'<'}
+          <span class="name">{t.name}</span>
+          {'>'}
+        </span>
+        <span class="bar">
+          <span class="bar-fill" style={`width:${Math.max(2, (t.updates / most) * 100)}%`} />
+        </span>
+        <span class="bar-n">{t.updates}</span>
+      </div>
+    ))}
+    {top.length === 0 && <div class="empty">No updates yet.</div>}
+  </div>
+</div>
+
+<style>
+  .perf { flex: 1; overflow: auto; padding: 10px; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; }
+  .card.warn { border-color: rgba(255, 107, 107, 0.5); }
+  .card.warn .card-value { color: var(--err); }
+  .card-value { font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .card-label { color: var(--muted); font-size: 11px; }
+  .perf-title { display: flex; align-items: center; gap: 4px; font-weight: 700; margin: 16px 0 6px; }
+  .spark {
+    width: 100%;
+    height: 64px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    display: block;
+  }
+  .spark .ok { fill: var(--accent); opacity: 0.75; }
+  .spark .slow { fill: var(--err); }
+  .spark .budget { stroke: var(--muted); stroke-dasharray: 4 4; stroke-width: 1; vector-effect: non-scaling-stroke; }
+  .bar-row {
+    display: grid;
+    grid-template-columns: minmax(0, 40%) 1fr 44px;
+    align-items: center;
+    gap: 8px;
+    padding: 3px 4px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  .bar-row:hover { background: var(--hover); }
+  .bar-row .tag { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bar { height: 6px; background: var(--raised); border-radius: 6px; overflow: hidden; }
+  .bar-fill { display: block; height: 100%; background: linear-gradient(90deg, #f5a524, #ffd27a); border-radius: 6px; }
+  .bar-n { text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; }
+</style>

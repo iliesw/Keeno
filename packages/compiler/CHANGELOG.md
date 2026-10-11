@@ -1,4 +1,4 @@
-# @inflector/lux-compiler
+# @inflector/keeno-compiler
 
 ## 0.2.0
 

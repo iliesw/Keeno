@@ -1,0 +1,64 @@
+{
+  "name": "@inflector/keeno-check",
+  "version": "0.1.1",
+  "description": "Command-line type checker for Keeno (.kn) projects",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iliesw/Keeno.git",
+    "directory": "packages/keeno-check"
+  },
+  "homepage": "https://github.com/iliesw/Keeno/tree/main/packages/keeno-check#readme",
+  "bugs": {
+    "url": "https://github.com/iliesw/Keeno/issues"
+  },
+  "keywords": [
+    "keeno",
+    "typescript",
+    "type-check",
+    "cli",
+    "kn"
+  ],
+  "type": "module",
+  "bin": {
+    "keeno-check": "./dist/cli.js"
+  },
+  "main": "./dist/check.js",
+  "types": "./dist/check.d.ts",
+  "exports": {
+    ".": {
+      "keeno-source": "./src/check.ts",
+      "types": "./dist/check.d.ts",
+      "import": "./dist/check.js",
+      "default": "./dist/check.js"
+    },
+    "./cli": {
+      "keeno-source": "./src/cli.ts",
+      "types": "./dist/cli.d.ts",
+      "import": "./dist/cli.js",
+      "default": "./dist/cli.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "bun ../../scripts/build-package.ts --target=node",
+    "prepack": "bun run build"
+  },
+  "dependencies": {
+    "@inflector/keeno-language-server": "workspace:*",
+    "@volar/kit": "~2.4.28",
+    "volar-service-typescript": "~0.0.71"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

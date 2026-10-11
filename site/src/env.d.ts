@@ -1,7 +1,7 @@
 /// <reference types="vite/client" />
 
-declare module '*.lx' {
-  const Component: import('@inflector/lux').Component<any>
+declare module '*.kn' {
+  const Component: import('@inflector/keeno').Component<any>
   export default Component
 }
 
@@ -10,10 +10,10 @@ declare module '*.md' {
   export default doc
 }
 
-declare module 'virtual:lux-runtime' {
-  /** The Lux runtime (public API and compiler helpers) as one ES module. */
-  export const lux: string
-  /** @inflector/lux-router, importing `@inflector/lux`. */
+declare module 'virtual:keeno-runtime' {
+  /** The Keeno runtime (public API and compiler helpers) as one ES module. */
+  export const keeno: string
+  /** @inflector/keeno-router, importing `@inflector/keeno`. */
   export const router: string
 }
 
@@ -32,7 +32,7 @@ declare module '*?search' {
   export default page
 }
 
-declare module 'virtual:lux-stats' {
+declare module 'virtual:keeno-stats' {
   /** Gzipped size of the minified runtime, in KB. */
   export const runtimeKb: number
   export const routerKb: number

@@ -1,0 +1,108 @@
+<script lang="ts">
+  import { Portal, Transition, type Children } from '@inflector/keeno'
+
+  const { open, title, onClose, children } = props<{
+    open: boolean
+    title: string
+    onClose: () => void
+    children?: Children
+  }>()
+
+  init(() => {
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  })
+</script>
+
+<!-- Rendered at the end of <body>, so no parent's overflow or z-index can clip it. -->
+<Portal target="body">
+  <Transition name="modal">
+    {open && (
+      <div class="backdrop" onClick={onClose}>
+        <div class="dialog" role="dialog" aria-modal="true" aria-label={title} onClick={(e: MouseEvent) => e.stopPropagation()}>
+          <header>
+            <h2>{title}</h2>
+            <button class="close" aria-label="Close" onClick={onClose}>✕</button>
+          </header>
+          {children?.()}
+          <footer>
+            <button class="done" onClick={onClose}>Done</button>
+          </footer>
+        </div>
+      </div>
+    )}
+  </Transition>
+</Portal>
+
+<style>
+  .backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: grid;
+    place-items: center;
+    padding: 1rem;
+    background: rgb(0 0 0 / 0.45);
+    backdrop-filter: blur(3px);
+  }
+  .dialog {
+    width: min(100%, 380px);
+    padding: 1.25rem;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: var(--bg);
+    color: var(--fg);
+    font: 15px/1.5 ui-sans-serif, system-ui, sans-serif;
+    box-shadow: 0 24px 64px -16px rgb(0 0 0 / 0.5);
+  }
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+  }
+  h2 {
+    margin: 0;
+    font-size: 1.1rem;
+  }
+  button {
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+  }
+  .close {
+    border: none;
+    background: none;
+    padding: 2px 6px;
+  }
+  footer {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 1rem;
+  }
+  .done {
+    padding: 6px 16px;
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    background: var(--accent);
+    color: black;
+    font-weight: 600;
+  }
+  .modal-enter-active,
+  .modal-leave-active {
+    transition: opacity 0.2s ease;
+  }
+  .modal-enter-active .dialog,
+  .modal-leave-active .dialog {
+    transition: transform 0.2s cubic-bezier(0.2, 0.9, 0.3, 1.1);
+  }
+  .modal-enter-from,
+  .modal-leave-to {
+    opacity: 0;
+  }
+  .modal-enter-from .dialog,
+  .modal-leave-to .dialog {
+    transform: translateY(16px) scale(0.97);
+  }
+</style>

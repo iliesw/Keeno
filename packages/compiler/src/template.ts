@@ -8,6 +8,12 @@ const VOID_TAGS = new Set([
 ])
 const ATTR_ALIASES: Record<string, string> = { className: 'class', htmlFor: 'for' }
 
+/** The DOM event type for an `onX` attribute (kept in sync with `eventType` in the runtime). */
+function eventType(name: string): string {
+  const type = name.slice(2).toLowerCase()
+  return type === 'doubleclick' ? 'dblclick' : type
+}
+
 /**
  * Elements that only exist in SVG. A template whose root is one of these (or that sits inside an
  * `<svg>` in the markup) is parsed inside an `<svg>` wrapper, so it gets the SVG namespace.
@@ -360,7 +366,7 @@ export class TemplateCompiler {
         }
         if (/^on[A-Z]/.test(name)) {
           if (!expr || !t.isExpression(expr)) throw this.error(`${name} needs a function`)
-          call('on', [ref(path), t.stringLiteral(name.slice(2).toLowerCase()), handler(expr)])
+          call('on', [ref(path), t.stringLiteral(eventType(name)), handler(expr)])
           continue
         }
         name = ATTR_ALIASES[name] ?? name

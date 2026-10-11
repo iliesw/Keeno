@@ -1,19 +1,19 @@
 {
-  "name": "@inflector/lux-router",
+  "name": "@inflector/keeno-router",
   "version": "0.1.0",
-  "description": "Client-side router for Lux (.lx) apps",
+  "description": "Client-side router for Keeno (.kn) apps",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/iliesw/Lux.git",
+    "url": "git+https://github.com/iliesw/Keeno.git",
     "directory": "packages/router"
   },
-  "homepage": "https://github.com/iliesw/Lux/tree/main/packages/router#readme",
+  "homepage": "https://github.com/iliesw/Keeno/tree/main/packages/router#readme",
   "bugs": {
-    "url": "https://github.com/iliesw/Lux/issues"
+    "url": "https://github.com/iliesw/Keeno/issues"
   },
   "keywords": [
-    "lux",
+    "keeno",
     "router",
     "routing",
     "spa"
@@ -24,7 +24,7 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "lux-source": "./src/index.ts",
+      "keeno-source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
@@ -39,10 +39,10 @@
     "prepack": "bun run build"
   },
   "peerDependencies": {
-    "@inflector/lux": ">=0.2.0 <1.0.0"
+    "@inflector/keeno": ">=0.2.0 <1.0.0"
   },
   "devDependencies": {
-    "@inflector/lux": "workspace:*"
+    "@inflector/keeno": "workspace:*"
   },
   "publishConfig": {
     "access": "public"

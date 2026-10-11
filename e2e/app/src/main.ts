@@ -1,11 +1,11 @@
 // Fixtures for the Playwright suite. `/` holds SVG and table templates (e2e/svg-table.e2e.ts);
 // `/features/…` holds the router and built-in components (e2e/features.e2e.ts); `/bench` the
 // benchmark table (scripts/bench.ts); `/reparent` reparentable() content (e2e/reparent.e2e.ts).
-import { mount } from '@inflector/lux'
-import App from './App.lx'
-import Features from './features/Features.lx'
-import Bench from './bench/Bench.lx'
-import Reparent from './reparent/Reparent.lx'
+import { mount } from '@inflector/keeno'
+import App from './App.kn'
+import Features from './features/Features.kn'
+import Bench from './bench/Bench.kn'
+import Reparent from './reparent/Reparent.kn'
 
 const path = location.pathname
 const page = path.startsWith('/features')

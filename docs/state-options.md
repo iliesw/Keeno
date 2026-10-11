@@ -15,7 +15,7 @@
 ## equals
 
 ```ts
-import { deepEqual } from '@inflector/lux'
+import { deepEqual } from '@inflector/keeno'
 
 const filters = state({ tags: [] as string[] }, { equals: deepEqual })
 filters.set({ tags: [] }) // no change, nothing re-runs
@@ -62,7 +62,7 @@ const q = state('', { url: { param: 'q', replace: true }, debounce: 300 })
 
 ## history
 
-```html Editor.lx
+```html Editor.kn
 <script lang="ts">
   const text = state('', { history: 100 })
 </script>

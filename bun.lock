@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "lux-monorepo",
+      "name": "keeno-monorepo",
       "devDependencies": {
         "@changesets/changelog-github": "^1.0.1",
         "@changesets/cli": "^3.0.3",
@@ -14,34 +14,34 @@
       },
     },
     "e2e/app": {
-      "name": "lux-e2e-app",
+      "name": "keeno-e2e-app",
       "dependencies": {
-        "@inflector/lux": "workspace:*",
-        "@inflector/lux-router": "workspace:*",
+        "@inflector/keeno": "workspace:*",
+        "@inflector/keeno-router": "workspace:*",
       },
       "devDependencies": {
-        "@inflector/vite-plugin-lux": "workspace:*",
+        "@inflector/vite-plugin-keeno": "workspace:*",
         "vite": "^5.4.11",
       },
     },
     "examples/counter": {
       "name": "example-counter",
       "dependencies": {
-        "@inflector/lux": "workspace:*",
+        "@inflector/keeno": "workspace:*",
       },
       "devDependencies": {
-        "@inflector/vite-plugin-lux": "workspace:*",
+        "@inflector/vite-plugin-keeno": "workspace:*",
         "vite": "^5.4.11",
       },
     },
     "examples/tailwind": {
       "name": "example-tailwind",
       "dependencies": {
-        "@inflector/lux": "workspace:*",
+        "@inflector/keeno": "workspace:*",
       },
       "devDependencies": {
-        "@inflector/lux-check": "workspace:*",
-        "@inflector/vite-plugin-lux": "workspace:*",
+        "@inflector/keeno-check": "workspace:*",
+        "@inflector/vite-plugin-keeno": "workspace:*",
         "@tailwindcss/vite": "^4.1.0",
         "tailwindcss": "^4.1.0",
         "vite": "^5.4.11",
@@ -50,16 +50,16 @@
     "examples/todo": {
       "name": "example-todo",
       "dependencies": {
-        "@inflector/lux": "workspace:*",
+        "@inflector/keeno": "workspace:*",
       },
       "devDependencies": {
-        "@inflector/lux-check": "workspace:*",
-        "@inflector/vite-plugin-lux": "workspace:*",
+        "@inflector/keeno-check": "workspace:*",
+        "@inflector/vite-plugin-keeno": "workspace:*",
         "vite": "^5.4.11",
       },
     },
     "packages/compiler": {
-      "name": "@inflector/lux-compiler",
+      "name": "@inflector/keeno-compiler",
       "version": "0.2.0",
       "dependencies": {
         "@babel/generator": "^7.26.2",
@@ -70,31 +70,13 @@
         "postcss-selector-parser": "^7.0.0",
       },
       "devDependencies": {
-        "@inflector/lux": "workspace:*",
+        "@inflector/keeno": "workspace:*",
         "@types/babel__generator": "^7.6.8",
         "@types/babel__traverse": "^7.20.6",
       },
     },
-    "packages/language-server": {
-      "name": "@inflector/lux-language-server",
-      "version": "0.2.0",
-      "dependencies": {
-        "@inflector/lux-compiler": "workspace:*",
-        "@volar/language-core": "~2.4.28",
-        "@volar/language-server": "~2.4.28",
-        "@volar/typescript": "~2.4.28",
-        "volar-service-css": "~0.0.71",
-        "volar-service-typescript": "~0.0.71",
-        "vscode-css-languageservice": "~6.3.10",
-        "vscode-uri": "^3.2.0",
-      },
-      "devDependencies": {
-        "@inflector/lux": "workspace:*",
-        "@volar/test-utils": "~2.4.28",
-      },
-    },
-    "packages/lux": {
-      "name": "@inflector/lux",
+    "packages/keeno": {
+      "name": "@inflector/keeno",
       "version": "0.2.0",
       "devDependencies": {
         "linkedom": "^0.18.13",
@@ -106,14 +88,14 @@
         "linkedom",
       ],
     },
-    "packages/lux-check": {
-      "name": "@inflector/lux-check",
+    "packages/keeno-check": {
+      "name": "@inflector/keeno-check",
       "version": "0.1.1",
       "bin": {
-        "lux-check": "./dist/cli.js",
+        "keeno-check": "./dist/cli.js",
       },
       "dependencies": {
-        "@inflector/lux-language-server": "workspace:*",
+        "@inflector/keeno-language-server": "workspace:*",
         "@volar/kit": "~2.4.28",
         "volar-service-typescript": "~0.0.71",
       },
@@ -121,21 +103,39 @@
         "typescript": "^5.0.0",
       },
     },
-    "packages/router": {
-      "name": "@inflector/lux-router",
-      "version": "0.1.0",
-      "devDependencies": {
-        "@inflector/lux": "workspace:*",
-      },
-      "peerDependencies": {
-        "@inflector/lux": ">=0.2.0 <1.0.0",
-      },
-    },
-    "packages/vite-plugin-lux": {
-      "name": "@inflector/vite-plugin-lux",
+    "packages/language-server": {
+      "name": "@inflector/keeno-language-server",
       "version": "0.2.0",
       "dependencies": {
-        "@inflector/lux-compiler": "workspace:*",
+        "@inflector/keeno-compiler": "workspace:*",
+        "@volar/language-core": "~2.4.28",
+        "@volar/language-server": "~2.4.28",
+        "@volar/typescript": "~2.4.28",
+        "volar-service-css": "~0.0.71",
+        "volar-service-typescript": "~0.0.71",
+        "vscode-css-languageservice": "~6.3.10",
+        "vscode-uri": "^3.2.0",
+      },
+      "devDependencies": {
+        "@inflector/keeno": "workspace:*",
+        "@volar/test-utils": "~2.4.28",
+      },
+    },
+    "packages/router": {
+      "name": "@inflector/keeno-router",
+      "version": "0.1.0",
+      "devDependencies": {
+        "@inflector/keeno": "workspace:*",
+      },
+      "peerDependencies": {
+        "@inflector/keeno": ">=0.2.0 <1.0.0",
+      },
+    },
+    "packages/vite-plugin-keeno": {
+      "name": "@inflector/vite-plugin-keeno",
+      "version": "0.2.0",
+      "dependencies": {
+        "@inflector/keeno-compiler": "workspace:*",
       },
       "devDependencies": {
         "@tailwindcss/vite": "^4.1.0",
@@ -147,10 +147,10 @@
       },
     },
     "packages/vscode": {
-      "name": "inflector-lux",
+      "name": "inflector-keeno",
       "version": "0.2.0",
       "devDependencies": {
-        "@inflector/lux-language-server": "workspace:*",
+        "@inflector/keeno-language-server": "workspace:*",
         "@types/vscode": "~1.90.0",
         "@volar/vscode": "~2.4.28",
         "@vscode/vsce": "^4.0.0",
@@ -159,10 +159,10 @@
       },
     },
     "site": {
-      "name": "lux-docs-site",
+      "name": "keeno-docs-site",
       "dependencies": {
-        "@inflector/lux": "workspace:*",
-        "@inflector/lux-router": "workspace:*",
+        "@inflector/keeno": "workspace:*",
+        "@inflector/keeno-router": "workspace:*",
         "linkedom": "^0.18.13",
       },
       "devDependencies": {
@@ -175,9 +175,9 @@
         "@codemirror/search": "^6.7.2",
         "@codemirror/state": "^6.7.6",
         "@codemirror/view": "^6.43.14",
-        "@inflector/lux-check": "workspace:*",
-        "@inflector/lux-compiler": "workspace:*",
-        "@inflector/vite-plugin-lux": "workspace:*",
+        "@inflector/keeno-check": "workspace:*",
+        "@inflector/keeno-compiler": "workspace:*",
+        "@inflector/vite-plugin-keeno": "workspace:*",
         "@lezer/highlight": "^1.2.5",
         "@tailwindcss/vite": "^4.1.0",
         "codemirror": "6",
@@ -340,17 +340,17 @@
 
     "@happy-dom/global-registrator": ["@happy-dom/global-registrator@15.11.7", "", { "dependencies": { "happy-dom": "^15.11.7" } }, "sha512-mfOoUlIw8VBiJYPrl5RZfMzkXC/z7gbSpi2ecycrj/gRWLq2CMV+Q+0G+JPjeOmuNFgg0skEIzkVFzVYFP6URw=="],
 
-    "@inflector/lux": ["@inflector/lux@workspace:packages/lux"],
+    "@inflector/keeno": ["@inflector/keeno@workspace:packages/keeno"],
 
-    "@inflector/lux-check": ["@inflector/lux-check@workspace:packages/lux-check"],
+    "@inflector/keeno-check": ["@inflector/keeno-check@workspace:packages/keeno-check"],
 
-    "@inflector/lux-compiler": ["@inflector/lux-compiler@workspace:packages/compiler"],
+    "@inflector/keeno-compiler": ["@inflector/keeno-compiler@workspace:packages/compiler"],
 
-    "@inflector/lux-language-server": ["@inflector/lux-language-server@workspace:packages/language-server"],
+    "@inflector/keeno-language-server": ["@inflector/keeno-language-server@workspace:packages/language-server"],
 
-    "@inflector/lux-router": ["@inflector/lux-router@workspace:packages/router"],
+    "@inflector/keeno-router": ["@inflector/keeno-router@workspace:packages/router"],
 
-    "@inflector/vite-plugin-lux": ["@inflector/vite-plugin-lux@workspace:packages/vite-plugin-lux"],
+    "@inflector/vite-plugin-keeno": ["@inflector/vite-plugin-keeno@workspace:packages/vite-plugin-keeno"],
 
     "@jridgewell/gen-mapping": ["@jridgewell/gen-mapping@0.3.13", "", { "dependencies": { "@jridgewell/sourcemap-codec": "^1.5.0", "@jridgewell/trace-mapping": "^0.3.24" } }, "sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA=="],
 
@@ -692,7 +692,7 @@
 
     "import-meta-resolve": ["import-meta-resolve@4.2.0", "", {}, "sha512-Iqv2fzaTQN28s/FwZAoFq0ZSs/7hMAHJVX+w8PZl3cY19Pxk6jFFalxQoIfW2826i/fDLXv8IiEZRIT0lDuWcg=="],
 
-    "inflector-lux": ["inflector-lux@workspace:packages/vscode"],
+    "inflector-keeno": ["inflector-keeno@workspace:packages/vscode"],
 
     "is-docker": ["is-docker@3.0.0", "", { "bin": { "is-docker": "cli.js" } }, "sha512-eljcgEDlEns/7AXFosB5K/2nCM4P7FQPkGc/DWLy5rmFEWvZayGrik1d9/QIY5nJ4f9YsVvBkA6kJpHn9rISdQ=="],
 
@@ -717,6 +717,10 @@
     "jwa": ["jwa@2.0.1", "", { "dependencies": { "buffer-equal-constant-time": "^1.0.1", "ecdsa-sig-formatter": "1.0.11", "safe-buffer": "^5.0.1" } }, "sha512-hRF04fqJIP8Abbkq5NKGN0Bbr3JxlQ+qhZufXVr0DvujKy93ZCbXZMHDL4EOtodSbCWxOqR8MS1tXA5hwqCXDg=="],
 
     "jws": ["jws@4.0.1", "", { "dependencies": { "jwa": "^2.0.1", "safe-buffer": "^5.0.1" } }, "sha512-EKI/M/yqPncGUUh44xz0PxSidXFr/+r0pA70+gIYhjv+et7yxM+s29Y+VGDkovRofQem0fs7Uvf4+YmAdyRduA=="],
+
+    "keeno-docs-site": ["keeno-docs-site@workspace:site"],
+
+    "keeno-e2e-app": ["keeno-e2e-app@workspace:e2e/app"],
 
     "launch-editor": ["launch-editor@2.14.2", "", { "dependencies": { "picocolors": "^1.1.1", "shell-quote": "^1.10.0" } }, "sha512-NHJEb30MGBCkmZXLZwz25t37QR4aY03ZzPYUJXOJaOa92uWwExI9SBQUuIznBYc1xkD7cJNGX7oc3Nl3sq2kQQ=="],
 
@@ -763,10 +767,6 @@
     "lodash.once": ["lodash.once@4.1.1", "", {}, "sha512-Sb487aTOCr9drQVL8pIxOzVhafOjZN9UU54hiN8PU3uAiSV7lx1yYNpbNmex2PK6dSJoNTSJUUswT651yww3Mg=="],
 
     "lru-cache": ["lru-cache@6.0.0", "", { "dependencies": { "yallist": "^4.0.0" } }, "sha512-Jo6dJ04CmSjuznwJSS3pUeWmd/H0ffTlkXXgwZi+eq1UCmqQwCh+eLsYOYCwY991i2Fah4h1BEMCx4qThGbsiA=="],
-
-    "lux-docs-site": ["lux-docs-site@workspace:site"],
-
-    "lux-e2e-app": ["lux-e2e-app@workspace:e2e/app"],
 
     "magic-string": ["magic-string@0.30.21", "", { "dependencies": { "@jridgewell/sourcemap-codec": "^1.5.5" } }, "sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ=="],
 

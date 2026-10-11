@@ -1,36 +1,36 @@
 {
-  "name": "@inflector/lux-language-server",
+  "name": "@inflector/keeno-language-server",
   "version": "0.2.0",
-  "description": "Volar-based language server for Lux (.lx) components",
+  "description": "Volar-based language server for Keeno (.kn) components",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/iliesw/Lux.git",
+    "url": "git+https://github.com/iliesw/Keeno.git",
     "directory": "packages/language-server"
   },
-  "homepage": "https://github.com/iliesw/Lux/tree/main/packages/language-server#readme",
+  "homepage": "https://github.com/iliesw/Keeno/tree/main/packages/language-server#readme",
   "bugs": {
-    "url": "https://github.com/iliesw/Lux/issues"
+    "url": "https://github.com/iliesw/Keeno/issues"
   },
   "keywords": [
-    "lux",
+    "keeno",
     "language-server",
     "volar",
     "lsp",
-    "lx"
+    "kn"
   ],
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "lux-source": "./src/index.ts",
+      "keeno-source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
     "./server": {
-      "lux-source": "./src/server.ts",
+      "keeno-source": "./src/server.ts",
       "types": "./dist/server.d.ts",
       "import": "./dist/server.js",
       "default": "./dist/server.js"
@@ -48,7 +48,7 @@
     "prepack": "bun run build"
   },
   "dependencies": {
-    "@inflector/lux-compiler": "workspace:*",
+    "@inflector/keeno-compiler": "workspace:*",
     "@volar/language-core": "~2.4.28",
     "@volar/language-server": "~2.4.28",
     "@volar/typescript": "~2.4.28",
@@ -59,7 +59,7 @@
   },
   "devDependencies": {
     "@volar/test-utils": "~2.4.28",
-    "@inflector/lux": "workspace:*"
+    "@inflector/keeno": "workspace:*"
   },
   "engines": {
     "node": ">=18"

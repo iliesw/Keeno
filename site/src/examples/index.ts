@@ -1,6 +1,6 @@
 // The examples: shown live on /examples (compiled by Vite like any component) and loaded into
-// the playground (as source, compiled in the browser). Each folder holds an App.lx entry.
-import type { Component } from '@inflector/lux'
+// the playground (as source, compiled in the browser). Each folder holds an App.kn entry.
+import type { Component } from '@inflector/keeno'
 import type { PlaygroundFile } from '../playground/types'
 
 export interface Example {
@@ -25,7 +25,7 @@ export const examples: Example[] = [
   {
     slug: 'counter',
     title: 'Counter',
-    description: 'The smallest Lux app: a state, two derived values and a few buttons.',
+    description: 'The smallest Keeno app: a state, two derived values and a few buttons.',
     concepts: [
       { label: 'state()', href: '/docs/reactivity' },
       { label: 'derived()', href: '/docs/reactivity' },
@@ -173,17 +173,17 @@ export const examples: Example[] = [
 
 export const categories = ['Basics', 'State', 'Components', 'Built-ins', 'Styling'] as const
 
-const components = import.meta.glob<Component<any>>('./*/App.lx', { eager: true, import: 'default' })
+const components = import.meta.glob<Component<any>>('./*/App.kn', { eager: true, import: 'default' })
 // Sources (with their highlighted HTML) load on demand, so pages that only run examples don't ship them.
-const sources = import.meta.glob<{ raw: string; html: string }>('./*/*.{lx,ts,css}', { import: 'default', query: '?highlight' })
+const sources = import.meta.glob<{ raw: string; html: string }>('./*/*.{kn,ts,css}', { import: 'default', query: '?highlight' })
 
 export const findExample = (slug: string) => examples.find((e) => e.slug === slug)
 
-export const exampleComponent = (slug: string): Component<any> | undefined => components[`./${slug}/App.lx`]
+export const exampleComponent = (slug: string): Component<any> | undefined => components[`./${slug}/App.kn`]
 
 const cache = new Map<string, SourceFile[]>()
 
-/** The files of an example, App.lx first, if they were loaded already. */
+/** The files of an example, App.kn first, if they were loaded already. */
 export const getExampleFiles = (slug: string): SourceFile[] | undefined => cache.get(slug)
 
 export async function loadExampleFiles(slug: string): Promise<SourceFile[]> {
@@ -194,7 +194,7 @@ export async function loadExampleFiles(slug: string): Promise<SourceFile[]> {
       .filter(([path]) => path.startsWith(`./${slug}/`))
       .map(async ([path, load]) => ({ name: path.slice(slug.length + 3), ...(await load()) })),
   )
-  files.sort((a, b) => (a.name === 'App.lx' ? -1 : b.name === 'App.lx' ? 1 : a.name.localeCompare(b.name)))
+  files.sort((a, b) => (a.name === 'App.kn' ? -1 : b.name === 'App.kn' ? 1 : a.name.localeCompare(b.name)))
   cache.set(slug, files)
   return files
 }

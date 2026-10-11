@@ -1,0 +1,140 @@
+<script lang="ts">
+  import { Link } from '@inflector/keeno-router'
+  import Footer from '../components/Footer.kn'
+  import Icon from '../components/Icon.kn'
+  import LiveDemo from '../components/LiveDemo.kn'
+  import Navbar from '../components/Navbar.kn'
+  import NotFound from './NotFound.kn'
+  import { onContentClick } from '../content'
+  import { exampleComponent, examples, findExample, getExampleFiles, loadExampleFiles, type SourceFile } from '../examples'
+  import { GITHUB } from '../icons'
+
+  const { params } = props<{ params: { slug: string } }>()
+
+  const slug = derived(() => params.slug)
+  const example = derived(() => findExample(slug))
+  // Filled from the cache on the server and while hydrating; loaded on client-side navigation.
+  const files = state<SourceFile[]>(getExampleFiles(slug) ?? [])
+  const index = derived(() => examples.findIndex((e) => e.slug === slug))
+  const prev = derived(() => (index > 0 ? examples[index - 1] : null))
+  const next = derived(() => (index >= 0 && index < examples.length - 1 ? examples[index + 1] : null))
+
+  const active = state('App.kn')
+  const current = derived(() => files.find((f) => f.name === active) ?? files[0] ?? { name: '', raw: '', html: '' })
+  const run = state(0)
+
+  function loadFiles() {
+    const s = slug.peek()
+    const hit = getExampleFiles(s)
+    if (hit) return files.set(hit)
+    loadExampleFiles(s).then((f) => slug.peek() === s && files.set(f))
+  }
+  init(loadFiles)
+
+  update(() => {
+    active.set('App.kn')
+    run.set(0)
+    loadFiles()
+    const e = example.peek()
+    if (e) document.title = `${e.title} · Examples · Keeno`
+  }, [slug])
+  init(() => {
+    const e = example.peek()
+    if (e) document.title = `${e.title} · Examples · Keeno`
+  })
+
+  const icon = (name: string) => (name.endsWith('.kn') ? '/icons/kn.svg' : name.endsWith('.css') ? '/icons/css.svg' : '/icons/typescript.svg')
+</script>
+
+{example ? (
+  <main class="mx-auto w-full max-w-400 px-6 pt-28 md:px-10">
+    <Navbar />
+    <nav class="flex items-center gap-2 text-sm text-neutral-500" aria-label="Breadcrumb">
+      <Link href="/examples" class="hover:text-neutral-900 dark:hover:text-white">Examples</Link>
+      <span>/</span>
+      <span class="text-neutral-900 dark:text-white">{example.title}</span>
+    </nav>
+
+    <header class="mt-4 flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
+      <div class="flex max-w-2xl flex-col gap-3">
+        <h1 class="font-s2 text-4xl md:text-5xl">{example.title}</h1>
+        <p class="text-lg text-neutral-600 dark:text-neutral-400">{example.description}</p>
+        <div class="flex flex-wrap gap-1.5">
+          {example.concepts.map((c) => (
+            <Link key={c.label} href={c.href} class="flex items-center gap-1 rounded-md border bg-neutral-50 px-2 py-0.5 font-code text-xs transition hover:border-orange-400 hover:text-orange-500 dark:bg-neutral-900">
+              {c.label} <Icon name="arrowUpRight" />
+            </Link>
+          ))}
+        </div>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <a href={`${GITHUB}/tree/main/site/src/examples/${example.slug}`} target="_blank" rel="noreferrer" class="flex items-center gap-2 rounded-lg border px-3.5 py-2 text-sm font-medium transition hover:bg-neutral-100 dark:hover:bg-neutral-900">
+          <Icon name="github" /> Source
+        </a>
+        <Link href={`/playground?example=${example.slug}`} class="flex items-center gap-2 rounded-lg bg-orange-400 px-3.5 py-2 text-sm font-bold text-black transition hover:bg-orange-300">
+          <Icon name="play" /> Edit in the playground
+        </Link>
+      </div>
+    </header>
+
+    <div class="mt-8 grid gap-5 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
+      <section class="flex min-h-96 flex-col overflow-hidden rounded-2xl border bg-neutral-50 p-1.5 dark:bg-neutral-900/60">
+        <div class="flex items-center gap-1.5 px-2.5 py-2">
+          <span class="size-2.5 rounded-full bg-red-400"></span>
+          <span class="size-2.5 rounded-full bg-yellow-400"></span>
+          <span class="size-2.5 rounded-full bg-green-400"></span>
+          <span class="ml-2 font-code text-xs opacity-50">live preview</span>
+          <button type="button" onClick={() => run.set(run + 1)} class="ml-auto flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1 text-xs opacity-60 transition hover:bg-neutral-200 hover:opacity-100 dark:hover:bg-neutral-800" title="Mount the example again">
+            <Icon name="refresh" /> Restart
+          </button>
+        </div>
+        <div class="flex-1 rounded-xl border border-black/5 bg-white p-6 md:p-8 dark:border-white/5 dark:bg-ink">
+          <LiveDemo component={exampleComponent(example.slug)!} run={run} />
+        </div>
+      </section>
+
+      <section class="flex min-w-0 flex-col overflow-hidden rounded-2xl border bg-(--code-bg)">
+        <div class="flex items-center gap-1 overflow-x-auto border-b px-1.5 py-1.5" role="tablist" aria-label="Files">
+          {files.map((f) => (
+            <button
+              key={f.name}
+              type="button"
+              role="tab"
+              aria-selected={current.name === f.name}
+              onClick={() => active.set(f.name)}
+              class={[
+                'flex flex-none cursor-pointer items-center gap-1.5 rounded-lg px-2.5 py-1 font-code text-xs transition',
+                current.name === f.name ? 'bg-neutral-200 dark:bg-neutral-800' : 'opacity-60 hover:opacity-100',
+              ]}
+            >
+              <img src={icon(f.name)} width="14" height="14" alt="" /> {f.name}
+            </button>
+          ))}
+        </div>
+        <div class="ex-source max-h-[44rem] overflow-auto" onClick={onContentClick} innerHTML={current.html}></div>
+      </section>
+    </div>
+
+    <nav class="mt-12 grid gap-3 sm:grid-cols-2" aria-label="More examples">
+      {prev ? (
+        <Link href={`/examples/${prev.slug}`} class="group flex flex-col gap-1 rounded-xl border p-4 transition hover:border-orange-400">
+          <span class="flex items-center gap-1 text-xs text-neutral-500"><Icon name="arrowLeft" /> Previous</span>
+          <span class="font-bold group-hover:text-orange-500">{prev.title}</span>
+        </Link>
+      ) : (
+        <div></div>
+      )}
+      {next ? (
+        <Link href={`/examples/${next.slug}`} class="group flex flex-col items-end gap-1 rounded-xl border p-4 text-right transition hover:border-orange-400">
+          <span class="flex items-center gap-1 text-xs text-neutral-500">Next <Icon name="arrowRight" /></span>
+          <span class="font-bold group-hover:text-orange-500">{next.title}</span>
+        </Link>
+      ) : (
+        <div></div>
+      )}
+    </nav>
+  </main>
+) : (
+  <NotFound />
+)}
+{example && <Footer />}

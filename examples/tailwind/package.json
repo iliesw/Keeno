@@ -2,11 +2,11 @@
   "name": "example-tailwind",
   "private": true,
   "type": "module",
-  "scripts": { "dev": "bunx --bun vite", "build": "bunx --bun vite build", "check": "lux-check" },
-  "dependencies": { "@inflector/lux": "workspace:*" },
+  "scripts": { "dev": "bunx --bun vite", "build": "bunx --bun vite build", "check": "keeno-check" },
+  "dependencies": { "@inflector/keeno": "workspace:*" },
   "devDependencies": {
-    "@inflector/lux-check": "workspace:*",
-    "@inflector/vite-plugin-lux": "workspace:*",
+    "@inflector/keeno-check": "workspace:*",
+    "@inflector/vite-plugin-keeno": "workspace:*",
     "@tailwindcss/vite": "^4.1.0",
     "tailwindcss": "^4.1.0",
     "vite": "^5.4.11"

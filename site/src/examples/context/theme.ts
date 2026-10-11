@@ -1,4 +1,4 @@
-import { createContext, state, type State } from '@inflector/lux'
+import { createContext, state, type State } from '@inflector/keeno'
 
 export type Accent = 'orange' | 'violet' | 'teal'
 
@@ -10,5 +10,5 @@ export const ACCENTS: Record<Accent, string> = {
 
 export const color = (accent: Accent) => ACCENTS[accent]
 
-/** App.lx provides a state, so components that inject it follow changes and can write to it. */
+/** App.kn provides a state, so components that inject it follow changes and can write to it. */
 export const AccentContext = createContext<State<Accent>>(state<Accent>('orange'))

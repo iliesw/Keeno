@@ -1,0 +1,35 @@
+<script lang="ts">
+  // One `path old → new` line of a timeline event.
+  import { ABSENT, preview, valueClass, type Change } from '../shared'
+
+  const { change } = props<{ change: Change }>()
+</script>
+
+<span class="change">
+  {change.path && <span class="path">{change.path}</span>}
+  {change.old === ABSENT ? (
+    <span class="added">+</span>
+  ) : (
+    <span class={[valueClass(change.old), 'old']} title={preview(change.old)}>
+      {preview(change.old, 1)}
+    </span>
+  )}
+  {change.old !== ABSENT && change.next !== ABSENT && <span class="arrow">→</span>}
+  {change.next === ABSENT ? (
+    <span class="removed">removed</span>
+  ) : (
+    <span class={valueClass(change.next)} title={preview(change.next)}>
+      {preview(change.next, 1)}
+    </span>
+  )}
+</span>
+
+<style>
+  .change { display: flex; gap: 6px; min-width: 0; overflow: hidden; white-space: nowrap; }
+  .change > span { overflow: hidden; text-overflow: ellipsis; }
+  .path { color: var(--muted); flex: none; }
+  .added { color: var(--str); font-weight: 700; flex: none; }
+  .removed { color: var(--err); font-style: italic; }
+  .old { opacity: 0.6; text-decoration: line-through; text-decoration-color: rgba(255, 255, 255, 0.25); }
+  .arrow { color: var(--muted); flex: none; }
+</style>

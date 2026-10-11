@@ -1,0 +1,30 @@
+<script lang="ts">
+  import { mount, type Component, type MountedApp } from '@inflector/keeno'
+
+  // Examples run in the browser only: each gets its own root, mounted after hydration.
+  const { component, run = 0, class: cls = '' } = props<{ component: Component<any>; run?: number; class?: string }>()
+  const host = ref<HTMLDivElement>()
+  const mounted = state(false)
+  let app: MountedApp | undefined
+
+  function start() {
+    app?.destroy()
+    if (!host.current) return
+    app = mount(component, host.current)
+    mounted.set(true)
+  }
+  init(start)
+  update(start, [component, run])
+  destroy(() => app?.destroy())
+</script>
+
+<div class={['keeno-stage', cls]}>
+  <div ref={host}></div>
+  {!mounted && (
+    <div class="grid gap-2 py-2" aria-hidden="true">
+      <span class="h-4 w-1/2 animate-pulse rounded bg-neutral-200 dark:bg-neutral-800"></span>
+      <span class="h-4 w-3/4 animate-pulse rounded bg-neutral-200 dark:bg-neutral-800"></span>
+      <span class="h-4 w-2/5 animate-pulse rounded bg-neutral-200 dark:bg-neutral-800"></span>
+    </div>
+  )}
+</div>

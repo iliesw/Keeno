@@ -58,7 +58,7 @@ test('tables keep the written structure, and rows update in place', async ({ pag
   await expect(table.locator('tbody')).toHaveCount(1)
 })
 
-test('the browser parser would rewrite the markup Lux rejects', async ({ page }) => {
+test('the browser parser would rewrite the markup Keeno rejects', async ({ page }) => {
   // Why `<table><tr>` is a compile error: the parser inserts a <tbody>, so compiled
   // firstChild/nextSibling paths would point at the wrong nodes.
   const parsed = await page.evaluate(() => {

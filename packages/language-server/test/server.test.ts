@@ -36,10 +36,10 @@ afterAll(async () => {
 })
 
 let n = 0
-/** Open an in-memory .lx document next to the example (so `@inflector/lux` resolves). Returns its URI and a position helper. */
+/** Open an in-memory .kn document next to the example (so `@inflector/keeno` resolves). Returns its URI and a position helper. */
 async function open(content: string) {
-  const uri = pathToFileURL(path.join(exampleSrc, `__test${n++}.lx`)).href
-  const doc = await server.openInMemoryDocument(uri, 'lux', content.replace('|', ''))
+  const uri = pathToFileURL(path.join(exampleSrc, `__test${n++}.kn`)).href
+  const doc = await server.openInMemoryDocument(uri, 'keeno', content.replace('|', ''))
   const at = content.indexOf('|')
   return { uri, pos: doc.positionAt(at < 0 ? 0 : at) }
 }
@@ -56,8 +56,8 @@ async function labels(uri: string, pos: { line: number; character: number }) {
 
 describe('diagnostics', () => {
   test('the todo example has no type errors', async () => {
-    for (const file of ['App.lx', 'TodoItem.lx']) {
-      const doc = await server.openTextDocument(path.join(exampleSrc, file), 'lux')
+    for (const file of ['App.kn', 'TodoItem.kn']) {
+      const doc = await server.openTextDocument(path.join(exampleSrc, file), 'keeno')
       expect({ file, errors: await errors(doc.uri) }).toEqual({ file, errors: [] })
     }
   }, 30_000)
@@ -102,7 +102,7 @@ describe('completions', () => {
     for (const l of ['set', 'get', 'peek', 'onUpdate', 'toUpperCase', 'length']) expect(items).toContain(l)
   })
 
-  test('lux APIs are available without imports', async () => {
+  test('keeno APIs are available without imports', async () => {
     const { uri, pos } = await open('<script lang="ts">\n  upd|\n</script>')
     expect(await labels(uri, pos)).toContain('update')
   })
@@ -181,7 +181,7 @@ describe('derived, state options, spread, class arrays', () => {
 
 describe('typed props', () => {
   const item = (attrs: string) =>
-    `<script lang="ts">\n  import TodoItem from './TodoItem.lx'\n  const t = { id: 1, text: 'x', done: false }\n</script>\n<ul><TodoItem ${attrs} /></ul>`
+    `<script lang="ts">\n  import TodoItem from './TodoItem.kn'\n  const t = { id: 1, text: 'x', done: false }\n</script>\n<ul><TodoItem ${attrs} /></ul>`
 
   test('a missing required prop is an error', async () => {
     const { uri } = await open(item('onToggle={() => {}} onRemove={() => {}}'))
@@ -201,7 +201,7 @@ describe('typed props', () => {
 
   test('props are typed inside the component; children is a function', async () => {
     const { uri } = await open(`<script lang="ts">
-  import type { Children } from '@inflector/lux'
+  import type { Children } from '@inflector/keeno'
   const { title, children } = props<{ title: string; children?: Children }>()
   const n: number = title
   children?.()
@@ -214,7 +214,7 @@ describe('typed props', () => {
 
   test('a parent passes children as nested markup', async () => {
     const card = await open(`<script lang="ts">
-  import type { Children } from '@inflector/lux'
+  import type { Children } from '@inflector/keeno'
   const { title, children } = props<{ title: string; children: Children }>()
 </script>
 <section><h2>{title}</h2>{children}</section>`)
@@ -235,7 +235,7 @@ describe('hover and navigation', () => {
   test('hover shows the state type', async () => {
     const { uri, pos } = await open('<script lang="ts">const co|unt = state(0)</script>')
     const hover = await server.sendHoverRequest(uri, pos)
-    expect(JSON.stringify(hover?.contents)).toMatch(/LxState<number>/)
+    expect(JSON.stringify(hover?.contents)).toMatch(/KnState<number>/)
   })
 
   test('go to definition from markup into the script', async () => {

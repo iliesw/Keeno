@@ -104,7 +104,7 @@ test('dev mode: the devtools hook lists the component tree', async ({ page }) =>
   const names = await page.evaluate(() => {
     const out: string[] = []
     const walk = (nodes: any[]) => nodes.forEach((n) => (out.push(n.name), walk(n.children)))
-    walk((globalThis as any).__LUX_DEVTOOLS__.tree())
+    walk((globalThis as any).__KEENO_DEVTOOLS__.tree())
     return out
   })
   expect(names).toContain('Router')

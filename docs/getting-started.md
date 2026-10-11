@@ -1,24 +1,24 @@
 # Getting started
 
-Lux is a compiled, signal-based frontend framework. You write components in `.lx` files: HTML-first markup with JSX-style `{expressions}`, a `<script>` block, and a scoped `<style>` block. The compiler turns each file into direct DOM code with fine-grained updates. There is no virtual DOM.
+Keeno is a compiled, signal-based frontend framework. You write components in `.kn` files: HTML-first markup with JSX-style `{expressions}`, a `<script>` block, and a scoped `<style>` block. The compiler turns each file into direct DOM code with fine-grained updates. There is no virtual DOM.
 
 ## Project setup
 
-Lux uses Bun for packages, scripts and tests, and Vite for the dev server and builds.
+Keeno uses Bun for packages, scripts and tests, and Vite for the dev server and builds.
 
 ```bash
-bun add @inflector/lux
-bun add -d vite @inflector/vite-plugin-lux
+bun add @inflector/keeno
+bun add -d vite @inflector/vite-plugin-keeno
 ```
 
 `vite.config.ts`:
 
 ```ts
 import { defineConfig } from 'vite'
-import lux from '@inflector/vite-plugin-lux'
+import keeno from '@inflector/vite-plugin-keeno'
 
 export default defineConfig({
-  plugins: [lux()],
+  plugins: [keeno()],
 })
 ```
 
@@ -32,17 +32,17 @@ export default defineConfig({
 `src/main.ts`:
 
 ```ts
-import { mount } from '@inflector/lux'
-import App from './App.lx'
+import { mount } from '@inflector/keeno'
+import App from './App.kn'
 
 mount(App, document.getElementById('app')!)
 ```
 
-`src/env.d.ts`, so plain `.ts` files can import `.lx` files:
+`src/env.d.ts`, so plain `.ts` files can import `.kn` files:
 
 ```ts
-declare module '*.lx' {
-  const Component: import('@inflector/lux').Component
+declare module '*.kn' {
+  const Component: import('@inflector/keeno').Component
   export default Component
 }
 ```
@@ -51,7 +51,7 @@ Start the dev server with `bunx --bun vite` and build with `bunx --bun vite buil
 
 ## A first component
 
-```html App.lx
+```html App.kn
 <script lang="ts">
   const count = state(0)
   const doubled = derived(() => count * 2)
@@ -65,7 +65,7 @@ Start the dev server with `bunx --bun vite` and build with `bunx --bun vite buil
 </style>
 ```
 
-- `state(0)` creates a reactive value. Inside `.lx` files you read it by name (`count`) and write it with `count.set(…)`.
+- `state(0)` creates a reactive value. Inside `.kn` files you read it by name (`count`) and write it with `count.set(…)`.
 - `derived(…)` computes a value from other states and stays up to date automatically.
 - `{count}` in the markup is a live text node: only that node changes when `count` changes.
 - The `<style>` only applies to this component.

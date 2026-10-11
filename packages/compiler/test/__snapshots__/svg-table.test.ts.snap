@@ -1,8 +1,8 @@
 // Bun Snapshot v1, https://bun.sh/docs/test/snapshots
 
 exports[`SVG codegen an SVG-only root is created inside an <svg> wrapper 1`] = `
-"import { state } from "@inflector/lux";
-import { attr as _$attr, template as _$template } from "@inflector/lux/internal";
+"import { state } from "@inflector/keeno";
+import { attr as _$attr, template as _$template } from "@inflector/keeno/internal";
 const _tmpl$1 = _$template("<g class=\\"a\\"><circle></circle><text>hi</text></g>", true);
 export default function Test($$props) {
   const r = state(1);
@@ -14,8 +14,8 @@ export default function Test($$props) {
 `;
 
 exports[`SVG codegen nested roots inside <svg> are SVG, even for tags HTML also has 1`] = `
-"import { state } from "@inflector/lux";
-import { and as _$and, insert as _$insert, createComponent as _$createComponent, template as _$template } from "@inflector/lux/internal";
+"import { state } from "@inflector/keeno";
+import { and as _$and, insert as _$insert, createComponent as _$createComponent, template as _$template } from "@inflector/keeno/internal";
 const _tmpl$1 = _$template("<a href=\\"#\\"><circle></circle></a>", true);
 const _tmpl$2 = _$template("<a></a>", true);
 const _tmpl$3 = _$template("<svg><!----></svg>");
@@ -32,8 +32,8 @@ export default function Test($$props) {
 `;
 
 exports[`table codegen a well-formed table compiles to straight firstChild/nextSibling paths 1`] = `
-"import { state } from "@inflector/lux";
-import { insert as _$insert, template as _$template } from "@inflector/lux/internal";
+"import { state } from "@inflector/keeno";
+import { insert as _$insert, template as _$template } from "@inflector/keeno/internal";
 const _tmpl$1 = _$template("<table><thead><tr><th>A</th></tr></thead><tbody><tr><td></td></tr></tbody></table>");
 export default function Test($$props) {
   const a = state(1);

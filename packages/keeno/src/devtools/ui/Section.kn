@@ -1,0 +1,30 @@
+<script lang="ts">
+  import type { Children } from '@inflector/keeno'
+
+  const { title, count, children } = props<{ title: string; count: number; children?: Children }>()
+  const open = state(true)
+</script>
+
+<div class={['section', !open && 'closed']}>
+  <button class="section-head" aria-expanded={open ? 'true' : 'false'} onClick={() => open.set(!open)}>
+    <span class="caret">{open ? '▾' : '▸'}</span>
+    {title}
+    <span class="count">{count}</span>
+  </button>
+  {open && <div class="section-body">{children}</div>}
+</div>
+
+<style>
+  .section { border-top: 1px solid var(--border); padding: 6px 0; }
+  .section-head {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    width: 100%;
+    text-align: left;
+    font-weight: 700;
+    color: var(--text);
+    padding: 2px 0;
+  }
+  .section-body { padding: 2px 0 2px 14px; }
+</style>

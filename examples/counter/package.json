@@ -3,6 +3,6 @@
   "private": true,
   "type": "module",
   "scripts": { "dev": "bunx --bun vite", "build": "bunx --bun vite build" },
-  "dependencies": { "@inflector/lux": "workspace:*" },
-  "devDependencies": { "vite": "^5.4.11", "@inflector/vite-plugin-lux": "workspace:*" }
+  "dependencies": { "@inflector/keeno": "workspace:*" },
+  "devDependencies": { "vite": "^5.4.11", "@inflector/vite-plugin-keeno": "workspace:*" }
 }

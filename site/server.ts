@@ -36,7 +36,13 @@ const prodRender: Render | undefined = prod
 
 /** Serve a file from dist/client (prod), other than the prerendered HTML: pages are rendered live. */
 function serveStatic(url: string, res: http.ServerResponse): boolean {
-  const file = path.join(clientDir, decodeURIComponent(url.split('?')[0]))
+  let pathname: string
+  try {
+    pathname = decodeURIComponent(url.split('?')[0])
+  } catch {
+    return false // malformed escape (`/%E0`): not a file, so it renders as a 404 page
+  }
+  const file = path.join(clientDir, pathname)
   if (!file.startsWith(clientDir) || file.endsWith('.html') || !existsSync(file) || !statSync(file).isFile()) return false
   const immutable = file.includes(`${path.sep}assets${path.sep}`)
   res.writeHead(200, {
@@ -91,5 +97,5 @@ if (!prod) {
 }
 
 server.listen(port, () => {
-  console.log(`Lux docs (${prod ? 'production' : 'dev'} SSR) → http://localhost:${port}`)
+  console.log(`Keeno docs (${prod ? 'production' : 'dev'} SSR) → http://localhost:${port}`)
 })

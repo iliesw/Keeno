@@ -1,4 +1,4 @@
-# @inflector/lux-language-server
+# @inflector/keeno-language-server
 
 ## 0.2.0
 

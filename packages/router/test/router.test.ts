@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
-import { init, mount, type MountedApp } from '@inflector/lux'
-import { renderToString } from '@inflector/lux/server'
-import { createComponent } from '@inflector/lux/internal'
-import { Link, Router, isActive, link, matchPath, navigate, useRoute, type RouteDefinition } from '../src/index'
+import { init, mount, type MountedApp } from '@inflector/keeno'
+import { renderToString } from '@inflector/keeno/server'
+import { createComponent } from '@inflector/keeno/internal'
+import { Link, Router, href, isActive, link, matchPath, navigate, useRoute, type RouteDefinition } from '../src/index'
 
 const tick = () => new Promise((r) => setTimeout(r, 0))
 
@@ -90,9 +90,9 @@ describe('Router', () => {
       return () => (seen = `${route.query.get('q')}|${route.hash}`)
     }
     render(() => createComponent(Router, { routes: [{ path: '*', component: Show }] }))
-    navigate('/search?q=lux#top')
+    navigate('/search?q=keeno#top')
     await tick()
-    expect(seen).toBe('lux|#top')
+    expect(seen).toBe('keeno|#top')
   })
 
   test('useRoute outside a router is an error', () => {
@@ -129,12 +129,12 @@ describe('links', () => {
 
   test("<Link> gets the scope class of the component that renders it", () => {
     const el = render(() => [
-      createComponent(Link, { href: '/', class: 'nav', children: () => 'home' }, 'lux-abc'),
-      createComponent(Link, { href: '/x', children: () => 'x' }, 'lux-abc'),
+      createComponent(Link, { href: '/', class: 'nav', children: () => 'home' }, 'keeno-abc'),
+      createComponent(Link, { href: '/x', children: () => 'x' }, 'keeno-abc'),
     ])
     const [home, x] = [...el.querySelectorAll('a')]
-    expect(home.className).toBe('nav active lux-abc')
-    expect(x.className).toBe('lux-abc')
+    expect(home.className).toBe('nav active keeno-abc')
+    expect(x.className).toBe('keeno-abc')
   })
 
   test('the link handler works on plain anchors', async () => {
@@ -160,5 +160,60 @@ describe('links', () => {
     render(() => createComponent(Router, { routes: [{ path: '/', component: Page }] }))
     await tick()
     expect(mounted).toBe(1)
+  })
+})
+
+describe('regressions', () => {
+  test('href() never produces a protocol-relative URL', () => {
+    expect(href('//evil.com')).toBe('/evil.com')
+  })
+
+  test('navigate() does not fire popstate', () => {
+    let pops = 0
+    const onPop = () => pops++
+    window.addEventListener('popstate', onPop)
+    navigate('/somewhere')
+    window.removeEventListener('popstate', onPop)
+    expect(pops).toBe(0)
+  })
+
+  test('server-rendered links use their router base', async () => {
+    const html = await renderToString(() =>
+      createComponent(Router, {
+        url: '/app/a',
+        base: '/app',
+        routes: [{ path: '/a', component: () => createComponent(Link, { href: '/b', children: () => 'b' }) }],
+      }),
+    )
+    expect(html).toContain('href="/app/b"')
+  })
+
+  test('URLs outside the base match nothing', async () => {
+    history.replaceState(null, '', '/other/users/7')
+    const el = render(() => createComponent(Router, { routes: [{ path: '*', component: () => 'app' }], base: '/app', fallback: () => 'none' }))
+    expect(el.textContent).toBe('none')
+  })
+})
+
+describe('scroll restoration', () => {
+  test('back/forward restores the scroll position of the entry', async () => {
+    history.replaceState(null, '', '/list')
+    render(() => createComponent(Router, { routes: [{ path: '*', component: () => 'page' }] }))
+    const calls: [number, number][] = []
+    const scrollTo = window.scrollTo
+    const y = Object.getOwnPropertyDescriptor(window, 'scrollY')
+    Object.defineProperty(window, 'scrollY', { value: 420, configurable: true })
+    window.scrollTo = ((x: number, yy: number) => void calls.push([x, yy])) as unknown as typeof window.scrollTo
+    try {
+      navigate('/detail')
+      Object.defineProperty(window, 'scrollY', { value: 0, configurable: true })
+      history.replaceState(null, '', '/list')
+      window.dispatchEvent(new PopStateEvent('popstate'))
+      await new Promise((r) => setTimeout(r, 50))
+      expect(calls.at(-1)).toEqual([0, 420])
+    } finally {
+      window.scrollTo = scrollTo
+      if (y) Object.defineProperty(window, 'scrollY', y)
+    }
   })
 })

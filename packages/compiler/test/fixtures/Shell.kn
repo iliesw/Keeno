@@ -1,0 +1,16 @@
+<script lang="ts">
+  import { ErrorBoundary, Await, Portal, Transition } from '@inflector/keeno'
+  import Bomb from './Bomb.kn'
+  const { load } = props<{ load: () => Promise<string> }>()
+  const open = state(false)
+  const explode = state(false)
+</script>
+
+<ErrorBoundary fallback={(err, reset) => <p class="err" onClick={reset}>{String(err)}</p>}>
+  <Bomb explode={explode} />
+</ErrorBoundary>
+<Await promise={load()} pending={() => <i>loading</i>} fulfilled={(v) => <b>{v}</b>} />
+<Transition name="fade">{open && <div class="panel">panel</div>}</Transition>
+<button class="toggle" onClick={() => open.set(!open)}>toggle</button>
+<button class="boom" onClick={() => explode.set(true)}>boom</button>
+<Portal target="body"><aside class="toast">toast</aside></Portal>

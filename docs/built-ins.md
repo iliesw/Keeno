@@ -1,15 +1,15 @@
 # Built-in components
 
-`@inflector/lux` exports a few components for things plain markup can't express: catching errors, waiting for promises, loading code on demand, rendering elsewhere in the page, moving live content around without re-creating it, and animating elements in and out. Import them like any component.
+`@inflector/keeno` exports a few components for things plain markup can't express: catching errors, waiting for promises, loading code on demand, rendering elsewhere in the page, moving live content around without re-creating it, and animating elements in and out. Import them like any component.
 
 ## ErrorBoundary
 
 An error thrown while a component renders, updates or mounts (including inside `init` and `update`) goes to the closest `<ErrorBoundary>`, which shows `fallback` instead of its children:
 
-```html App.lx
+```html App.kn
 <script lang="ts">
-  import { ErrorBoundary } from '@inflector/lux'
-  import Chart from './Chart.lx'
+  import { ErrorBoundary } from '@inflector/keeno'
+  import Chart from './Chart.kn'
 </script>
 
 <ErrorBoundary
@@ -37,9 +37,9 @@ A `derived` that throws passes the error on to whatever reads it, and it recover
 
 `<Await>` renders the states of a promise:
 
-```html User.lx
+```html User.kn
 <script lang="ts">
-  import { Await } from '@inflector/lux'
+  import { Await } from '@inflector/keeno'
   const { id } = props<{ id: number }>()
   const load = (id: number) => fetch(`/api/users/${id}`).then((r) => r.json() as Promise<{ name: string }>)
 </script>
@@ -61,9 +61,9 @@ A `derived` that throws passes the error on to whatever reads it, and it recover
 `lazy()` loads a component when it is first rendered, so it ends up in its own chunk:
 
 ```ts
-import { lazy } from '@inflector/lux'
+import { lazy } from '@inflector/keeno'
 
-export const Chart = lazy(() => import('./Chart.lx'), { pending: () => 'Loading chart…' })
+export const Chart = lazy(() => import('./Chart.kn'), { pending: () => 'Loading chart…' })
 ```
 
 Use `Chart` like any other component. `Chart.preload()` starts loading earlier, for example on hover. If loading fails, the error goes to the closest `<ErrorBoundary>`, and rendering the component again (for example with `reset()`) retries the load.
@@ -72,11 +72,11 @@ Use `Chart` like any other component. `Chart.preload()` starts loading earlier, 
 
 `<Dynamic>` renders whatever component is in its `component` prop and passes it the other props. It creates a new instance when `component` changes:
 
-```html Tabs.lx
+```html Tabs.kn
 <script lang="ts">
-  import { Dynamic } from '@inflector/lux'
-  import Profile from './Profile.lx'
-  import Settings from './Settings.lx'
+  import { Dynamic } from '@inflector/keeno'
+  import Profile from './Profile.kn'
+  import Settings from './Settings.kn'
   const tabs = { profile: Profile, settings: Settings }
   const tab = state<keyof typeof tabs>('profile')
 </script>
@@ -90,10 +90,10 @@ Use `Chart` like any other component. `Chart.preload()` starts loading earlier, 
 
 `<Portal>` renders its children at the end of another element. This is useful for modals, toasts and popovers that must escape `overflow: hidden` or stacking contexts:
 
-```html Modal.lx
+```html Modal.kn
 <script lang="ts">
-  import { Portal } from '@inflector/lux'
-  import type { Children } from '@inflector/lux'
+  import { Portal } from '@inflector/keeno'
+  import type { Children } from '@inflector/keeno'
   const { onClose, children } = props<{ onClose: () => void; children?: Children }>()
 </script>
 
@@ -110,16 +110,17 @@ Use `Chart` like any other component. `Chart.preload()` starts loading earlier, 
 
 - `target` is an element or a CSS selector. It defaults to `document.body`, and is read once, when the portal is created.
 - The children stay part of this component: its scoped styles, context, error boundaries and `destroy` all apply, and their nodes are removed when the portal is destroyed.
+- With `renderToString`, portal content is appended after the app's HTML, each portal in a `<div data-keeno-portal="…">` (the selector, if `target` was one). `hydrate` replaces it and renders the portal at its target.
 - DOM events bubble through the real DOM, that is through the target and not through the portal's position in the tree.
 
 ## reparentable
 
 `reparentable()` renders content once and lets you show it in different places while it keeps its state: the same component instances and the same DOM nodes move, instead of being destroyed in one place and created again in another. Put the handle in markup wherever the content should appear now:
 
-```html Lesson.lx
+```html Lesson.kn
 <script lang="ts">
-  import { reparentable } from '@inflector/lux'
-  import Video from './Video.lx'
+  import { reparentable } from '@inflector/keeno'
+  import Video from './Video.kn'
   const { src } = props<{ src: string }>()
   const theater = state(false)
   const player = reparentable(() => <Video src={src} />)
@@ -140,10 +141,10 @@ In browsers with the native [`moveBefore`](https://developer.mozilla.org/docs/We
 
 Code that works with elements directly, like drag and drop, a layout engine or a picture-in-picture toggle, can move the content itself:
 
-```html Lesson.lx
+```html Lesson.kn
 <script lang="ts">
-  import { reparentable } from '@inflector/lux'
-  import Video from './Video.lx'
+  import { reparentable } from '@inflector/keeno'
+  import Video from './Video.kn'
   const player = reparentable(() => <Video src="/intro.mp4" />)
 
   function dropInto(e: DragEvent) {
@@ -162,14 +163,14 @@ Code that works with elements directly, like drag and drop, a layout engine or a
 - `player.nodes()` returns its current nodes, wherever they are, for example to measure them.
 - After `moveTo()` or `remove()`, a place in markup that was already showing the content does not take it back just because it updates. A place that renders it anew does, such as a branch of a condition that switches back, and from then on markup is in charge again.
 
-For a single DOM node that isn't Lux content, `moveNode(node, parent, before?)` does the same native-when-possible move.
+For a single DOM node that isn't Keeno content, `moveNode(node, parent, before?)` does the same native-when-possible move.
 
 For items that move between lists, such as cards on a kanban board, use `keyedReparentable()`. It creates one entry per key on first use, and every entry belongs to the component that called it, even when it is first rendered inside a list row:
 
-```html Board.lx
+```html Board.kn
 <script lang="ts">
-  import { keyedReparentable } from '@inflector/lux'
-  import Card from './Card.lx'
+  import { keyedReparentable } from '@inflector/keeno'
+  import Card from './Card.kn'
   const cards = state([{ id: 1, column: 'todo' }, { id: 2, column: 'done' }])
   const cardView = keyedReparentable((id: number) => <Card id={id} />)
 
@@ -192,9 +193,9 @@ Moving a card to the other column re-creates its `<li>`, but the `<Card>` inside
 
 `<Transition>` animates elements as they are added and removed inside it. Elements that are being removed stay in place until their animation ends.
 
-```html Panel.lx
+```html Panel.kn
 <script lang="ts">
-  import { Transition } from '@inflector/lux'
+  import { Transition } from '@inflector/keeno'
   const open = state(false)
 </script>
 
@@ -207,7 +208,7 @@ Moving a card to the other column re-creates its `<li>`, but the `<Card>` inside
 </style>
 ```
 
-An entering element gets the classes `{name}-enter-from` and `{name}-enter-active` first. One frame later, `{name}-enter-from` is swapped for `{name}-enter-to`, and all three are removed when the longest transition or animation on the element ends. Leaving works the same way with `leave`. The default `name` is `lux`.
+An entering element gets the classes `{name}-enter-from` and `{name}-enter-active` first. One frame later, `{name}-enter-from` is swapped for `{name}-enter-to`, and all three are removed when the longest transition or animation on the element ends. Leaving works the same way with `leave`. The default `name` is `keeno`.
 
 - `appear`: also animate the elements present on first render.
 - `onEnter(el, done)` / `onLeave(el, done)`: animate with JavaScript (for example the Web Animations API) instead of classes. Call `done()` when finished.

@@ -1,5 +1,5 @@
-import { hydrate } from '@inflector/lux'
-import App from './App.lx'
+import { hydrate } from '@inflector/keeno'
+import App from './App.kn'
 import { loadDoc, slugFromPath } from './docs'
 import { findExample, loadExampleFiles } from './examples'
 

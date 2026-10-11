@@ -1,6 +1,6 @@
 # Reactivity
 
-Lux tracks reads of states and deriveds, and re-runs exactly the code that depends on them. There is no virtual DOM and no component re-rendering.
+Keeno tracks reads of states and deriveds, and re-runs exactly the code that depends on them. There is no virtual DOM and no component re-rendering.
 
 ## state
 
@@ -8,7 +8,7 @@ Lux tracks reads of states and deriveds, and re-runs exactly the code that depen
 const count = state(0)
 ```
 
-In a `.lx` file:
+In a `.kn` file:
 
 | You write | It means |
 |---|---|
@@ -40,7 +40,7 @@ Reassigning a state variable (`count = 5`) is a compile error. Use `count.set(5)
 
 `derived(fn)` is a computed, read-only signal. It recomputes only when something it read changes, and it is always current, even when read synchronously right after a write.
 
-```html Cart.lx
+```html Cart.kn
 <script lang="ts">
   const price = state(10)
   const qty = state(2)
@@ -74,20 +74,20 @@ Reassigning a state variable (`count = 5`) is a compile error. Use `count.set(5)
 
 ## Shared stores in plain .ts files
 
-Outside `.lx` files, states are plain objects, so you call `.get()` and `.set()` yourself:
+Outside `.kn` files, states are plain objects, so you call `.get()` and `.set()` yourself:
 
 ```ts
 // store.ts
-import { derived, state } from '@inflector/lux'
+import { derived, state } from '@inflector/keeno'
 
 export const user = state<{ name: string } | null>(null, { persist: 'user' })
 export const isLoggedIn = derived(() => user.get() !== null)
 ```
 
-Only states and deriveds declared in the `.lx` file itself are unwrapped. An imported store is used as `user.get()` and `user.set(…)` in components too.
+Only states and deriveds declared in the `.kn` file itself are unwrapped. An imported store is used as `user.get()` and `user.set(…)` in components too.
 
 ## Batching and flush
 
-All work runs in one microtask, in this order: stale deriveds, DOM updates, mount jobs (`init` and the first `update` runs), then `update` re-runs. `flush()` from `@inflector/lux` runs pending work synchronously, which is handy in tests.
+All work runs in one microtask, in this order: stale deriveds, DOM updates, mount jobs (`init` and the first `update` runs), then `update` re-runs. `flush()` from `@inflector/keeno` runs pending work synchronously, which is handy in tests.
 
 See [State options](state-options.md) for persistence, URL sync, undo/redo, validation and debouncing.

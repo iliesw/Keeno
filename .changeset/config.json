@@ -1,12 +1,12 @@
 {
   "$schema": "https://unpkg.com/@changesets/config@4.0.1/schema.json",
-  "changelog": ["@changesets/changelog-github", { "repo": "iliesw/Lux" }],
+  "changelog": ["@changesets/changelog-github", { "repo": "iliesw/Keeno" }],
   "commit": false,
-  "fixed": [["@inflector/lux", "@inflector/lux-compiler", "@inflector/vite-plugin-lux"]],
+  "fixed": [["@inflector/keeno", "@inflector/keeno-compiler", "@inflector/vite-plugin-keeno"]],
   "linked": [],
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
-  "ignore": ["example-counter", "example-tailwind", "example-todo", "lux-e2e-app"],
+  "ignore": ["example-counter", "example-tailwind", "example-todo", "keeno-e2e-app"],
   "privatePackages": { "version": true, "tag": false }
 }

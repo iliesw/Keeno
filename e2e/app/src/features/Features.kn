@@ -1,0 +1,49 @@
+<script lang="ts">
+  import { ErrorBoundary, Portal, Transition, lazy } from '@inflector/keeno'
+  import { Link, Router, type RouteDefinition } from '@inflector/keeno-router'
+  import Home from './Home.kn'
+  import User from './User.kn'
+  import Fragile from './Fragile.kn'
+
+  const routes: RouteDefinition[] = [
+    { path: '/', component: Home },
+    { path: '/users/:id', component: User },
+    { path: '/lazy', component: lazy(() => import('./LazyPage.kn'), { pending: () => 'loading…' }) },
+  ]
+  const open = state(false)
+  const modal = state(false)
+  const broken = state(false)
+</script>
+
+<nav>
+  <Link href="/" exact class="nav-home">Home</Link>
+  <Link href="/users/1" class="nav-user1">User 1</Link>
+  <Link href="/users/2" class="nav-user2">User 2</Link>
+  <Link href="/lazy" class="nav-lazy">Lazy</Link>
+</nav>
+<main>
+  <Router routes={routes} base="/features" fallback={() => <p class="not-found">not found</p>} />
+</main>
+
+<button class="toggle-panel" onClick={() => open.set(!open)}>panel</button>
+<Transition name="fade">{open && <div class="panel">panel</div>}</Transition>
+
+<button class="open-modal" onClick={() => modal.set(true)}>modal</button>
+{modal && (
+  <Portal>
+    <div class="modal">
+      modal <button class="close-modal" onClick={() => modal.set(false)}>close</button>
+    </div>
+  </Portal>
+)}
+
+<ErrorBoundary fallback={(error, reset) => <p class="caught">caught: {String(error)} <button class="retry" onClick={() => { broken.set(false); reset() }}>retry</button></p>}>
+  <Fragile broken={broken} />
+</ErrorBoundary>
+<button class="break" onClick={() => broken.set(true)}>break</button>
+
+<style>
+  .panel { transition: opacity 150ms linear }
+  .fade-enter-from, .fade-leave-to { opacity: 0 }
+  :global(.modal) { position: fixed; top: 0; left: 0 }
+</style>

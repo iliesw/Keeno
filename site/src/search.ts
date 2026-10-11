@@ -1,6 +1,6 @@
 // Site search: an index of every docs section, example and page, loaded the first time the
 // search dialog opens, and a small scorer over it.
-import { state } from '@inflector/lux'
+import { state } from '@inflector/keeno'
 import { examples } from './examples'
 import { nav } from './docs'
 
@@ -33,7 +33,7 @@ export function loadIndex(): Promise<Entry[]> {
   return (index ??= (async () => {
     const titles = new Map(nav.flatMap((g) => g.items).map((p) => [p.slug, p.title]))
     const entries: Entry[] = [
-      { url: '/playground', page: 'Playground', heading: '', text: 'Write and run Lux components in the browser, with the compiled output and a console.', kind: 'page' },
+      { url: '/playground', page: 'Playground', heading: '', text: 'Write and run Keeno components in the browser, with the compiled output and a console.', kind: 'page' },
       { url: '/examples', page: 'Examples', heading: '', text: 'Live example apps: counter, todos, forms, async data, transitions, portals.', kind: 'page' },
     ]
     for (const e of examples) {

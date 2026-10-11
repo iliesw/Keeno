@@ -1,0 +1,198 @@
+<script lang="ts">
+  // One state or derived: its badges, its value, and editing (inline for primitives, JSON for
+  // anything). The row is keyed by the signal, so an edit in progress survives refreshes.
+  import IconButton from './IconButton.kn'
+  import Value from './Value.kn'
+  import { expandable, parseInput, preview, useActions, valueClass, type DevSignal } from '../shared'
+
+  const { signal } = props<{ signal: DevSignal }>()
+  const { api } = useActions()
+
+  const mode = state<'view' | 'inline' | 'json'>('view')
+  const draft = state('')
+  const error = state('')
+  const input = ref<HTMLInputElement>()
+  const area = ref<HTMLTextAreaElement>()
+
+  const editable = derived(() => signal.kind === 'state' && !signal.error)
+  const show = derived(() => {
+    if (signal.error) return 'error'
+    if (mode === 'inline') return 'inline'
+    if (editable && typeof signal.value === 'boolean') return 'bool'
+    if (editable && !expandable(signal.value) && typeof signal.value !== 'function') return 'click'
+    return 'value'
+  })
+
+  function startInline() {
+    draft.set(typeof signal.value === 'string' ? signal.value : preview(signal.value))
+    error.set('')
+    mode.set('inline')
+  }
+
+  function startJson() {
+    let text: string
+    try {
+      text = JSON.stringify(signal.value, null, 2) ?? 'undefined'
+    } catch {
+      text = preview(signal.value)
+    }
+    draft.set(text)
+    error.set('')
+    mode.set('json')
+  }
+
+  function commit() {
+    // In the JSON editor a string state takes JSON too (`"text"`), so parse as for a non-string.
+    const current = mode === 'json' && typeof signal.value === 'string' ? 0 : signal.value
+    const parsed = parseInput(draft, current)
+    if (!parsed.ok) return error.set(parsed.error)
+    mode.set('view')
+    api.set(signal.id, parsed.value)
+  }
+
+  function cancel() {
+    mode.set('view')
+    error.set('')
+  }
+
+  function onKey(e: KeyboardEvent) {
+    if (e.key === 'Enter' && (mode !== 'json' || e.ctrlKey || e.metaKey)) {
+      e.preventDefault()
+      commit()
+    } else if (e.key === 'Escape') cancel()
+  }
+
+  update(() => {
+    if (mode === 'inline' && input.current) {
+      input.current.focus()
+      input.current.select()
+    }
+    if (mode === 'json') area.current?.focus()
+  })
+</script>
+
+<div class="srow">
+  <div class="kv state">
+    <span class="key">{signal.name}</span>
+    {signal.kind === 'derived' && <span class="badge derived" title="Read-only, computed">derived</span>}
+    {signal.persist && <span class="badge" title={`localStorage "${signal.persist}"`}>persist</span>}
+    {signal.url && <span class="badge" title={`Query parameter ?${signal.url}`}>?{signal.url}</span>}
+    {signal.pending && <span class="badge pending" title="A debounced or throttled write is waiting">pending</span>}
+    <span class="colon">:</span>
+    <span class="val">
+      {show === 'error' && <span class="v-err">{preview(signal.error)}</span>}
+      {show === 'inline' && (
+        <span class="inline-wrap">
+          <input
+            ref={input}
+            class="inline"
+            spellcheck="false"
+            bind:value={draft}
+            onKeyDown={onKey}
+            onBlur={() => mode === 'inline' && cancel()}
+          />
+          {error && <span class="edit-err">{error}</span>}
+        </span>
+      )}
+      {show === 'bool' && (
+        <label class="bool-edit">
+          <input
+            type="checkbox"
+            checked={signal.value === true}
+            onChange={(e) => api.set(signal.id, (e.currentTarget as HTMLInputElement).checked)}
+          />
+          <span class="v-bool">{String(signal.value)}</span>
+        </label>
+      )}
+      {show === 'click' && (
+        <span class={[valueClass(signal.value), 'editable']} title="Click to edit" onClick={startInline}>
+          {preview(signal.value)}
+        </span>
+      )}
+      {show === 'value' && <Value value={signal.value} />}
+    </span>
+    <span class="row-actions">
+      {signal.history && (
+        <span class="hist-wrap">
+          <IconButton
+            icon="undo"
+            small
+            title={`Undo (${signal.history.past})`}
+            disabled={!signal.history.past}
+            onClick={() => api.undo(signal.id)}
+          />
+          <span class="hist">{signal.history.past}·{signal.history.future}</span>
+          <IconButton
+            icon="redo"
+            small
+            title={`Redo (${signal.history.future})`}
+            disabled={!signal.history.future}
+            onClick={() => api.redo(signal.id)}
+          />
+        </span>
+      )}
+      {editable && <IconButton icon="edit" small title="Edit as JSON" onClick={startJson} />}
+    </span>
+  </div>
+  {mode === 'json' && (
+    <div class="json-edit">
+      <textarea
+        ref={area}
+        class="json"
+        spellcheck="false"
+        rows={Math.min(14, draft.split('\n').length + 1)}
+        bind:value={draft}
+        onKeyDown={onKey}
+      />
+      <div class="json-actions">
+        {error ? <span class="edit-err">{error}</span> : <span class="muted small">Ctrl+Enter to apply · Esc to cancel</span>}
+        <div class="spacer" />
+        <button class="btn" onClick={cancel}>Cancel</button>
+        <button class="btn primary" onClick={commit}>Apply</button>
+      </div>
+    </div>
+  )}
+</div>
+
+<style>
+  .kv.state:hover { background: rgba(255, 255, 255, 0.02); }
+  .row-actions {
+    flex: none;
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    opacity: 0.4;
+    transition: opacity 0.15s;
+  }
+  .kv.state:hover .row-actions { opacity: 1; }
+  .hist { color: var(--muted); font-size: 10px; }
+  .hist-wrap { display: inline-flex; align-items: center; gap: 2px; }
+  .editable { cursor: text; border-radius: 3px; padding: 0 2px; margin: 0 -2px; }
+  .editable:hover { background: var(--raised); outline: 1px dashed var(--border); }
+  .val > .editable { display: inline-block; max-width: 100%; vertical-align: bottom; }
+  .inline-wrap { display: inline-flex; flex-direction: column; gap: 2px; flex: 1; min-width: 120px; }
+  .inline {
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    padding: 1px 4px;
+    outline: none;
+    width: 100%;
+  }
+  .bool-edit { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+  .bool-edit input { accent-color: var(--accent); margin: 0; }
+  .json-edit { margin: 4px 0 8px; }
+  .json {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    padding: 6px 8px;
+    outline: none;
+    resize: vertical;
+    tab-size: 2;
+  }
+  .json-actions { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+  .edit-err { color: var(--err); font-size: 11px; }
+</style>

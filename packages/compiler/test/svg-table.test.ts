@@ -2,10 +2,10 @@
 // rendering in happy-dom (Playwright covers real-browser parsing in e2e/svg-table.e2e.ts).
 import { plugin } from 'bun'
 import { afterEach, beforeAll, describe, expect, test } from 'bun:test'
-import { mount, type MountedApp } from '@inflector/lux'
+import { mount, type MountedApp } from '@inflector/keeno'
 import { compile } from '../src/index'
 
-const js = (markup: string, script = '') => compile(`<script lang="ts">\n${script}\n</script>\n${markup}`, { filename: 'src/Test.lx' }).js
+const js = (markup: string, script = '') => compile(`<script lang="ts">\n${script}\n</script>\n${markup}`, { filename: 'src/Test.kn' }).js
 const SVG_NS = 'http://www.w3.org/2000/svg'
 const HTML_NS = 'http://www.w3.org/1999/xhtml'
 
@@ -92,9 +92,9 @@ describe('table codegen', () => {
 
 beforeAll(() => {
   plugin({
-    name: 'lux-test-svg-table',
+    name: 'keeno-test-svg-table',
     setup(build) {
-      build.onLoad({ filter: /\.lx$/ }, async ({ path }) => ({
+      build.onLoad({ filter: /\.kn$/ }, async ({ path }) => ({
         contents: compile(await Bun.file(path).text(), { filename: path }).js,
         loader: 'ts',
       }))
@@ -111,7 +111,7 @@ afterEach(() => {
 })
 
 async function render(fixture: string) {
-  const Comp = (await import(`./fixtures/${fixture}.lx`)).default
+  const Comp = (await import(`./fixtures/${fixture}.kn`)).default
   const target = document.createElement('div')
   document.body.appendChild(target)
   app = mount(Comp, target)

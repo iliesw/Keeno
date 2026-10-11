@@ -74,6 +74,20 @@
         "5310"
       ],
       "port": 5310
+    },
+    {
+      "name": "docs-keeno",
+      "runtimeExecutable": "bun",
+      "runtimeArgs": [
+        "run",
+        "--cwd",
+        "site",
+        "dev",
+        "--",
+        "--port",
+        "5311"
+      ],
+      "port": 5311
     }
   ]
 }

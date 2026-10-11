@@ -1,0 +1,84 @@
+{
+  "name": "@inflector/keeno",
+  "version": "0.2.0",
+  "description": "Compiled, signal-based UI runtime for Keeno (.kn) components",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iliesw/Keeno.git",
+    "directory": "packages/keeno"
+  },
+  "homepage": "https://github.com/iliesw/Keeno/tree/main/packages/keeno#readme",
+  "bugs": {
+    "url": "https://github.com/iliesw/Keeno/issues"
+  },
+  "keywords": [
+    "keeno",
+    "ui",
+    "framework",
+    "signals",
+    "reactive",
+    "compiler",
+    "components"
+  ],
+  "type": "module",
+  "sideEffects": [
+    "./src/devtools-ui.ts",
+    "./dist/devtools-ui.js"
+  ],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "keeno-source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./internal": {
+      "keeno-source": "./src/internal.ts",
+      "types": "./dist/internal.d.ts",
+      "import": "./dist/internal.js",
+      "default": "./dist/internal.js"
+    },
+    "./server": {
+      "keeno-source": "./src/server.ts",
+      "types": "./dist/server.d.ts",
+      "import": "./dist/server.js",
+      "default": "./dist/server.js"
+    },
+    "./devtools": {
+      "keeno-source": "./src/devtools-ui.ts",
+      "types": "./dist/devtools-ui.d.ts",
+      "import": "./dist/devtools-ui.js",
+      "default": "./dist/devtools-ui.js"
+    },
+    "./kn": {
+      "keeno-source": "./src/kn.d.ts",
+      "types": "./dist/kn.d.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "kn.d.ts"
+  ],
+  "scripts": {
+    "build": "bun ../../scripts/build-package.ts --target=browser",
+    "prepack": "bun run build"
+  },
+  "peerDependencies": {
+    "linkedom": ">=0.16.0"
+  },
+  "peerDependenciesMeta": {
+    "linkedom": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "linkedom": "^0.18.13"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

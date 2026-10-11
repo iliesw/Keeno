@@ -1,4 +1,4 @@
-# inflector-lux
+# inflector-keeno
 
 ## 0.2.0
 

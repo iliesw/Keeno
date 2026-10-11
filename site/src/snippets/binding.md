@@ -1,4 +1,4 @@
-```html Greeting.lx
+```html Greeting.kn
 <script lang="ts">
   const name = state('', { persist: 'name' })
   const loud = state(false)

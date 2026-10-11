@@ -1,4 +1,4 @@
-```html Counter.lx
+```html Counter.kn
 <script lang="ts">
   const count = state(0)
   const doubled = derived(() => count * 2)

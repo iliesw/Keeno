@@ -52,8 +52,8 @@ export const icons = {
 
 export type IconName = keyof typeof icons
 
-/** The Lux spark, as in the VS Code extension's file icon. */
-export const spark = (cls = '') =>
-  `<svg class="${cls}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="22" height="22"><defs><linearGradient id="lux-spark" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffd84d"/><stop offset="1" stop-color="#ff7a1a"/></linearGradient></defs><path fill="url(#lux-spark)" d="M14 3 Q15.4 16.6 29 18 Q15.4 19.4 14 31 Q12.6 19.4 1 18 Q12.6 16.6 14 3Z"/><path fill="#ffc233" d="M26 1 Q26.6 5.4 31 6 Q26.6 6.6 26 11 Q25.4 6.6 21 6 Q25.4 5.4 26 1Z"/></svg>`
+/** The Keeno mark (site/public/images/icon_*.svg), drawn in `currentColor`. */
+export const logo = (cls = '') =>
+  `<svg class="${cls}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 73 61" width="22" height="22" fill="currentColor"><path d="M45.4581 0H15.9044C14.4992 0 13.2824 0.97526 12.9764 2.34665L0.815211 56.8466C0.396995 58.7209 1.82288 60.5 3.7432 60.5H23.5C24.7111 60.5 25.8034 59.7718 26.2692 58.6538L28.953 52.2128C29.5884 50.6878 31.6942 50.5472 32.5267 51.9743L36.6318 59.0116C37.1694 59.9333 38.1561 60.5 39.2231 60.5H58.1901C60.4095 60.5 61.8605 58.1736 60.8843 56.1804L51.7052 37.4399C51.3798 36.7755 51.8635 36 52.6033 36H60.5941C61.7573 36 62.8156 35.3277 63.3098 34.2747L71.9935 15.7747C72.9273 13.7852 71.4755 11.5 69.2778 11.5H52.901C51.7404 11.5 50.6839 12.1695 50.1883 13.219L42.77 28.9281C42.592 29.3052 42.3372 29.6411 42.0221 29.9142L38.2055 33.2219C37.4079 33.9132 36.2222 33.0574 36.6271 32.0826L48.2286 4.15074C49.0492 2.17509 47.5974 0 45.4581 0Z"/></svg>`
 
-export const GITHUB = 'https://github.com/iliesw/Lux'
+export const GITHUB = 'https://github.com/iliesw/Keeno'

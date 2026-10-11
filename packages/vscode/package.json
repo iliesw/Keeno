@@ -1,19 +1,19 @@
 {
-  "name": "inflector-lux",
-  "displayName": "Lux Framework",
-  "description": "Syntax highlighting and IntelliSense for Lux (.lx) components",
+  "name": "inflector-keeno",
+  "displayName": "Keeno Framework",
+  "description": "Syntax highlighting and IntelliSense for Keeno (.kn) components",
   "version": "0.2.0",
   "publisher": "inflector",
   "private": true,
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/iliesw/Lux.git",
+    "url": "git+https://github.com/iliesw/Keeno.git",
     "directory": "packages/vscode"
   },
-  "homepage": "https://github.com/iliesw/Lux/tree/main/packages/vscode#readme",
+  "homepage": "https://github.com/iliesw/Keeno/tree/main/packages/vscode#readme",
   "bugs": {
-    "url": "https://github.com/iliesw/Lux/issues"
+    "url": "https://github.com/iliesw/Keeno/issues"
   },
   "engines": {
     "vscode": "^1.90.0"
@@ -27,17 +27,17 @@
   "contributes": {
     "languages": [
       {
-        "id": "lux",
+        "id": "keeno",
         "aliases": [
-          "Lux",
-          "lux"
+          "Keeno",
+          "keeno"
         ],
         "extensions": [
-          ".lx"
+          ".kn"
         ],
         "icon": {
-          "light": "./images/file-icon.svg",
-          "dark": "./images/file-icon.svg"
+          "light": "./images/file-icon-light.svg",
+          "dark": "./images/file-icon-dark.svg"
         },
         "configuration": "./language-configuration.json"
       }
@@ -49,18 +49,18 @@
     },
     "configurationDefaults": {
       "tailwindCSS.includeLanguages": {
-        "lux": "html"
+        "keeno": "html"
       }
     },
     "grammars": [
       {
-        "language": "lux",
-        "scopeName": "source.lux",
-        "path": "./syntaxes/lux.tmLanguage.json",
+        "language": "keeno",
+        "scopeName": "source.keeno",
+        "path": "./syntaxes/keeno.tmLanguage.json",
         "embeddedLanguages": {
-          "meta.embedded.block.lux.script": "typescriptreact",
-          "meta.embedded.block.lux.style": "css",
-          "meta.embedded.expression.lux": "typescriptreact"
+          "meta.embedded.block.keeno.script": "typescriptreact",
+          "meta.embedded.block.keeno.style": "css",
+          "meta.embedded.expression.keeno": "typescriptreact"
         }
       }
     ]
@@ -70,7 +70,7 @@
     "package": "bun run scripts/package.ts"
   },
   "devDependencies": {
-    "@inflector/lux-language-server": "workspace:*",
+    "@inflector/keeno-language-server": "workspace:*",
     "@types/vscode": "~1.90.0",
     "@volar/vscode": "~2.4.28",
     "@vscode/vsce": "^4.0.0",

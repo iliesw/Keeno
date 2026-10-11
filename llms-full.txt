@@ -1,10 +1,10 @@
-# Lux
+# Keeno
 
-> Lux is a compiled, signal-based frontend framework. Components are `.lx` files with HTML-first JSX markup, a `<script>` block and a scoped `<style>` block. The compiler (via `@inflector/vite-plugin-lux`) turns them into direct DOM code with fine-grained updates: no virtual DOM, no re-rendering components. Tooling is Bun (packages, scripts, `bun test`) plus Vite.
+> Keeno is a compiled, signal-based frontend framework. Components are `.kn` files with HTML-first JSX markup, a `<script>` block and a scoped `<style>` block. The compiler (via `@inflector/vite-plugin-keeno`) turns them into direct DOM code with fine-grained updates: no virtual DOM, no re-rendering components. Tooling is Bun (packages, scripts, `bun test`) plus Vite.
 
 Rules that differ from React, Svelte and Vue, which models get wrong most often:
 
-- **Reading state:** in `.lx` files, read a local state by name (`count`), not `count()` or `count.value`. Write with `count.set(v)`, never `count = v`.
+- **Reading state:** in `.kn` files, read a local state by name (`count`), not `count()` or `count.value`. Write with `count.set(v)`, never `count = v`.
 - **Reserved members:** `x.set`, `x.get`, `x.peek`, `x.onUpdate`, `x.undo`, `x.redo`, `x.canUndo` and `x.canRedo` stay on the state. Any other member (`x.length`, `x.map`) reads the value.
 - **Immutable updates:** `todos.set([...todos, item])`. In-place mutation (`todos.push`) does not update anything.
 - **Computed values:** use `derived(() => …)`. Don't copy values between states in `update()`.
@@ -14,10 +14,10 @@ Rules that differ from React, Svelte and Vue, which models get wrong most often:
 - **Lists:** `{list.map(item => <li key={item.id}>…</li>)}` is keyed. The callback must return JSX directly.
 - **Lifecycle:** `init(fn)` runs after mount and its return value is cleanup. `update(fn)` runs when a value read inside `fn` changes (deps inferred by the compiler), and `update(fn, [a, b])` only when `a` or `b` changes; neither runs on mount. `destroy(fn)` runs on unmount.
 - **State options:** `persist`, `url`, `history`, `equals`, `validate`, `debounce` and `throttle`.
-- **Built-ins:** `ErrorBoundary`, `Await`, `Dynamic`, `Portal`, `Transition`, `lazy()` and `reparentable()` are imported from `@inflector/lux`. Render props such as `fallback={(error, reset) => <p>…</p>}` and `fulfilled={(value) => …}` are functions.
+- **Built-ins:** `ErrorBoundary`, `Await`, `Dynamic`, `Portal`, `Transition`, `lazy()` and `reparentable()` are imported from `@inflector/keeno`. Render props such as `fallback={(error, reset) => <p>…</p>}` and `fulfilled={(value) => …}` are functions.
 - **Reparenting:** to move content between places without re-creating it, `const player = reparentable(() => <Video />)` and render `{player}` wherever it should be now. Use `keyedReparentable((id) => <Card id={id} />)` for items moving between lists. Imperatively: `player.moveTo(el)`, `player.remove()`, and `moveNode(node, parent)` for any DOM node.
 - **Context:** `provide(Ctx, value)` and `inject(Ctx)` are called in `<script>`. To make the value reactive, provide a state. An injected state is a plain object, so use `.get()`.
-- **Packages:** `@inflector/lux` (runtime), `@inflector/lux/server` (`renderToString`), `@inflector/lux-router`, `@inflector/vite-plugin-lux` and `@inflector/lux-check`.
+- **Packages:** `@inflector/keeno` (runtime), `@inflector/keeno/server` (`renderToString`), `@inflector/keeno-router`, `@inflector/vite-plugin-keeno` and `@inflector/keeno-check`.
 
 ## Docs
 
@@ -29,17 +29,16 @@ Rules that differ from React, Svelte and Vue, which models get wrong most often:
 - [Styles](docs/styles.md): scoped CSS, `:global()`, Tailwind CSS (`@apply` in `<style>`, auto `@reference`)
 - [Context](docs/context.md): createContext, provide and inject
 - [Built-in components](docs/built-ins.md): ErrorBoundary, Await, lazy, Dynamic, Portal, reparentable, Transition
-- [Routing](docs/routing.md): @inflector/lux-router: Router, Link, navigate, useRoute
+- [Routing](docs/routing.md): @inflector/keeno-router: Router, Link, navigate, useRoute
 - [Server rendering](docs/ssr.md): renderToString, hydrate, Vite SSR setup
 - [Security](docs/security.md): what is escaped, innerHTML, javascript: URLs, CSP
-- [Tooling](docs/tooling.md): Vite plugin, HMR, dev mode, VS Code extension, lux-check, testing with `bun test`
+- [Tooling](docs/tooling.md): Vite plugin, HMR, dev mode, VS Code extension, keeno-check, testing with `bun test`
 - [API reference](docs/api.md): every export, and the compile rules in one table
 - [Versioning and support](docs/stability.md): semver policy, public API, supported browsers, Node and Vite versions
 
 ## Optional
 
 - [Full docs in one file](llms-full.txt): all of the above concatenated, for loading into a model's context
-- [Design spec](PLAN.md): the original architecture and semantics
 - [Examples](examples/): `examples/counter` and `examples/todo`
 
 ---
@@ -48,25 +47,25 @@ Rules that differ from React, Svelte and Vue, which models get wrong most often:
 
 # Getting started
 
-Lux is a compiled, signal-based frontend framework. You write components in `.lx` files: HTML-first markup with JSX-style `{expressions}`, a `<script>` block, and a scoped `<style>` block. The compiler turns each file into direct DOM code with fine-grained updates. There is no virtual DOM.
+Keeno is a compiled, signal-based frontend framework. You write components in `.kn` files: HTML-first markup with JSX-style `{expressions}`, a `<script>` block, and a scoped `<style>` block. The compiler turns each file into direct DOM code with fine-grained updates. There is no virtual DOM.
 
 ## Project setup
 
-Lux uses Bun for packages, scripts and tests, and Vite for the dev server and builds.
+Keeno uses Bun for packages, scripts and tests, and Vite for the dev server and builds.
 
 ```bash
-bun add @inflector/lux
-bun add -d vite @inflector/vite-plugin-lux
+bun add @inflector/keeno
+bun add -d vite @inflector/vite-plugin-keeno
 ```
 
 `vite.config.ts`:
 
 ```ts
 import { defineConfig } from 'vite'
-import lux from '@inflector/vite-plugin-lux'
+import keeno from '@inflector/vite-plugin-keeno'
 
 export default defineConfig({
-  plugins: [lux()],
+  plugins: [keeno()],
 })
 ```
 
@@ -80,17 +79,17 @@ export default defineConfig({
 `src/main.ts`:
 
 ```ts
-import { mount } from '@inflector/lux'
-import App from './App.lx'
+import { mount } from '@inflector/keeno'
+import App from './App.kn'
 
 mount(App, document.getElementById('app')!)
 ```
 
-`src/env.d.ts`, so plain `.ts` files can import `.lx` files:
+`src/env.d.ts`, so plain `.ts` files can import `.kn` files:
 
 ```ts
-declare module '*.lx' {
-  const Component: import('@inflector/lux').Component
+declare module '*.kn' {
+  const Component: import('@inflector/keeno').Component
   export default Component
 }
 ```
@@ -99,7 +98,7 @@ Start the dev server with `bunx --bun vite` and build with `bunx --bun vite buil
 
 ## A first component
 
-```html App.lx
+```html App.kn
 <script lang="ts">
   const count = state(0)
   const doubled = derived(() => count * 2)
@@ -113,7 +112,7 @@ Start the dev server with `bunx --bun vite` and build with `bunx --bun vite buil
 </style>
 ```
 
-- `state(0)` creates a reactive value. Inside `.lx` files you read it by name (`count`) and write it with `count.set(…)`.
+- `state(0)` creates a reactive value. Inside `.kn` files you read it by name (`count`) and write it with `count.set(…)`.
 - `derived(…)` computes a value from other states and stays up to date automatically.
 - `{count}` in the markup is a live text node: only that node changes when `count` changes.
 - The `<style>` only applies to this component.
@@ -126,7 +125,7 @@ Continue with [Components](components.md), [Reactivity](reactivity.md) and [Temp
 
 # Components
 
-A `.lx` file is one component. It has up to three parts, in any order:
+A `.kn` file is one component. It has up to three parts, in any order:
 
 - `<script>` or `<script lang="ts">`: runs once per component instance.
 - Markup: everything outside `<script>` and `<style>`, parsed as JSX.
@@ -138,7 +137,7 @@ Imports and TypeScript `type`/`interface` declarations in the script stay at mod
 
 Call `props()` and destructure it. Destructured props stay reactive, because the compiler rewrites `title` to a getter read (`$$props.title`).
 
-```html Greeting.lx
+```html Greeting.kn
 <script lang="ts">
   const { name, greeting = 'Hello', onClose } = props<{ name: string; greeting?: string; onClose: () => void }>()
 </script>
@@ -147,17 +146,18 @@ Call `props()` and destructure it. Destructured props stay reactive, because the
 ```
 
 - Defaults use `??`: `greeting = 'Hello'` applies when the prop is `undefined` or `null`.
+- A default that creates an object (`items = []`, `{}`, a function, `new …`) is evaluated once, when `props()` runs, so every read gets the same object.
 - Renames work: `const { 'aria-label': label } = props()`.
 - Rest destructuring (`...rest`) is not supported. Use `const p = props()` and read `p.x` instead.
 - Callbacks are ordinary props.
 - Never reassign a destructured prop: that is a compile error.
-- The type argument also types the component for its parents: the editor and `lux-check` report a missing required prop or a prop of the wrong type where the component is used, and complete prop names. Without a type argument, props are `any`.
+- The type argument also types the component for its parents: the editor and `keeno-check` report a missing required prop or a prop of the wrong type where the component is used, and complete prop names. Without a type argument, props are `any`.
 
 Pass props like JSX. Dynamic values become getters, so the child sees updates:
 
-```html Parent.lx
+```html Parent.kn
 <script lang="ts">
-  import Greeting from './Greeting.lx'
+  import Greeting from './Greeting.kn'
   const who = state('Ada')
 </script>
 
@@ -170,9 +170,9 @@ Spread props work on components: `<Item {...item} selected={isSelected} />`. Lat
 
 Nested content arrives as the `children` prop, a function that renders it. Type it as `Children` and put `{children}` where it should appear:
 
-```html Card.lx
+```html Card.kn
 <script lang="ts">
-  import type { Children } from '@inflector/lux'
+  import type { Children } from '@inflector/keeno'
   const { title, children } = props<{ title: string; children?: Children }>()
 </script>
 
@@ -182,9 +182,9 @@ Nested content arrives as the `children` prop, a function that renders it. Type 
 </section>
 ```
 
-```html UsesCard.lx
+```html UsesCard.kn
 <script lang="ts">
-  import Card from './Card.lx'
+  import Card from './Card.kn'
 </script>
 
 <Card title="Hi"><p>Card body</p></Card>
@@ -207,7 +207,7 @@ Order:
 - Within a component, `init` and `update` run in declaration order.
 - On unmount, children are destroyed before parents, and callbacks run in registration order.
 
-```html Clock.lx
+```html Clock.kn
 <script lang="ts">
   const now = state(new Date())
   init(() => {
@@ -232,7 +232,7 @@ Order:
 
 # Reactivity
 
-Lux tracks reads of states and deriveds, and re-runs exactly the code that depends on them. There is no virtual DOM and no component re-rendering.
+Keeno tracks reads of states and deriveds, and re-runs exactly the code that depends on them. There is no virtual DOM and no component re-rendering.
 
 ## state
 
@@ -240,7 +240,7 @@ Lux tracks reads of states and deriveds, and re-runs exactly the code that depen
 const count = state(0)
 ```
 
-In a `.lx` file:
+In a `.kn` file:
 
 | You write | It means |
 |---|---|
@@ -272,7 +272,7 @@ Reassigning a state variable (`count = 5`) is a compile error. Use `count.set(5)
 
 `derived(fn)` is a computed, read-only signal. It recomputes only when something it read changes, and it is always current, even when read synchronously right after a write.
 
-```html Cart.lx
+```html Cart.kn
 <script lang="ts">
   const price = state(10)
   const qty = state(2)
@@ -306,21 +306,21 @@ Reassigning a state variable (`count = 5`) is a compile error. Use `count.set(5)
 
 ## Shared stores in plain .ts files
 
-Outside `.lx` files, states are plain objects, so you call `.get()` and `.set()` yourself:
+Outside `.kn` files, states are plain objects, so you call `.get()` and `.set()` yourself:
 
 ```ts
 // store.ts
-import { derived, state } from '@inflector/lux'
+import { derived, state } from '@inflector/keeno'
 
 export const user = state<{ name: string } | null>(null, { persist: 'user' })
 export const isLoggedIn = derived(() => user.get() !== null)
 ```
 
-Only states and deriveds declared in the `.lx` file itself are unwrapped. An imported store is used as `user.get()` and `user.set(…)` in components too.
+Only states and deriveds declared in the `.kn` file itself are unwrapped. An imported store is used as `user.get()` and `user.set(…)` in components too.
 
 ## Batching and flush
 
-All work runs in one microtask, in this order: stale deriveds, DOM updates, mount jobs (`init` and the first `update` runs), then `update` re-runs. `flush()` from `@inflector/lux` runs pending work synchronously, which is handy in tests.
+All work runs in one microtask, in this order: stale deriveds, DOM updates, mount jobs (`init` and the first `update` runs), then `update` re-runs. `flush()` from `@inflector/keeno` runs pending work synchronously, which is handy in tests.
 
 See [State options](state-options.md) for persistence, URL sync, undo/redo, validation and debouncing.
 
@@ -345,7 +345,7 @@ See [State options](state-options.md) for persistence, URL sync, undo/redo, vali
 ## equals
 
 ```ts
-import { deepEqual } from '@inflector/lux'
+import { deepEqual } from '@inflector/keeno'
 
 const filters = state({ tags: [] as string[] }, { equals: deepEqual })
 filters.set({ tags: [] }) // no change, nothing re-runs
@@ -392,7 +392,7 @@ const q = state('', { url: { param: 'q', replace: true }, debounce: 300 })
 
 ## history
 
-```html Editor.lx
+```html Editor.kn
 <script lang="ts">
   const text = state('', { history: 100 })
 </script>
@@ -434,7 +434,7 @@ Markup is JSX, written HTML-first: use `class` and `for` (`className` and `htmlF
 
 `{expr}` is a live text node or attribute. It updates when the states it reads change, and nothing else is touched.
 
-```html Profile.lx
+```html Profile.kn
 <script lang="ts">
   const user = state({ name: 'Ada', avatar: '/ada.png' })
 </script>
@@ -447,7 +447,7 @@ Attribute values: `null`, `undefined` and `false` remove the attribute, and `tru
 
 ## Conditionals
 
-```html Status.lx
+```html Status.kn
 <script lang="ts">
   const count = state(0)
   const user = state<{ name: string } | null>(null)
@@ -463,7 +463,7 @@ Attribute values: `null`, `undefined` and `false` remove the attribute, and `tru
 
 ## Lists
 
-```html List.lx
+```html List.kn
 <script lang="ts">
   const todos = state([{ id: 1, text: 'Write docs', done: false }])
 </script>
@@ -485,7 +485,7 @@ Attribute values: `null`, `undefined` and `false` remove the attribute, and `tru
 
 `onClick={fn}`, `onInput={fn}`, `onKeyDown={fn}` and so on: the name is lowercased after `on`, so `onDblClick` listens to `dblclick`. Handlers receive the DOM event.
 
-```html Form.lx
+```html Form.kn
 <script lang="ts">
   const sent = state(false)
 </script>
@@ -499,7 +499,7 @@ Attribute values: `null`, `undefined` and `false` remove the attribute, and `tru
 
 `bind:value={myState}` (inputs, textareas, selects) and `bind:checked={myState}` (checkboxes) take the state itself:
 
-```html Settings.lx
+```html Settings.kn
 <script lang="ts">
   const name = state('')
   const volume = state(5)
@@ -518,7 +518,7 @@ Number and range inputs store numbers. Binding a prop or a derived is a compile 
 
 `ref()` creates a reference; `ref={myRef}` points it at an element. `myRef.current` is the element, or `null` before mount and after the element is removed. Reading `current` is reactive, so `update` re-runs when the element appears or goes away:
 
-```html Search.lx
+```html Search.kn
 <script lang="ts">
   const input = ref<HTMLInputElement>()
 
@@ -534,7 +534,7 @@ Number and range inputs store numbers. Binding a prop or a derived is a compile 
 
 `class` accepts a string, an array (falsy entries skipped, nested arrays allowed) or an object of `name: condition`:
 
-```html Button.lx
+```html Button.kn
 <script lang="ts">
   const active = state(false)
   const size = state('big')
@@ -549,7 +549,7 @@ The component's scope class is always kept.
 
 Spread works on components and on DOM elements. Attributes apply in order, and later ones win:
 
-```html Field.lx
+```html Field.kn
 <script lang="ts">
   const attrs = state({ placeholder: 'Email', type: 'email', required: true })
   const touched = state(false)
@@ -564,7 +564,7 @@ Spread objects can include `class`, `onX` event handlers and any attribute. When
 
 Inline `<svg>` works as in HTML. Conditionals, lists and components inside it render SVG elements:
 
-```html Dot.lx
+```html Dot.kn
 <script lang="ts">
   const { x, y } = props()
 </script>
@@ -572,9 +572,9 @@ Inline `<svg>` works as in HTML. Conditionals, lists and components inside it re
 <circle cx={x} cy={y} r="4" />
 ```
 
-```html Chart.lx
+```html Chart.kn
 <script lang="ts">
-  import Dot from './Dot.lx'
+  import Dot from './Dot.kn'
   const points = state([{ id: 1, x: 10, y: 20 }])
   const grid = state(true)
 </script>
@@ -593,7 +593,7 @@ Inline `<svg>` works as in HTML. Conditionals, lists and components inside it re
 
 Write tables with their full structure. Rows go in `<tbody>`, `<thead>` or `<tfoot>`, and cells go in `<tr>`:
 
-```html Stock.lx
+```html Stock.kn
 <script lang="ts">
   const items = state([{ id: 1, name: 'apples', qty: 3 }])
 </script>
@@ -610,7 +610,7 @@ Write tables with their full structure. Rows go in `<tbody>`, `<thead>` or `<tfo
 </table>
 ```
 
-- **Compile errors:** HTML parsers rewrite misplaced table content. `<table><tr>` gets an implied `<tbody>`, and text or a `<div>` inside a `<tr>` is moved out of the table. Lux reports these as compile errors instead of rendering a different tree, for example: `<tr> cannot be a direct child of <table>: the HTML parser would insert a <tbody> and break the template. Wrap it in <tbody> (or <thead>/<tfoot>).`
+- **Compile errors:** HTML parsers rewrite misplaced table content. `<table><tr>` gets an implied `<tbody>`, and text or a `<div>` inside a `<tr>` is moved out of the table. Keeno reports these as compile errors instead of rendering a different tree, for example: `<tr> cannot be a direct child of <table>: the HTML parser would insert a <tbody> and break the template. Wrap it in <tbody> (or <thead>/<tfoot>).`
 - **Allowed children:** `<table>` takes `<caption>`, `<colgroup>`, `<thead>`, `<tbody>` and `<tfoot>`. `<thead>`, `<tbody>` and `<tfoot>` take `<tr>`. `<tr>` takes `<td>` and `<th>`. `<colgroup>` takes `<col>`. `{expressions}`, components, whitespace, `<template>`, `<script>` and `<style>` are allowed anywhere.
 - **Row components:** a component can have `<tr>` or `<td>` as its root.
 
@@ -626,12 +626,12 @@ A capitalized tag is a component: `<Item text={t.text} onSave={save} />`. Dynami
 
 The `<style>` block of a component is scoped to it.
 
-- **Scope class:** each component gets a class `lux-<hash of the file path>`. Every element in its markup gets that class, and every compound selector in its CSS gets it too: `h1 { … }` becomes `h1.lux-1a2b3c4d { … }`, and `ul > li.done` becomes `ul.lux-… > li.done.lux-…`.
+- **Scope class:** each component gets a class `keeno-<hash of the file path>`. Every element in its markup gets that class, and every compound selector in its CSS gets it too: `h1 { … }` becomes `h1.keeno-1a2b3c4d { … }`, and `ul > li.done` becomes `ul.keeno-… > li.done.keeno-…`.
 - **Escape hatch:** `:global(...)` is left as written: `:global(body) { margin: 0 }` and `:global(.dark) h1 { … }`.
-- **Pseudo-classes and pseudo-elements:** the scope class goes before them (`a:hover` becomes `a.lux-…:hover`).
+- **Pseudo-classes and pseudo-elements:** the scope class goes before them (`a:hover` becomes `a.keeno-…:hover`).
 - **At-rules:** `@media` rules are scoped. `@keyframes` steps are not.
 
-```html Panel.lx
+```html Panel.kn
 <div class="panel"><h2>Title</h2></div>
 
 <style>
@@ -645,7 +645,7 @@ Styles don't leak between components, and parent styles don't reach into childre
 
 ## Tailwind CSS
 
-Lux works with Tailwind CSS v4. Add `@tailwindcss/vite` next to the Lux plugin and import Tailwind from a stylesheet:
+Keeno works with Tailwind CSS v4. Add `@tailwindcss/vite` next to the Keeno plugin and import Tailwind from a stylesheet:
 
 ```bash
 bun add -d tailwindcss @tailwindcss/vite
@@ -655,9 +655,9 @@ bun add -d tailwindcss @tailwindcss/vite
 // vite.config.ts
 import { defineConfig } from 'vite'
 import tailwindcss from '@tailwindcss/vite'
-import lux from '@inflector/vite-plugin-lux'
+import keeno from '@inflector/vite-plugin-keeno'
 
-export default defineConfig({ plugins: [lux(), tailwindcss()] })
+export default defineConfig({ plugins: [keeno(), tailwindcss()] })
 ```
 
 ```css
@@ -665,14 +665,14 @@ export default defineConfig({ plugins: [lux(), tailwindcss()] })
 @import 'tailwindcss';
 ```
 
-- **Utilities in markup:** Tailwind scans `.lx` files, so classes in `class="…"` and in `class={[…]}` arrays and ternaries are generated. Write class names in full (`'bg-red-500'`, not `` `bg-${color}-500` ``).
+- **Utilities in markup:** Tailwind scans `.kn` files, so classes in `class="…"` and in `class={[…]}` arrays and ternaries are generated. Write class names in full (`'bg-red-500'`, not `` `bg-${color}-500` ``).
 - **Directives in `<style>`:** `@apply`, `@variant`, `theme()`, `--theme()`, `--spacing()` and `--alpha()` work in component styles, and the result stays scoped.
-- **No `@reference` needed:** a component style that uses Tailwind gets `@reference` to your main stylesheet added for you. That's the shallowest `.css` file in the project that imports `tailwindcss`, so your `@theme` tokens are available. Write your own `@reference` to choose another file, or set `lux({ tailwind: { reference: 'src/app.css' } })`.
+- **No `@reference` needed:** a component style that uses Tailwind gets `@reference` to your main stylesheet added for you. That's the shallowest `.css` file in the project that imports `tailwindcss`, so your `@theme` tokens are available. Write your own `@reference` to choose another file, or set `keeno({ tailwind: { reference: 'src/app.css' } })`.
 - **Not scoped:** rules inside `@utility`, `@theme` and `@custom-variant`, which define global things.
 
-```html Button.lx
+```html Button.kn
 <script lang="ts">
-  import type { Children } from '@inflector/lux'
+  import type { Children } from '@inflector/keeno'
   const { children } = props<{ children: Children }>()
 </script>
 
@@ -688,11 +688,11 @@ export default defineConfig({ plugins: [lux(), tailwindcss()] })
 </style>
 ```
 
-This is on whenever `@tailwindcss/vite` is in the plugins. Turn it off with `lux({ tailwind: false })`. For editor support, see [Tooling](tooling.md#tailwind-css-intellisense). `examples/tailwind` is a complete app.
+This is on whenever `@tailwindcss/vite` is in the plugins. Turn it off with `keeno({ tailwind: false })`. For editor support, see [Tooling](tooling.md#tailwind-css-intellisense). `examples/tailwind` is a complete app.
 
 ## Virtual CSS module
 
-The CSS is served as a virtual module (`Foo.lx?lux&type=style&lang.css`). Vite injects it in dev with hot updates and extracts it in builds.
+The CSS is served as a virtual module (`Foo.kn?keeno&type=style&lang.css`). Vite injects it in dev with hot updates and extracts it in builds.
 
 ---
 
@@ -704,18 +704,18 @@ Context passes a value from a component to everything rendered inside it, howeve
 
 ```ts
 // theme.ts
-import { createContext } from '@inflector/lux'
+import { createContext } from '@inflector/keeno'
 
 export const Theme = createContext<'light' | 'dark'>('light')
 ```
 
 A component provides a value with `provide(context, value)`:
 
-```html App.lx
+```html App.kn
 <script lang="ts">
-  import { provide, state } from '@inflector/lux'
+  import { provide, state } from '@inflector/keeno'
   import { Theme } from './theme'
-  import Toolbar from './Toolbar.lx'
+  import Toolbar from './Toolbar.kn'
   const theme = state<'light' | 'dark'>('dark')
   provide(Theme, theme)
 </script>
@@ -726,9 +726,9 @@ A component provides a value with `provide(context, value)`:
 
 Any component inside it reads the value with `inject(context)`:
 
-```html Toolbar.lx
+```html Toolbar.kn
 <script lang="ts">
-  import { inject } from '@inflector/lux'
+  import { inject } from '@inflector/keeno'
   import { Theme } from './theme'
   const theme = inject(Theme)
 </script>
@@ -738,7 +738,7 @@ Any component inside it reads the value with `inject(context)`:
 
 - `inject` returns the value from the closest component that provided one, or else the context's default value. `createContext()` without a default gives `undefined`.
 - Call `provide` and `inject` in the `<script>` block, while the component is being created. Event handlers, timers and promise callbacks run outside the component tree, so `inject` there only sees the default.
-- Context values are reactive. In a `.lx` file:
+- Context values are reactive. In a `.kn` file:
   - `provide(Theme, theme)` with a state or a derived provides the state itself, not its current value.
   - `provide(User, { name, role })`, or any other expression that reads states or props, is provided as `derived(() => …)`, so it follows them.
   - `const theme = inject(Theme)` reads like a state: `{theme}` and `theme.foo` are tracked. When a state was provided, `theme.set(…)` writes to it. Other values are read-only.
@@ -751,16 +751,16 @@ Any component inside it reads the value with `inject(context)`:
 
 # Built-in components
 
-`@inflector/lux` exports a few components for things plain markup can't express: catching errors, waiting for promises, loading code on demand, rendering elsewhere in the page, moving live content around without re-creating it, and animating elements in and out. Import them like any component.
+`@inflector/keeno` exports a few components for things plain markup can't express: catching errors, waiting for promises, loading code on demand, rendering elsewhere in the page, moving live content around without re-creating it, and animating elements in and out. Import them like any component.
 
 ## ErrorBoundary
 
 An error thrown while a component renders, updates or mounts (including inside `init` and `update`) goes to the closest `<ErrorBoundary>`, which shows `fallback` instead of its children:
 
-```html App.lx
+```html App.kn
 <script lang="ts">
-  import { ErrorBoundary } from '@inflector/lux'
-  import Chart from './Chart.lx'
+  import { ErrorBoundary } from '@inflector/keeno'
+  import Chart from './Chart.kn'
 </script>
 
 <ErrorBoundary
@@ -788,9 +788,9 @@ A `derived` that throws passes the error on to whatever reads it, and it recover
 
 `<Await>` renders the states of a promise:
 
-```html User.lx
+```html User.kn
 <script lang="ts">
-  import { Await } from '@inflector/lux'
+  import { Await } from '@inflector/keeno'
   const { id } = props<{ id: number }>()
   const load = (id: number) => fetch(`/api/users/${id}`).then((r) => r.json() as Promise<{ name: string }>)
 </script>
@@ -812,9 +812,9 @@ A `derived` that throws passes the error on to whatever reads it, and it recover
 `lazy()` loads a component when it is first rendered, so it ends up in its own chunk:
 
 ```ts
-import { lazy } from '@inflector/lux'
+import { lazy } from '@inflector/keeno'
 
-export const Chart = lazy(() => import('./Chart.lx'), { pending: () => 'Loading chart…' })
+export const Chart = lazy(() => import('./Chart.kn'), { pending: () => 'Loading chart…' })
 ```
 
 Use `Chart` like any other component. `Chart.preload()` starts loading earlier, for example on hover. If loading fails, the error goes to the closest `<ErrorBoundary>`, and rendering the component again (for example with `reset()`) retries the load.
@@ -823,11 +823,11 @@ Use `Chart` like any other component. `Chart.preload()` starts loading earlier, 
 
 `<Dynamic>` renders whatever component is in its `component` prop and passes it the other props. It creates a new instance when `component` changes:
 
-```html Tabs.lx
+```html Tabs.kn
 <script lang="ts">
-  import { Dynamic } from '@inflector/lux'
-  import Profile from './Profile.lx'
-  import Settings from './Settings.lx'
+  import { Dynamic } from '@inflector/keeno'
+  import Profile from './Profile.kn'
+  import Settings from './Settings.kn'
   const tabs = { profile: Profile, settings: Settings }
   const tab = state<keyof typeof tabs>('profile')
 </script>
@@ -841,10 +841,10 @@ Use `Chart` like any other component. `Chart.preload()` starts loading earlier, 
 
 `<Portal>` renders its children at the end of another element. This is useful for modals, toasts and popovers that must escape `overflow: hidden` or stacking contexts:
 
-```html Modal.lx
+```html Modal.kn
 <script lang="ts">
-  import { Portal } from '@inflector/lux'
-  import type { Children } from '@inflector/lux'
+  import { Portal } from '@inflector/keeno'
+  import type { Children } from '@inflector/keeno'
   const { onClose, children } = props<{ onClose: () => void; children?: Children }>()
 </script>
 
@@ -861,16 +861,17 @@ Use `Chart` like any other component. `Chart.preload()` starts loading earlier, 
 
 - `target` is an element or a CSS selector. It defaults to `document.body`, and is read once, when the portal is created.
 - The children stay part of this component: its scoped styles, context, error boundaries and `destroy` all apply, and their nodes are removed when the portal is destroyed.
+- With `renderToString`, portal content is appended after the app's HTML, each portal in a `<div data-keeno-portal="…">` (the selector, if `target` was one). `hydrate` replaces it and renders the portal at its target.
 - DOM events bubble through the real DOM, that is through the target and not through the portal's position in the tree.
 
 ## reparentable
 
 `reparentable()` renders content once and lets you show it in different places while it keeps its state: the same component instances and the same DOM nodes move, instead of being destroyed in one place and created again in another. Put the handle in markup wherever the content should appear now:
 
-```html Lesson.lx
+```html Lesson.kn
 <script lang="ts">
-  import { reparentable } from '@inflector/lux'
-  import Video from './Video.lx'
+  import { reparentable } from '@inflector/keeno'
+  import Video from './Video.kn'
   const { src } = props<{ src: string }>()
   const theater = state(false)
   const player = reparentable(() => <Video src={src} />)
@@ -891,10 +892,10 @@ In browsers with the native [`moveBefore`](https://developer.mozilla.org/docs/We
 
 Code that works with elements directly, like drag and drop, a layout engine or a picture-in-picture toggle, can move the content itself:
 
-```html Lesson.lx
+```html Lesson.kn
 <script lang="ts">
-  import { reparentable } from '@inflector/lux'
-  import Video from './Video.lx'
+  import { reparentable } from '@inflector/keeno'
+  import Video from './Video.kn'
   const player = reparentable(() => <Video src="/intro.mp4" />)
 
   function dropInto(e: DragEvent) {
@@ -913,14 +914,14 @@ Code that works with elements directly, like drag and drop, a layout engine or a
 - `player.nodes()` returns its current nodes, wherever they are, for example to measure them.
 - After `moveTo()` or `remove()`, a place in markup that was already showing the content does not take it back just because it updates. A place that renders it anew does, such as a branch of a condition that switches back, and from then on markup is in charge again.
 
-For a single DOM node that isn't Lux content, `moveNode(node, parent, before?)` does the same native-when-possible move.
+For a single DOM node that isn't Keeno content, `moveNode(node, parent, before?)` does the same native-when-possible move.
 
 For items that move between lists, such as cards on a kanban board, use `keyedReparentable()`. It creates one entry per key on first use, and every entry belongs to the component that called it, even when it is first rendered inside a list row:
 
-```html Board.lx
+```html Board.kn
 <script lang="ts">
-  import { keyedReparentable } from '@inflector/lux'
-  import Card from './Card.lx'
+  import { keyedReparentable } from '@inflector/keeno'
+  import Card from './Card.kn'
   const cards = state([{ id: 1, column: 'todo' }, { id: 2, column: 'done' }])
   const cardView = keyedReparentable((id: number) => <Card id={id} />)
 
@@ -943,9 +944,9 @@ Moving a card to the other column re-creates its `<li>`, but the `<Card>` inside
 
 `<Transition>` animates elements as they are added and removed inside it. Elements that are being removed stay in place until their animation ends.
 
-```html Panel.lx
+```html Panel.kn
 <script lang="ts">
-  import { Transition } from '@inflector/lux'
+  import { Transition } from '@inflector/keeno'
   const open = state(false)
 </script>
 
@@ -958,7 +959,7 @@ Moving a card to the other column re-creates its `<li>`, but the `<Card>` inside
 </style>
 ```
 
-An entering element gets the classes `{name}-enter-from` and `{name}-enter-active` first. One frame later, `{name}-enter-from` is swapped for `{name}-enter-to`, and all three are removed when the longest transition or animation on the element ends. Leaving works the same way with `leave`. The default `name` is `lux`.
+An entering element gets the classes `{name}-enter-from` and `{name}-enter-active` first. One frame later, `{name}-enter-from` is swapped for `{name}-enter-to`, and all three are removed when the longest transition or animation on the element ends. Leaving works the same way with `leave`. The default `name` is `keeno`.
 
 - `appear`: also animate the elements present on first render.
 - `onEnter(el, done)` / `onLeave(el, done)`: animate with JavaScript (for example the Web Animations API) instead of classes. Call `done()` when finished.
@@ -971,26 +972,26 @@ An entering element gets the classes `{name}-enter-from` and `{name}-enter-activ
 
 # Routing
 
-`@inflector/lux-router` is a small client-side router built on the History API.
+`@inflector/keeno-router` is a small client-side router built on the History API.
 
 ```bash
-bun add @inflector/lux-router
+bun add @inflector/keeno-router
 ```
 
 ## Routes
 
-```html App.lx
+```html App.kn
 <script lang="ts">
-  import { lazy } from '@inflector/lux'
-  import { Link, Router, type RouteDefinition } from '@inflector/lux-router'
-  import Home from './Home.lx'
-  import User from './User.lx'
-  import NotFound from './NotFound.lx'
+  import { lazy } from '@inflector/keeno'
+  import { Link, Router, type RouteDefinition } from '@inflector/keeno-router'
+  import Home from './Home.kn'
+  import User from './User.kn'
+  import NotFound from './NotFound.kn'
 
   const routes: RouteDefinition[] = [
     { path: '/', component: Home },
     { path: '/users/:id', component: User },
-    { path: '/settings', component: lazy(() => import('./Settings.lx')) },
+    { path: '/settings', component: lazy(() => import('./Settings.kn')) },
     { path: '*', component: NotFound },
   ]
 </script>
@@ -1013,9 +1014,9 @@ bun add @inflector/lux-router
 
 A route component receives `params`:
 
-```html User.lx
+```html User.kn
 <script lang="ts">
-  import { useRoute } from '@inflector/lux-router'
+  import { useRoute } from '@inflector/keeno-router'
   const { params } = props<{ params: { id: string } }>()
   const route = useRoute()
 </script>
@@ -1031,7 +1032,7 @@ A route component receives `params`:
 - `<Link href="/users/1">` renders an `<a>` that navigates without reloading. While its path is active, it gets the class `active` (change it with `activeClass`) and `aria-current="page"`. A link is active on its own path and on the paths below it, and `exact` limits it to its own path. `replace` replaces the history entry instead of adding one.
 - The scoped styles of the component that renders a `<Link>` apply to its `<a>`: `a { … }` and `.active { … }` in that component's `<style>` reach it.
 - To write your own anchor, use the `link` click handler: `<a href="/about" onClick={link}>About</a>`. With a `base`, write `href={href('/about')}`. `isActive('/about')` tells you whether to mark it.
-- `navigate('/users/2')` navigates from code. `navigate('/login', { replace: true })` replaces the current entry, and `{ scroll: false }` keeps the scroll position. Relative URLs such as `navigate('?tab=2')` work too.
+- `navigate('/users/2')` navigates from code. `navigate('/login', { replace: true })` replaces the current entry, and `{ scroll: false }` keeps the scroll position. A URL with a `#hash` scrolls to that element instead of the top. On back/forward, the router restores the scroll position the page had, once the route has rendered. Relative URLs such as `navigate('?tab=2')` work too.
 - Clicks with a modifier key, a middle click, `target="_blank"`, `download` and links to other sites are left to the browser.
 - Query parameters synced with `state(v, { url: 'tab' })` follow navigation, including back and forward.
 
@@ -1045,7 +1046,7 @@ On the server there is no browser location, so pass the request URL: `<Router ro
 
 # Server rendering
 
-Lux renders components to HTML on the server (Node, Bun or Deno) with `renderToString`. In the browser, `hydrate` then takes over that markup.
+Keeno renders components to HTML on the server (Node, Bun or Deno) with `renderToString`. In the browser, `hydrate` then takes over that markup.
 
 ```bash
 bun add linkedom
@@ -1057,8 +1058,8 @@ bun add linkedom
 
 ```ts
 // src/entry-server.ts
-import { renderToString } from '@inflector/lux/server'
-import App from './App.lx'
+import { renderToString } from '@inflector/keeno/server'
+import App from './App.kn'
 
 export async function render(url: string) {
   return renderToString(App, { url })
@@ -1067,8 +1068,8 @@ export async function render(url: string) {
 
 ```ts
 // src/entry-client.ts
-import { hydrate } from '@inflector/lux'
-import App from './App.lx'
+import { hydrate } from '@inflector/keeno'
+import App from './App.kn'
 
 hydrate(App, document.getElementById('app')!)
 ```
@@ -1092,7 +1093,7 @@ What runs on the server:
 
 ## With Vite
 
-Set up Vite's SSR mode as the [Vite SSR guide](https://vite.dev/guide/ssr) describes. `@inflector/vite-plugin-lux` needs no extra options.
+Set up Vite's SSR mode as the [Vite SSR guide](https://vite.dev/guide/ssr) describes. `@inflector/vite-plugin-keeno` needs no extra options.
 
 - **In development**, load your server entry with `vite.ssrLoadModule('/src/entry-server.ts')`. Don't import `renderToString` directly in your Node server file. The components and `renderToString` must come from the same copy of the runtime, and the runtime warns when two copies are loaded.
 - **In production**, build the client with `vite build`, then the server entry with `vite build --ssr src/entry-server.ts`, and import the server bundle from Node.
@@ -1123,7 +1124,7 @@ On the server, give the router the request URL: `<Router routes={routes} url={ur
 
 **`innerHTML`.** `<div innerHTML={html} />` inserts raw HTML, exactly like the DOM property. Never pass it content that a user can influence unless you sanitize it first, for example with [DOMPurify](https://github.com/cure53/DOMPurify):
 
-```html Article.lx
+```html Article.kn
 <script lang="ts">
   import DOMPurify from 'dompurify'
   const { body } = props<{ body: string }>()
@@ -1134,7 +1135,9 @@ On the server, give the router the request URL: `<Router routes={routes} url={ur
 
 **`javascript:` URLs.** A dynamic URL attribute (`href`, `src`, `action`, `formaction`, `xlink:href`, `poster`, `cite`, `background`, `ping`) whose value is a `javascript:` URL is **blocked**: the attribute is removed and an error is logged. Browsers also accept variants with leading spaces, tabs inside the scheme and mixed case, and those are blocked too. A static `href="javascript:…"` written in the template is left alone, since the author wrote it. Other schemes, such as `data:` URLs in `src`, pass through. Validate them yourself if users can supply them.
 
-**Event handlers and spread.** `{...attrs}` applies every key as an attribute, and keys starting with `on` followed by a capital letter become event listeners. Don't spread objects that come from users.
+**`srcdoc`.** `<iframe srcdoc={html} />` renders `html` as a whole document, like `innerHTML`. Sanitize user content, or keep the iframe's `sandbox` without `allow-same-origin`.
+
+**Event handlers and spread.** `{...attrs}` applies every key as an attribute, except keys like `onClick` or `onclick`: a function there becomes an event listener, and anything else is ignored. A dynamic inline handler attribute (`onclick={…}` as a string, from a spread or a binding) is never set. Still, don't spread objects that come from users.
 
 **Styles.** A `style={…}` string that comes from user input can still do things like overlay the page. Prefer fixed classes.
 
@@ -1146,7 +1149,7 @@ Templates are parsed once per component by assigning the compiler's static HTML 
 
 ## Reporting a vulnerability
 
-Please report security issues privately through [GitHub security advisories](https://github.com/iliesw/Lux/security/advisories/new), not in public issues.
+Please report security issues privately through [GitHub security advisories](https://github.com/iliesw/Keeno/security/advisories/new), not in public issues.
 
 ---
 
@@ -1156,76 +1159,96 @@ Please report security issues privately through [GitHub security advisories](htt
 
 ## Vite plugin
 
-`@inflector/vite-plugin-lux` compiles `.lx` files, serves their CSS, strips TypeScript (with Oxc on Vite 8, and esbuild on Vite 5 to 7) and chains source maps. It supports Vite 5, 6, 7 and 8. Options: `lux({ hmr?: boolean, tailwind?: boolean | { reference?: string } })`. `tailwind` defaults to on when `@tailwindcss/vite` is in the plugins (see [Styles](styles.md#tailwind-css)).
+`@inflector/vite-plugin-keeno` compiles `.kn` files, serves their CSS, strips TypeScript (with Oxc on Vite 8, and esbuild on Vite 5 to 7) and chains source maps. It supports Vite 5, 6, 7 and 8. Options: `keeno({ hmr?: boolean, tailwind?: boolean | { reference?: string }, devtools?: boolean })`. `tailwind` defaults to on when `@tailwindcss/vite` is in the plugins (see [Styles](styles.md#tailwind-css)).
 
-During `vite dev` the plugin also turns on development mode: warnings such as duplicate keys in a list, and a console hook for inspecting the component tree (below). Production builds have neither.
+During `vite dev` the plugin also turns on development mode: warnings such as duplicate keys in a list, and the dev tools panel (below). Production builds have neither.
 
 ## Hot module replacement
 
-In dev, editing a `.lx` file swaps the component in place without a page reload:
+In dev, editing a `.kn` file swaps the component in place without a page reload:
 
 - **What re-mounts:** every live instance re-mounts with the same props, and its own state resets.
 - **What survives:** parent state.
 - **CSS:** style changes apply without re-mounting.
 
-## Inspecting the component tree
+## Dev tools panel
 
-In development mode, the browser console has a `__LUX_DEVTOOLS__` object:
+During `vite dev` every page gets an in-page dev tools panel. Open it with the **◆ Keeno** button in the bottom-left corner, or with <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd>.
 
-- `__LUX_DEVTOOLS__.print()` prints the mounted component tree as collapsible groups, with each component's current props.
-- `__LUX_DEVTOOLS__.tree()` returns the same tree as data: `{ name, props, children }[]`.
+- **Components:** the live component tree. Search it by name or file, and move through it with the arrow keys. Hover a row to outline the component on the page, and double-click a row to scroll the component into view. Rows flash when a component re-renders, and `×N` counts its updates.
+- **Inspector:** the selected component's props, plus the states and deriveds declared in its `<script>`, under their variable names. Badges mark `derived`, `persist`, `?url` and `pending` (a debounced write is waiting).
+  - Click a string, number or `null` to edit it, and click a boolean's checkbox to flip it.
+  - Use the pencil button to edit any state as JSON.
+  - States with `history` get undo and redo buttons.
+  - The file link opens the component in your editor, through Vite's `/__open-in-editor`.
+  - The selected component is in `$keeno` in the console, so `$keeno.states.count.set(5)` works there.
+- **Picker** (crosshair button, or <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>C</kbd>): hover the page to see which component renders each element, then click to select it. <kbd>Esc</kbd> cancels.
+- **Highlight updates** (lightning button): outlines components on the page as they re-render.
+- **Timeline:** every state write, newest first. It shows the component, the state and what changed; for arrays and objects that is the changed path, for example `todos [1].done false → true`. Writes that came from the URL, another tab or undo/redo get a badge. Errors appear here too. You can filter, pause and clear it, and set a state back to its value before a write.
+- **Perf:** counts of components, signals, flushes and component updates; flush times (last, average, slowest) with a chart of the recent ones; and the components that update most.
+- **Stores:** states created outside components (in a shared module, for example) are listed under ◆ Stores at the top of the tree. Only stores created after the first `mount()` are tracked.
 
-Outside Vite, turn on development mode with `globalThis.__LUX_DEV__ = true` before mounting.
+The panel is itself a Keeno app, rendered in a shadow root so that it doesn't pick up the app's styles. The dev tools leave it out: it is not in the tree, and its own updates are not counted or logged. It remembers whether it was open, the side it is docked to (dock button), its width and the active tab. It doesn't load in browsers driven by test tools (`navigator.webdriver`), so end-to-end tests don't see it. Turn it off with `keeno({ devtools: false })`. Outside Vite, add `import '@inflector/keeno/devtools'` to your dev entry point.
+
+## Inspecting the component tree from the console
+
+In development mode, the browser console has a `__KEENO_DEVTOOLS__` object (the panel is built on it):
+
+- `__KEENO_DEVTOOLS__.print()` prints the mounted component tree as collapsible groups, with each component's current props.
+- `__KEENO_DEVTOOLS__.tree()` returns the same tree as data: `{ name, props, children }[]`.
+- `components()` returns it with ids, files and update counts. `details(id)` returns a component's props and states, and `set(stateId, value)` writes a state. `log()` returns the state timeline, `stats()` the performance counters, and `subscribe(fn)` reports every flush and write.
+
+Outside Vite, turn on development mode with `globalThis.__KEENO_DEV__ = true` before mounting.
 
 ## Editor support (VS Code and Cursor)
 
 `packages/vscode` is an extension with:
 
 - Highlighting for script (TypeScript), markup (JSX) and style (CSS).
-- TypeScript IntelliSense in `.lx` files, through a Volar-based language server:
+- TypeScript IntelliSense in `.kn` files, through a Volar-based language server:
   - completions, hover, go to definition and type errors
   - HTML tag, attribute and event completions
   - CSS completions, including Tailwind directives (`@apply`, `@theme`, `@utility`, `@variant`, ...) with no "unknown at-rule" warnings
-- `.lx` semantics in the types: a local state reads as its value plus `set`, `get`, `peek`, `onUpdate`, `undo`, `redo`, `canUndo` and `canRedo`.
+- `.kn` semantics in the types: a local state reads as its value plus `set`, `get`, `peek`, `onUpdate`, `undo`, `redo`, `canUndo` and `canRedo`.
 - Typed props: a component's props type is the type argument of its `props<P>()` call. Using it with a missing or mistyped prop is an error, and prop names complete on its tag. Parents write `children` as nested markup; inside the component it is a `Children` function.
 
-Install "Lux Framework" (`inflector.inflector-lux`) from the VS Code Marketplace or Open VSX. To build it from the repo instead:
+Install "Keeno Framework" (`inflector.inflector-keeno`) from the VS Code Marketplace or Open VSX. To build it from the repo instead:
 
 ```bash
 bun run --cwd packages/vscode package
-code --install-extension packages/vscode/lux-vscode.vsix
+code --install-extension packages/vscode/keeno-vscode.vsix
 ```
 
 ### Tailwind CSS IntelliSense
 
-With the [Tailwind CSS IntelliSense](https://marketplace.visualstudio.com/items?itemName=bradlc.vscode-tailwindcss) extension installed, `.lx` files get class completions, hover previews and linting in `class="…"`, in `class={…}` strings and in `@apply`. The Lux extension sets `"tailwindCSS.includeLanguages": { "lux": "html" }` by default. If you set `tailwindCSS.includeLanguages` yourself, add `"lux": "html"` to it.
+With the [Tailwind CSS IntelliSense](https://marketplace.visualstudio.com/items?itemName=bradlc.vscode-tailwindcss) extension installed, `.kn` files get class completions, hover previews and linting in `class="…"`, in `class={…}` strings and in `@apply`. The Keeno extension sets `"tailwindCSS.includeLanguages": { "keeno": "html" }` by default. If you set `tailwindCSS.includeLanguages` yourself, add `"keeno": "html"` to it.
 
 Limitations:
 - Props of a component without a `props<P>()` type argument are untyped (`any`).
 - A nullable state reads as non-null.
 - A plain `<script>` without `lang="ts"` gets completions but no type errors.
 
-## Type checking in CI (`lux-check`)
+## Type checking in CI (`keeno-check`)
 
-`lux-check` (the `@inflector/lux-check` package) reports the same type errors as the editor, for every `.lx` and `.ts` file in a tsconfig. It prints `file:line:col - error TSxxxx: message` and exits with 1 when there are errors (2 for a missing tsconfig or a bad option).
+`keeno-check` (the `@inflector/keeno-check` package) reports the same type errors as the editor, for every `.kn` and `.ts` file in a tsconfig. It prints `file:line:col - error TSxxxx: message` and exits with 1 when there are errors (2 for a missing tsconfig or a bad option).
 
-Install it with `bun add -d @inflector/lux-check` and add a script, as `examples/todo` does (`"check": "lux-check"`), then:
+Install it with `bun add -d @inflector/keeno-check` and add a script, as `examples/todo` does (`"check": "keeno-check"`), then:
 
 ```bash
 bun run --cwd examples/todo check
 ```
 
 - Argument: a tsconfig.json, or a directory that contains one (default: `.`).
-- `--lx-only`: check only `.lx` files.
-- The tsconfig's `include` must cover the `.lx` files, e.g. `"include": ["src"]`.
+- `--kn-only`: check only `.kn` files.
+- The tsconfig's `include` must cover the `.kn` files, e.g. `"include": ["src"]`.
 
 ## Testing
 
-Use `bun test` with happy-dom registered in a preload (`bunfig.toml`: `[test] preload = ["./test-setup.ts"]`). Mount components with `mount()`, then await a microtask (or call `flush()`) before asserting DOM changes. To test `.lx` files directly, register a Bun plugin that runs `compile()` from `@inflector/lux-compiler` (see `packages/compiler/test/e2e.test.ts`).
+Use `bun test` with happy-dom registered in a preload (`bunfig.toml`: `[test] preload = ["./test-setup.ts"]`). Mount components with `mount()`, then await a microtask (or call `flush()`) before asserting DOM changes. To test `.kn` files directly, register a Bun plugin that runs `compile()` from `@inflector/keeno-compiler` (see `packages/compiler/test/e2e.test.ts`).
 
 ## Compiler
 
-`compile(source, { filename, hmrId? })` from `@inflector/lux-compiler` returns `{ js, css, map, scope, name }`. The output is TypeScript when the script is.
+`compile(source, { filename, hmrId? })` from `@inflector/keeno-compiler` returns `{ js, css, map, scope, name }`. The output is TypeScript when the script is.
 
 ---
 
@@ -1233,7 +1256,7 @@ Use `bun test` with happy-dom registered in a preload (`bunfig.toml`: `[test] pr
 
 # API reference
 
-Everything below is exported from `@inflector/lux`. In `.lx` files, `state`, `derived`, `props`, `init`, `update`, `destroy` and `ref` are available without importing.
+Everything below is exported from `@inflector/keeno`. In `.kn` files, `state`, `derived`, `props`, `init`, `update`, `destroy` and `ref` are available without importing.
 
 ## Reactivity
 
@@ -1251,7 +1274,7 @@ isSignal(v): v is Signal<unknown>   // State or Derived
 
 | Member | Description |
 |---|---|
-| `get(): T` | Tracked read (implicit in `.lx` files) |
+| `get(): T` | Tracked read (implicit in `.kn` files) |
 | `peek(): T` | Untracked read |
 | `set(value: T): void` | Write; ignored if `equals(old, value)` |
 | `onUpdate(fn: (old, next) => void): () => void` | Synchronous change listener; returns unsubscribe |
@@ -1302,8 +1325,8 @@ type Children = () => unknown                    // the `children` prop: renders
 ```ts
 createContext<T>(defaultValue: T, name?: string): Context<T>
 createContext<T>(): Context<T | undefined>
-provide<T>(context: Context<T>, value: T): void   // while a component is being created; in .lx, states stay states
-inject<T>(context: Context<T>): T                 // closest provided value, or the default; in .lx, reads like a state
+provide<T>(context: Context<T>, value: T): void   // while a component is being created; in .kn, states stay states
+inject<T>(context: Context<T>): T                 // closest provided value, or the default; in .kn, reads like a state
 ```
 
 See [Context](context.md).
@@ -1316,7 +1339,7 @@ See [Context](context.md).
 | `Await` | `promise`, `pending?: () => content`, `fulfilled?: (value) => content`, `rejected?: (error) => content` |
 | `Dynamic` | `component`, plus the props passed to it |
 | `Portal` | `target?: Element \| selector` (default `document.body`), children |
-| `Transition` | `name?` (default `lux`), `appear?`, `onEnter?(el, done)`, `onLeave?(el, done)`, children |
+| `Transition` | `name?` (default `keeno`), `appear?`, `onEnter?(el, done)`, `onLeave?(el, done)`, children |
 
 ```ts
 lazy(load: () => Promise<{ default: Component } | Component>, options?: { pending?: () => unknown }): Component & { preload(): Promise<Component> }
@@ -1332,7 +1355,7 @@ moveNode(node: Node, parent: Node, before?: Node | null): void   // native moveB
 
 See [Built-in components](built-ins.md).
 
-## Server rendering (`@inflector/lux/server`)
+## Server rendering (`@inflector/keeno/server`)
 
 ```ts
 renderToString(Component, props?): Promise<string>           // needs the linkedom package
@@ -1341,7 +1364,7 @@ renderToStringWith(document: Document, Component, props?): string
 
 See [Server rendering](ssr.md).
 
-## Router (`@inflector/lux-router`)
+## Router (`@inflector/keeno-router`)
 
 ```ts
 Router            // props: routes, base?, url?, fallback?
@@ -1358,9 +1381,9 @@ See [Routing](routing.md).
 
 ## Development mode
 
-`globalThis.__LUX_DEV__ = true` turns on development warnings (duplicate list keys, for example) and the `__LUX_DEVTOOLS__` console hook. `@inflector/vite-plugin-lux` sets it during `vite dev`. Production builds leave it off.
+`globalThis.__KEENO_DEV__ = true` turns on development warnings (duplicate list keys, for example) and the `__KEENO_DEVTOOLS__` hook that the dev tools panel (`@inflector/keeno/devtools`, see [Tooling](tooling.md#dev-tools-panel)) is built on. `@inflector/vite-plugin-keeno` sets it during `vite dev` and loads the panel. Production builds leave it off.
 
-## .lx compile rules (summary)
+## .kn compile rules (summary)
 
 | Source | Compiles to |
 |---|---|
@@ -1402,24 +1425,24 @@ While the version is `0.x`:
 
 Pin a minor range (`~0.1.0` or `^0.1.0`, which npm treats the same way below 1.0) and read the changelog before upgrading. `1.0` will mark the API below as stable.
 
-Upgrade `@inflector/lux`, `@inflector/lux-compiler` and `@inflector/vite-plugin-lux` together. Compiled components call helpers from `@inflector/lux/internal`, and the compiler and the runtime are released in lockstep.
+Upgrade `@inflector/keeno`, `@inflector/keeno-compiler` and `@inflector/vite-plugin-keeno` together. Compiled components call helpers from `@inflector/keeno/internal`, and the compiler and the runtime are released in lockstep.
 
 ## Public API
 
 Public, and covered by semver:
 
-- Everything exported from `@inflector/lux` (see the [API reference](api.md)), `@inflector/lux/server` and `@inflector/lux-router`.
-- The `.lx` file format and the template and script rules in these docs.
-- The options of `@inflector/vite-plugin-lux`, the `lux-check` CLI, and `compile()` from `@inflector/lux-compiler`.
+- Everything exported from `@inflector/keeno` (see the [API reference](api.md)), `@inflector/keeno/server` and `@inflector/keeno-router`.
+- The `.kn` file format and the template and script rules in these docs.
+- The options of `@inflector/vite-plugin-keeno`, the `keeno-check` CLI, and `compile()` from `@inflector/keeno-compiler`.
 
-Not public: `@inflector/lux/internal`, the shape of the compiler's output, class names starting with `lux-`, and anything marked `@internal`. These can change in any release.
+Not public: `@inflector/keeno/internal`, the shape of the compiler's output, class names starting with `keeno-`, and anything marked `@internal`. These can change in any release.
 
 ## Supported environments
 
 | | Supported |
 |---|---|
 | Browsers | Last 2 versions of Chrome, Edge, Firefox and Safari (the end-to-end tests run in Chromium, Firefox and WebKit) |
-| Node.js | 18 and later for the compiler, Vite plugin, `lux-check` and server rendering (CI tests Node 20 and 22) |
+| Node.js | 18 and later for the compiler, Vite plugin, `keeno-check` and server rendering (CI tests Node 20 and 22) |
 | Bun | 1.4 and later |
 | Vite | 5, 6, 7 and 8 (CI builds a test app with each) |
 | TypeScript | 5.0 and later |

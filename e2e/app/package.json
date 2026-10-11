@@ -1,8 +1,8 @@
 {
-  "name": "lux-e2e-app",
+  "name": "keeno-e2e-app",
   "private": true,
   "type": "module",
   "scripts": { "dev": "bunx --bun vite" },
-  "dependencies": { "@inflector/lux": "workspace:*", "@inflector/lux-router": "workspace:*" },
-  "devDependencies": { "vite": "^5.4.11", "@inflector/vite-plugin-lux": "workspace:*" }
+  "dependencies": { "@inflector/keeno": "workspace:*", "@inflector/keeno-router": "workspace:*" },
+  "devDependencies": { "vite": "^5.4.11", "@inflector/vite-plugin-keeno": "workspace:*" }
 }

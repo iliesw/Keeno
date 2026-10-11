@@ -1,6 +1,6 @@
 # API reference
 
-Everything below is exported from `@inflector/lux`. In `.lx` files, `state`, `derived`, `props`, `init`, `update`, `destroy` and `ref` are available without importing.
+Everything below is exported from `@inflector/keeno`. In `.kn` files, `state`, `derived`, `props`, `init`, `update`, `destroy` and `ref` are available without importing.
 
 ## Reactivity
 
@@ -18,7 +18,7 @@ isSignal(v): v is Signal<unknown>   // State or Derived
 
 | Member | Description |
 |---|---|
-| `get(): T` | Tracked read (implicit in `.lx` files) |
+| `get(): T` | Tracked read (implicit in `.kn` files) |
 | `peek(): T` | Untracked read |
 | `set(value: T): void` | Write; ignored if `equals(old, value)` |
 | `onUpdate(fn: (old, next) => void): () => void` | Synchronous change listener; returns unsubscribe |
@@ -69,8 +69,8 @@ type Children = () => unknown                    // the `children` prop: renders
 ```ts
 createContext<T>(defaultValue: T, name?: string): Context<T>
 createContext<T>(): Context<T | undefined>
-provide<T>(context: Context<T>, value: T): void   // while a component is being created; in .lx, states stay states
-inject<T>(context: Context<T>): T                 // closest provided value, or the default; in .lx, reads like a state
+provide<T>(context: Context<T>, value: T): void   // while a component is being created; in .kn, states stay states
+inject<T>(context: Context<T>): T                 // closest provided value, or the default; in .kn, reads like a state
 ```
 
 See [Context](context.md).
@@ -83,7 +83,7 @@ See [Context](context.md).
 | `Await` | `promise`, `pending?: () => content`, `fulfilled?: (value) => content`, `rejected?: (error) => content` |
 | `Dynamic` | `component`, plus the props passed to it |
 | `Portal` | `target?: Element \| selector` (default `document.body`), children |
-| `Transition` | `name?` (default `lux`), `appear?`, `onEnter?(el, done)`, `onLeave?(el, done)`, children |
+| `Transition` | `name?` (default `keeno`), `appear?`, `onEnter?(el, done)`, `onLeave?(el, done)`, children |
 
 ```ts
 lazy(load: () => Promise<{ default: Component } | Component>, options?: { pending?: () => unknown }): Component & { preload(): Promise<Component> }
@@ -99,7 +99,7 @@ moveNode(node: Node, parent: Node, before?: Node | null): void   // native moveB
 
 See [Built-in components](built-ins.md).
 
-## Server rendering (`@inflector/lux/server`)
+## Server rendering (`@inflector/keeno/server`)
 
 ```ts
 renderToString(Component, props?): Promise<string>           // needs the linkedom package
@@ -108,7 +108,7 @@ renderToStringWith(document: Document, Component, props?): string
 
 See [Server rendering](ssr.md).
 
-## Router (`@inflector/lux-router`)
+## Router (`@inflector/keeno-router`)
 
 ```ts
 Router            // props: routes, base?, url?, fallback?
@@ -125,9 +125,9 @@ See [Routing](routing.md).
 
 ## Development mode
 
-`globalThis.__LUX_DEV__ = true` turns on development warnings (duplicate list keys, for example) and the `__LUX_DEVTOOLS__` console hook. `@inflector/vite-plugin-lux` sets it during `vite dev`. Production builds leave it off.
+`globalThis.__KEENO_DEV__ = true` turns on development warnings (duplicate list keys, for example) and the `__KEENO_DEVTOOLS__` hook that the dev tools panel (`@inflector/keeno/devtools`, see [Tooling](tooling.md#dev-tools-panel)) is built on. `@inflector/vite-plugin-keeno` sets it during `vite dev` and loads the panel. Production builds leave it off.
 
-## .lx compile rules (summary)
+## .kn compile rules (summary)
 
 | Source | Compiles to |
 |---|---|

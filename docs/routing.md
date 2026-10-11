@@ -1,25 +1,25 @@
 # Routing
 
-`@inflector/lux-router` is a small client-side router built on the History API.
+`@inflector/keeno-router` is a small client-side router built on the History API.
 
 ```bash
-bun add @inflector/lux-router
+bun add @inflector/keeno-router
 ```
 
 ## Routes
 
-```html App.lx
+```html App.kn
 <script lang="ts">
-  import { lazy } from '@inflector/lux'
-  import { Link, Router, type RouteDefinition } from '@inflector/lux-router'
-  import Home from './Home.lx'
-  import User from './User.lx'
-  import NotFound from './NotFound.lx'
+  import { lazy } from '@inflector/keeno'
+  import { Link, Router, type RouteDefinition } from '@inflector/keeno-router'
+  import Home from './Home.kn'
+  import User from './User.kn'
+  import NotFound from './NotFound.kn'
 
   const routes: RouteDefinition[] = [
     { path: '/', component: Home },
     { path: '/users/:id', component: User },
-    { path: '/settings', component: lazy(() => import('./Settings.lx')) },
+    { path: '/settings', component: lazy(() => import('./Settings.kn')) },
     { path: '*', component: NotFound },
   ]
 </script>
@@ -42,9 +42,9 @@ bun add @inflector/lux-router
 
 A route component receives `params`:
 
-```html User.lx
+```html User.kn
 <script lang="ts">
-  import { useRoute } from '@inflector/lux-router'
+  import { useRoute } from '@inflector/keeno-router'
   const { params } = props<{ params: { id: string } }>()
   const route = useRoute()
 </script>
@@ -60,7 +60,7 @@ A route component receives `params`:
 - `<Link href="/users/1">` renders an `<a>` that navigates without reloading. While its path is active, it gets the class `active` (change it with `activeClass`) and `aria-current="page"`. A link is active on its own path and on the paths below it, and `exact` limits it to its own path. `replace` replaces the history entry instead of adding one.
 - The scoped styles of the component that renders a `<Link>` apply to its `<a>`: `a { … }` and `.active { … }` in that component's `<style>` reach it.
 - To write your own anchor, use the `link` click handler: `<a href="/about" onClick={link}>About</a>`. With a `base`, write `href={href('/about')}`. `isActive('/about')` tells you whether to mark it.
-- `navigate('/users/2')` navigates from code. `navigate('/login', { replace: true })` replaces the current entry, and `{ scroll: false }` keeps the scroll position. Relative URLs such as `navigate('?tab=2')` work too.
+- `navigate('/users/2')` navigates from code. `navigate('/login', { replace: true })` replaces the current entry, and `{ scroll: false }` keeps the scroll position. A URL with a `#hash` scrolls to that element instead of the top. On back/forward, the router restores the scroll position the page had, once the route has rendered. Relative URLs such as `navigate('?tab=2')` work too.
 - Clicks with a modifier key, a middle click, `target="_blank"`, `download` and links to other sites are left to the browser.
 - Query parameters synced with `state(v, { url: 'tab' })` follow navigation, including back and forward.
 

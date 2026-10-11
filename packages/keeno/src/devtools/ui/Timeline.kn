@@ -1,0 +1,61 @@
+<script lang="ts">
+  // The Timeline tab: state writes and errors, newest first.
+  import IconButton from './IconButton.kn'
+  import TimelineEvent from './TimelineEvent.kn'
+  import { preview, type DevEvent } from '../shared'
+
+  const { events, paused, query, onQuery, onPause, onClear } = props<{
+    events: DevEvent[]
+    paused: boolean
+    query: string
+    onQuery: (q: string) => void
+    onPause: () => void
+    onClear: () => void
+  }>()
+
+  const shown = derived(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return events
+    return events.filter((e) =>
+      (e.type === 'write'
+        ? `${e.componentName ?? 'store'} ${e.name} ${preview(e.old)} ${preview(e.next)} ${e.source}`
+        : `${e.componentName ?? ''} ${preview(e.error)}`
+      )
+        .toLowerCase()
+        .includes(q),
+    )
+  })
+</script>
+
+<div class="view">
+  <div class="toolbar">
+    <IconButton
+      icon={paused ? 'rec' : 'pause'}
+      title={paused ? 'Resume recording' : 'Pause recording'}
+      danger={paused}
+      onClick={() => onPause()}
+    />
+    <input
+      class="search"
+      type="search"
+      placeholder="Filter by component, state or value…"
+      spellcheck="false"
+      value={query}
+      onInput={(e) => onQuery((e.currentTarget as HTMLInputElement).value)}
+    />
+    <span class="muted small">
+      {shown.length} event{shown.length === 1 ? '' : 's'}
+    </span>
+    <IconButton icon="trash" title="Clear" onClick={() => onClear()} />
+  </div>
+  <div class="timeline">
+    {shown.slice(0, 300).map((e) => <TimelineEvent key={e.seq} event={e} />)}
+    {shown.length === 0 && (
+      <div class="empty">{query ? 'No event matches.' : 'State changes show up here as they happen.'}</div>
+    )}
+  </div>
+</div>
+
+<style>
+  .timeline { flex: 1; overflow: auto; }
+</style>

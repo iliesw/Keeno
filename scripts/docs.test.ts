@@ -1,5 +1,5 @@
 // Keep the docs honest: every doc is linked from llms.txt, llms-full.txt is current, and every
-// `.lx` example in the docs compiles.
+// `.kn` example in the docs compiles.
 import { describe, expect, test } from 'bun:test'
 import { readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
@@ -20,9 +20,9 @@ describe('docs', () => {
     expect(read('llms-full.txt')).toBe(buildFull())
   })
 
-  // Fences written as ```html Name.lx are compiled.
+  // Fences written as ```html Name.kn are compiled.
   const examples = docs.flatMap((doc) =>
-    [...read(`docs/${doc}`).matchAll(/```html (\S+\.lx)\n([\s\S]*?)```/g)].map((m) => ({ doc, name: m[1], code: m[2] })),
+    [...read(`docs/${doc}`).matchAll(/```html (\S+\.kn)\n([\s\S]*?)```/g)].map((m) => ({ doc, name: m[1], code: m[2] })),
   )
 
   test('there are compiled examples', () => {

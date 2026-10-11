@@ -1,7 +1,7 @@
 // Bun Snapshot v1, https://bun.sh/docs/test/snapshots
 
 exports[`script rewrite a bare state read becomes x.get() 1`] = `
-"import { state } from "@inflector/lux";
+"import { state } from "@inflector/keeno";
 export default function Test($$props) {
   const count = state(0);
   console.log(count.get() + 1);
@@ -10,7 +10,7 @@ export default function Test($$props) {
 `;
 
 exports[`script rewrite reserved members are not unwrapped; other members are 1`] = `
-"import { state } from "@inflector/lux";
+"import { state } from "@inflector/keeno";
 export default function Test($$props) {
   const todos = state([]);
   todos.set([...todos.get(), 1]);
@@ -24,7 +24,7 @@ export default function Test($$props) {
 `;
 
 exports[`script rewrite the deps array of update() is not rewritten 1`] = `
-"import { state, update } from "@inflector/lux";
+"import { state, update } from "@inflector/keeno";
 export default function Test($$props) {
   const a = state(1);
   const b = state(2);
@@ -34,7 +34,7 @@ export default function Test($$props) {
 `;
 
 exports[`script rewrite props destructuring reads $$props 1`] = `
-"import { insert as _$insert, template as _$template } from "@inflector/lux/internal";
+"import { insert as _$insert, template as _$template } from "@inflector/keeno/internal";
 const _tmpl$1 = _$template("<p></p>");
 export default function Test($$props) {
   $$props.onSave($$props.title, $$props["aria-label"], $$props.size ?? 3);
@@ -61,16 +61,30 @@ export default function MyWidget($$props) {
 `;
 
 exports[`template codegen static markup becomes one hoisted template 1`] = `
-"import { template as _$template } from "@inflector/lux/internal";
+"import { template as _$template } from "@inflector/keeno/internal";
 const _tmpl$1 = _$template("<div><h1 id=\\"t\\">Hello <b>world</b></h1></div>");
 export default function Test($$props) {
   return _tmpl$1();
 }"
 `;
 
+exports[`template codegen text expressions use insert with comment markers 1`] = `
+"import { state } from "@inflector/keeno";
+import { insert as _$insert, template as _$template } from "@inflector/keeno/internal";
+const _tmpl$1 = _$template("<h1><!---->: </h1>");
+export default function Test($$props) {
+  const count = state(0);
+  const _el$1 = _tmpl$1();
+  const _el$2 = _el$1.firstChild;
+  _$insert(_el$1, () => $$props.title, _el$2);
+  _$insert(_el$1, () => count.get());
+  return _el$1;
+}"
+`;
+
 exports[`template codegen dynamic attributes, boolean attributes, aliases 1`] = `
-"import { state } from "@inflector/lux";
-import { attr as _$attr, template as _$template } from "@inflector/lux/internal";
+"import { state } from "@inflector/keeno";
+import { attr as _$attr, template as _$template } from "@inflector/keeno/internal";
 const _tmpl$1 = _$template("<label for=\\"x\\" class=\\"a\\" hidden data-n=\\"1\\">x</label>");
 export default function Test($$props) {
   const t = state("");
@@ -81,8 +95,8 @@ export default function Test($$props) {
 `;
 
 exports[`template codegen events become on(); non-literal handlers are read lazily 1`] = `
-"import { state } from "@inflector/lux";
-import { on as _$on, template as _$template } from "@inflector/lux/internal";
+"import { state } from "@inflector/keeno";
+import { on as _$on, template as _$template } from "@inflector/keeno/internal";
 const _tmpl$1 = _$template("<button>+</button>");
 export default function Test($$props) {
   const n = state(0);
@@ -96,8 +110,8 @@ export default function Test($$props) {
 `;
 
 exports[`template codegen &&, || and ternaries become and/or/cond 1`] = `
-"import { state } from "@inflector/lux";
-import { and as _$and, insert as _$insert, or as _$or, cond as _$cond, template as _$template } from "@inflector/lux/internal";
+"import { state } from "@inflector/keeno";
+import { and as _$and, insert as _$insert, or as _$or, cond as _$cond, template as _$template } from "@inflector/keeno/internal";
 const _tmpl$1 = _$template("<p class=\\"warn\\">big!</p>");
 const _tmpl$2 = _$template("<b>yes</b>");
 const _tmpl$3 = _$template("<i>no</i>");
@@ -117,8 +131,8 @@ export default function Test($$props) {
 `;
 
 exports[`template codegen .map with a key becomes mapKeyed with the row param read as a state 1`] = `
-"import { state } from "@inflector/lux";
-import { attr as _$attr, insert as _$insert, mapKeyed as _$mapKeyed, template as _$template } from "@inflector/lux/internal";
+"import { state } from "@inflector/keeno";
+import { attr as _$attr, insert as _$insert, mapKeyed as _$mapKeyed, template as _$template } from "@inflector/keeno/internal";
 const _tmpl$1 = _$template("<li></li>");
 const _tmpl$2 = _$template("<ul></ul>");
 export default function Test($$props) {
@@ -135,8 +149,8 @@ export default function Test($$props) {
 `;
 
 exports[`template codegen .map with index and destructuring 1`] = `
-"import { state } from "@inflector/lux";
-import { insert as _$insert, mapKeyed as _$mapKeyed, template as _$template } from "@inflector/lux/internal";
+"import { state } from "@inflector/keeno";
+import { insert as _$insert, mapKeyed as _$mapKeyed, template as _$template } from "@inflector/keeno/internal";
 const _tmpl$1 = _$template("<li><!---->: </li>");
 const _tmpl$2 = _$template("<ul></ul>");
 export default function Test($$props) {
@@ -157,9 +171,9 @@ export default function Test($$props) {
 `;
 
 exports[`template codegen components get getters for dynamic props and plain values otherwise 1`] = `
-"import { state } from "@inflector/lux";
-import { createComponent as _$createComponent } from "@inflector/lux/internal";
-import Item from "./Item.lx";
+"import { state } from "@inflector/keeno";
+import { createComponent as _$createComponent } from "@inflector/keeno/internal";
+import Item from "./Item.kn";
 export default function Test($$props) {
   const t = state({
     text: ""
@@ -183,9 +197,9 @@ export default function Test($$props) {
 `;
 
 exports[`template codegen component children arrive as a children function 1`] = `
-"import { state } from "@inflector/lux";
-import { insert as _$insert, createComponent as _$createComponent, template as _$template } from "@inflector/lux/internal";
-import Card from "./Card.lx";
+"import { state } from "@inflector/keeno";
+import { insert as _$insert, createComponent as _$createComponent, template as _$template } from "@inflector/keeno/internal";
+import Card from "./Card.kn";
 const _tmpl$1 = _$template("<p></p>");
 export default function Test($$props) {
   const n = state(0);
@@ -201,8 +215,8 @@ export default function Test($$props) {
 `;
 
 exports[`template codegen nested element refs are walked before any insert 1`] = `
-"import { state } from "@inflector/lux";
-import { insert as _$insert, template as _$template } from "@inflector/lux/internal";
+"import { state } from "@inflector/keeno";
+import { insert as _$insert, template as _$template } from "@inflector/keeno/internal";
 const _tmpl$1 = _$template("<div><p></p><p><b></b></p></div>");
 export default function Test($$props) {
   const a = state(1);
@@ -218,15 +232,15 @@ export default function Test($$props) {
 `;
 
 exports[`template codegen the plan example compiles 1`] = `
-"import { state, init, update, destroy } from "@inflector/lux";
-import { createComponent as _$createComponent, insert as _$insert, on as _$on, bind as _$bind, and as _$and, mapKeyed as _$mapKeyed, template as _$template } from "@inflector/lux/internal";
-import Item from './Item.lx';
-const _tmpl$1 = _$template("<p class=\\"warn lux-f6a61950\\">big!</p>");
-const _tmpl$2 = _$template("<h1 class=\\"lux-f6a61950\\"><!---->: </h1>");
-const _tmpl$3 = _$template("<button class=\\"lux-f6a61950\\">+1</button>");
-const _tmpl$4 = _$template("<input class=\\"lux-f6a61950\\">");
-const _tmpl$5 = _$template("<ul class=\\"lux-f6a61950\\"></ul>");
-const _tmpl$6 = _$template("<button class=\\"lux-f6a61950\\">save</button>");
+"import { state, init, update, destroy } from "@inflector/keeno";
+import { createComponent as _$createComponent, insert as _$insert, on as _$on, bind as _$bind, and as _$and, mapKeyed as _$mapKeyed, template as _$template } from "@inflector/keeno/internal";
+import Item from './Item.kn';
+const _tmpl$1 = _$template("<p class=\\"warn keeno-eeb755d9\\">big!</p>");
+const _tmpl$2 = _$template("<h1 class=\\"keeno-eeb755d9\\"><!---->: </h1>");
+const _tmpl$3 = _$template("<button class=\\"keeno-eeb755d9\\">+1</button>");
+const _tmpl$4 = _$template("<input class=\\"keeno-eeb755d9\\">");
+const _tmpl$5 = _$template("<ul class=\\"keeno-eeb755d9\\"></ul>");
+const _tmpl$6 = _$template("<button class=\\"keeno-eeb755d9\\">save</button>");
 export default function Counter($$props) {
   const count = state(0);
   const todos = state<{
@@ -266,7 +280,7 @@ export default function Counter($$props) {
       get text() {
         return t.get().text;
       }
-    }, "lux-f6a61950")));
+    }, "keeno-eeb755d9")));
     return _el$6;
   })(), (() => {
     const _el$7 = _tmpl$6();
@@ -278,14 +292,14 @@ export default function Counter($$props) {
 
 exports[`template codegen the plan example compiles 2`] = `
 "
-  h1.lux-f6a61950 { color: teal }          /* scoped to this component */
+  h1.keeno-eeb755d9 { color: teal }          /* scoped to this component */
   body { margin: 0 } /* escape hatch */
 "
 `;
 
 exports[`derived, history members, spread, class arrays spread on a DOM element: all attributes go through spread() in order 1`] = `
-"import { state } from "@inflector/lux";
-import { mergeProps as _$mergeProps, spread as _$spread, bind as _$bind, template as _$template } from "@inflector/lux/internal";
+"import { state } from "@inflector/keeno";
+import { mergeProps as _$mergeProps, spread as _$spread, bind as _$bind, template as _$template } from "@inflector/keeno/internal";
 const _tmpl$1 = _$template("<input>");
 export default function Test($$props) {
   const attrs = state({});
@@ -302,20 +316,6 @@ export default function Test($$props) {
     onInput: log
   }));
   _$bind(_el$1, "value", name);
-  return _el$1;
-}"
-`;
-
-exports[`template codegen text expressions use insert with comment markers 1`] = `
-"import { state } from "@inflector/lux";
-import { insert as _$insert, template as _$template } from "@inflector/lux/internal";
-const _tmpl$1 = _$template("<h1><!---->: </h1>");
-export default function Test($$props) {
-  const count = state(0);
-  const _el$1 = _tmpl$1();
-  const _el$2 = _el$1.firstChild;
-  _$insert(_el$1, () => $$props.title, _el$2);
-  _$insert(_el$1, () => count.get());
   return _el$1;
 }"
 `;

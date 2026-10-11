@@ -1,0 +1,23 @@
+<script lang="ts">
+  import Row from './Row.kn'
+
+  const items = state([
+    { id: 1, name: 'apples', qty: 3 },
+    { id: 2, name: 'pears', qty: 5 },
+  ])
+  const total = derived(() => items.reduce((n, i) => n + i.qty, 0))
+</script>
+
+<table>
+  <caption>Stock</caption>
+  <thead>
+    <tr><th>Name</th><th>Qty</th></tr>
+  </thead>
+  <tbody>
+    {items.map((i) => <Row key={i.id} name={i.name} qty={i.qty} />)}
+  </tbody>
+  <tfoot>
+    <tr><td>Total</td><td class="total">{total}</td></tr>
+  </tfoot>
+</table>
+<button class="more" onClick={() => items.set(items.map((i) => (i.id === 1 ? { ...i, qty: i.qty + 1 } : i)))}>more</button>

@@ -33,7 +33,7 @@ console.log(`Prerendered ${routes().length} pages to dist/client`)
 const site = process.env.SITE_URL?.replace(/\/+$/, '')
 let robots = 'User-agent: *\nAllow: /\n'
 if (site) {
-  const urls = (routes() as string[]).filter((r) => r !== '/404').map((r) => `  <url><loc>${site}${r === '/' ? '/' : r}</loc></url>`)
+  const urls = (routes() as string[]).filter((r) => r !== '/404' && r !== '/docs').map((r) => `  <url><loc>${site}${r === '/' ? '/' : r}</loc></url>`)
   writeFileSync(dist('client/sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join('\n')}\n</urlset>\n`)
   robots += `Sitemap: ${site}/sitemap.xml\n`
   console.log(`Wrote sitemap.xml for ${site}`)

@@ -1,0 +1,143 @@
+<script lang="ts">
+  import TodoItem from './TodoItem.kn'
+
+  type Todo = { id: number; text: string; done: boolean }
+  type Filter = 'all' | 'active' | 'done'
+  const FILTERS: Filter[] = ['all', 'active', 'done']
+
+  // Saved in localStorage and synced across tabs; undo/redo over the last 50 changes.
+  const todos = state<Todo[]>(
+    [
+      { id: 1, text: 'Read the plan', done: true },
+      { id: 2, text: 'Build Keeno', done: false },
+    ],
+    { persist: 'keeno-todos', history: 50 },
+  )
+  const draft = state('')
+  const showList = state(true)
+  // ?filter=… in the URL: back and forward switch filters.
+  const filter = state<Filter>('all', {
+    url: 'filter',
+    validate: (v, prev) => (FILTERS.includes(v) ? v : prev),
+  })
+  // ?q=… in the URL, updated 200 ms after typing stops.
+  const search = state('', { url: { param: 'q', replace: true }, debounce: 200 })
+
+  const visible = derived(() =>
+    todos.filter(
+      (t) =>
+        (filter === 'all' || (filter === 'done') === t.done) &&
+        t.text.toLowerCase().includes(search.toLowerCase()),
+    ),  
+  )
+  const remaining = derived(() => todos.filter((t) => !t.done).length)
+  let nextId = Math.max(0, ...todos.map((t) => t.id)) + 1
+
+  function add() {
+    const text = draft.trim()
+    if (!text) return
+    todos.set([...todos, { id: nextId++, text, done: false }])
+    draft.set('')
+  }
+  const toggle = (id: number) => todos.set(todos.map((t) => (t.id === id ? { ...t, done: !t.done } : t)))
+  const remove = (id: number) => todos.set(todos.filter((t) => t.id !== id))
+
+  init(() => console.log('[App] init'))
+</script>
+
+<main>
+  <h1>Todos</h1>
+  <form
+    onSubmit={(e) => {
+      e.preventDefault()
+      add()
+    }}
+  >
+    <input class="draft" placeholder="What needs doing?" bind:value={draft} />
+    <button type="submit">Add</button>
+    <button type="button" class="suggest" onClick={() => draft.set('Write docs')}>Suggest</button>
+  </form>
+  <p class="preview">Draft: {draft || '(empty)'}</p>
+
+  <div class="toolbar">
+    {FILTERS.map((f) => (
+      <button key={f} type="button" class={['filter', filter === f && 'selected']} onClick={() => filter.set(f)}>
+        {f}
+      </button>
+    ))}
+    <input class="search" type="search" placeholder="Search" bind:value={search} />
+  </div>
+  <div class="toolbar">
+    <button type="button" class="undo" disabled={!todos.canUndo} onClick={() => todos.undo()}>Undo</button>
+    <button type="button" class="redo" disabled={!todos.canRedo} onClick={() => todos.redo()}>Redo</button>
+    <button type="button" class="toggle-list" onClick={() => showList.set(!showList)}>
+      {showList ? 'Hide' : 'Show'} list
+    </button>
+  </div>
+  {showList && (
+    <ul>
+      {visible.map((t) => (
+        <TodoItem key={t.id} todo={t} onToggle={toggle} onRemove={remove} />
+      ))}
+    </ul>
+  )}
+  <p class="count">{remaining} of {todos.length} left</p>
+</main>
+
+<style>
+  :global(body) {
+    margin: 0;
+    font-family: system-ui, sans-serif;
+    background: #f6f7f9;
+  }
+  main {
+    max-width: 28rem;
+    margin: 2rem auto;
+    padding: 1.5rem;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 4px rgb(0 0 0 / 0.1);
+  }
+  h1 {
+    margin-top: 0;
+    color: teal;
+  }
+  form,
+  .toolbar {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+  input {
+    flex: 1;
+    padding: 0.4rem 0.6rem;
+  }
+  button {
+    background: teal;
+    color: white;
+    border: 0;
+    border-radius: 6px;
+    padding: 0.4rem 0.8rem;
+    cursor: pointer;
+  }
+  button:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+  .filter {
+    background: #e6f2f2;
+    color: teal;
+    text-transform: capitalize;
+  }
+  .filter.selected {
+    background: teal;
+    color: white;
+  }
+  ul {
+    list-style: none;
+    padding: 0;
+  }
+  p {
+    color: #555;
+  }
+</style>

@@ -1,15 +1,15 @@
 // Builds the preview iframe's document from compiled files. The iframe is sandboxed (its own
 // opaque origin), so it creates the module blobs itself: imports between playground files are
 // rewritten to bare `@pg/` specifiers, which an import map resolves to those blobs, next to the
-// Lux runtime. Other bare imports load from esm.sh.
-import { lux, router } from 'virtual:lux-runtime'
+// Keeno runtime. Other bare imports load from esm.sh.
+import { keeno, router } from 'virtual:keeno-runtime'
 import type { CompiledFile } from './types'
 
-export const ENTRY = 'App.lx'
+export const ENTRY = 'App.kn'
 
 const SPECIFIER = /(\bimport\s*(?:[\w*{}\s,$]+\s*from\s*)?|\bexport\s*(?:[\w*{}\s,$]+\s*from\s*)|\bimport\s*\(\s*)(['"])([^'"\n]+)\2/g
 
-/** `./Card.lx` from `App.lx` → `Card.lx` (playground files are flat, but allow `./x/../`). */
+/** `./Card.kn` from `App.kn` → `Card.kn` (playground files are flat, but allow `./x/../`). */
 function resolveRelative(spec: string, names: Set<string>): string | null {
   const parts: string[] = []
   for (const p of spec.split('/')) {
@@ -18,7 +18,7 @@ function resolveRelative(spec: string, names: Set<string>): string | null {
     else parts.push(p)
   }
   const base = parts.join('/')
-  for (const candidate of [base, `${base}.lx`, `${base}.ts`, `${base}.js`]) if (names.has(candidate)) return candidate
+  for (const candidate of [base, `${base}.kn`, `${base}.ts`, `${base}.js`]) if (names.has(candidate)) return candidate
   return null
 }
 
@@ -47,13 +47,13 @@ export function buildDocument(files: CompiledFile[], options: RunnerOptions): st
         }
         return `${head}${q}@pg/${target}${q}`
       }
-      if (!spec.startsWith('@inflector/lux') && !/^(https?:|data:|blob:)/.test(spec)) externals.add(spec)
+      if (!spec.startsWith('@inflector/keeno') && !/^(https?:|data:|blob:)/.test(spec)) externals.add(spec)
       return all
     })
   }
   const css = files.map((f) => f.css).filter(Boolean).join('\n')
   const payload = {
-    lux,
+    keeno,
     router,
     modules,
     externals: [...externals],
@@ -67,9 +67,9 @@ export function buildDocument(files: CompiledFile[], options: RunnerOptions): st
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>${BASE_CSS}</style>
-<style id="lux-css">${css.replace(/<\/style/gi, '<\\/style')}</style>
+<style id="keeno-css">${css.replace(/<\/style/gi, '<\\/style')}</style>
 ${options.tailwind ? '<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>\n<style type="text/tailwindcss">@custom-variant dark (&:where(.dark, .dark *));</style>' : ''}
-<script type="application/json" id="lux-payload">${json}</script>
+<script type="application/json" id="keeno-payload">${json}</script>
 <script>${BOOT}</script>
 </head>
 <body><div id="app"></div></body>
@@ -98,7 +98,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .
 // Runs inside the iframe: forwards the console and errors to the playground, swaps the storage
 // APIs (unavailable in an opaque origin) for in-memory ones, then loads the modules.
 const BOOT = `(() => {
-  const send = (msg) => parent.postMessage(Object.assign({ __lux: true }, msg), '*')
+  const send = (msg) => parent.postMessage(Object.assign({ __keeno: true }, msg), '*')
   const fmt = (v, depth = 0) => {
     if (typeof v === 'string') return depth ? JSON.stringify(v) : v
     if (v instanceof Error) return (v.name || 'Error') + ': ' + v.message
@@ -133,23 +133,23 @@ const BOOT = `(() => {
     const a = e.target.closest && e.target.closest('a[href]')
     if (a && !a.target && /^https?:/.test(a.href)) { e.preventDefault(); window.open(a.href, '_blank') }
   })
-  globalThis.__LUX_DEV__ = true
-  const p = JSON.parse(document.getElementById('lux-payload').textContent)
+  globalThis.__KEENO_DEV__ = true
+  const p = JSON.parse(document.getElementById('keeno-payload').textContent)
   for (const m of p.missing) console.error(m)
   const blob = (code) => URL.createObjectURL(new Blob([code], { type: 'text/javascript' }))
-  const runtime = blob(p.lux)
-  const imports = { '@inflector/lux': runtime, '@inflector/lux/internal': runtime, '@inflector/lux-router': blob(p.router) }
-  for (const name of p.externals) imports[name] = 'https://esm.sh/' + name + '?external=@inflector/lux'
+  const runtime = blob(p.keeno)
+  const imports = { '@inflector/keeno': runtime, '@inflector/keeno/internal': runtime, '@inflector/keeno-router': blob(p.router) }
+  for (const name of p.externals) imports[name] = 'https://esm.sh/' + name + '?external=@inflector/keeno'
   for (const [name, code] of Object.entries(p.modules)) imports[name] = blob(code)
   const map = document.createElement('script')
   map.type = 'importmap'
   map.textContent = JSON.stringify({ imports })
   document.head.append(map)
   const start = performance.now()
-  import('@inflector/lux').then((lux) =>
+  import('@inflector/keeno').then((keeno) =>
     import(p.entry).then((m) => {
-      if (typeof m.default !== 'function') throw new Error('App.lx must be a component')
-      lux.mount(m.default, document.getElementById('app'))
+      if (typeof m.default !== 'function') throw new Error('App.kn must be a component')
+      keeno.mount(m.default, document.getElementById('app'))
       send({ type: 'mounted', ms: performance.now() - start })
     }),
   ).catch((err) => { console.error(err); send({ type: 'mounted', ms: performance.now() - start }) })

@@ -1,29 +1,29 @@
-// Volar language plugin for .lx files.
+// Volar language plugin for .kn files.
 import type { LanguagePlugin } from '@volar/language-core'
 import type {} from '@volar/typescript'
 import type * as TS from 'typescript'
 import type { URI } from 'vscode-uri'
-import { LuxVirtualCode } from './virtualCode'
+import { KeenoVirtualCode } from './virtualCode'
 
-export { generateScript, LuxVirtualCode } from './virtualCode'
+export { generateScript, KeenoVirtualCode } from './virtualCode'
 
-export function createLuxLanguagePlugin(ts: typeof TS): LanguagePlugin<URI> {
+export function createKeenoLanguagePlugin(ts: typeof TS): LanguagePlugin<URI> {
   return {
     getLanguageId(uri) {
-      if (uri.path.endsWith('.lx')) return 'lux'
+      if (uri.path.endsWith('.kn')) return 'keeno'
     },
     createVirtualCode(_uri, languageId, snapshot) {
-      if (languageId === 'lux') return new LuxVirtualCode(snapshot, ts)
+      if (languageId === 'keeno') return new KeenoVirtualCode(snapshot, ts)
     },
     typescript: {
-      extraFileExtensions: [{ extension: 'lx', isMixedContent: true, scriptKind: ts.ScriptKind.Deferred }],
+      extraFileExtensions: [{ extension: 'kn', isMixedContent: true, scriptKind: ts.ScriptKind.Deferred }],
       getServiceScript(root) {
         const code = root.embeddedCodes?.find((c) => c.id === 'script')
         if (!code) return
         const isTs = code.languageId === 'typescriptreact'
         return { code, extension: isTs ? '.tsx' : '.jsx', scriptKind: isTs ? ts.ScriptKind.TSX : ts.ScriptKind.JSX }
       },
-      // .lx markup is JSX typed by the global JSX namespace from `@inflector/lux/lx`.
+      // .kn markup is JSX typed by the global JSX namespace from `@inflector/keeno/kn`.
       resolveLanguageServiceHost(host) {
         return new Proxy(host, {
           get(target, key, receiver) {

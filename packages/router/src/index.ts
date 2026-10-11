@@ -1,6 +1,6 @@
-// Client-side router for Lux: <Router>, <Link>, the `link` click handler, navigate() and useRoute().
-import { State, createContext, derived, inject, provide, untrack, type Children, type Component } from '@inflector/lux'
-import { attr, callerScope, createComponent, insert, on, template } from '@inflector/lux/internal'
+// Client-side router for Keeno: <Router>, <Link>, the `link` click handler, navigate() and useRoute().
+import { State, createContext, derived, inject, provide, untrack, type Children, type Component } from '@inflector/keeno'
+import { attr, callerScope, createComponent, insert, on, template } from '@inflector/keeno/internal'
 
 export type Params = Record<string, string>
 
@@ -60,18 +60,64 @@ let listening = false
 /** The `base` of the browser's <Router>. A state, so links rendered before the router follow it. */
 const base = new State('')
 
+// Scroll positions of the history entries visited in this document, by URL. The router restores
+// them on back/forward itself: the browser would scroll before the new route has rendered.
+const scrollPositions = new Map<string, [number, number]>()
+const locKey = (l: Loc) => l.pathname + l.search + l.hash
+
+function saveScroll(l: Loc) {
+  if (typeof window.scrollY === 'number') scrollPositions.set(locKey(l), [window.scrollX, window.scrollY])
+}
+
+function setScrollRestoration(mode: 'auto' | 'manual') {
+  try {
+    if ('scrollRestoration' in history) history.scrollRestoration = mode
+  } catch {
+    // not supported
+  }
+}
+
+/** After back/forward: the saved position, else the `#hash` target, else the top. */
+function restoreScroll(l: Loc) {
+  const saved = scrollPositions.get(locKey(l))
+  if (!saved && l.hash) return scrollToHash(l.hash)
+  const run = () => {
+    try {
+      window.scrollTo(saved?.[0] ?? 0, saved?.[1] ?? 0)
+    } catch {
+      // not implemented (test DOMs)
+    }
+  }
+  if (typeof requestAnimationFrame === 'function') requestAnimationFrame(run)
+  else setTimeout(run, 0)
+}
+
 /** Start following the browser location, and pick up changes made without `navigate()`. */
 function sync() {
   if (!hasWindow) return
   current.set(readLocation())
   if (listening) return
   listening = true
-  window.addEventListener('popstate', () => current.set(readLocation()))
+  window.addEventListener('popstate', () => {
+    saveScroll(current.peek())
+    const next = readLocation()
+    current.set(next)
+    restoreScroll(next)
+  })
+  setScrollRestoration('manual')
+  // Leaving the document (reload, another site): let the browser restore this entry natively.
+  window.addEventListener('pagehide', () => setScrollRestoration('auto'))
+  window.addEventListener('pageshow', () => setScrollRestoration('manual'))
 }
 
 function normalizeBase(b: string | undefined): string {
   if (!b || b === '/') return ''
   return '/' + b.replace(/^\/+|\/+$/g, '')
+}
+
+/** True if `pathname` is the app at `b` or below it. */
+function underBase(pathname: string, b: string): boolean {
+  return !b || pathname === b || pathname.startsWith(b + '/')
 }
 
 function stripBase(pathname: string, b: string): string {
@@ -80,9 +126,25 @@ function stripBase(pathname: string, b: string): string {
   return pathname.startsWith(b + '/') ? pathname.slice(b.length) : pathname
 }
 
+function withBase(b: string, path: string): string {
+  // `//host` would be a URL to another site: an app path always has a single leading slash.
+  return path.startsWith('/') ? b + '/' + path.replace(/^\/+/, '') : path
+}
+
 /** The URL for an app path, with the router's `base` in front: `href('/users/1')`. */
 export function href(path: string): string {
-  return path.startsWith('/') ? base.get() + path : path
+  return withBase(base.get(), path)
+}
+
+/** Scroll to the element a `#hash` names, once the new route has rendered. */
+function scrollToHash(hash: string) {
+  const id = decode(hash.slice(1))
+  const run = () => {
+    const el = id && document.getElementById(id)
+    if (el && typeof el.scrollIntoView === 'function') el.scrollIntoView()
+  }
+  if (typeof requestAnimationFrame === 'function') requestAnimationFrame(run)
+  else setTimeout(run, 0)
 }
 
 export interface NavigateOptions {
@@ -96,18 +158,22 @@ export interface NavigateOptions {
 
 /** Go to an app path (`/users/1`, prefixed with `base`) or a relative URL (`?tab=2`). */
 export function navigate(to: string, options: NavigateOptions = {}): void {
-  if (!hasWindow) throw new Error('[lux-router] navigate() only works in the browser')
+  if (!hasWindow) throw new Error('[keeno-router] navigate() only works in the browser')
   const url = new URL(href(to), location.href)
   if (url.origin !== location.origin) {
     location.assign(url.href)
     return
   }
+  saveScroll(current.peek())
   if (options.replace) history.replaceState(options.state ?? null, '', url)
   else history.pushState(options.state ?? null, '', url)
-  // Let everything that follows the URL (including `state(v, { url })`) see the change.
-  window.dispatchEvent(new PopStateEvent('popstate', { state: options.state ?? null }))
+  // Let everything that follows the URL (including `state(v, { url })`) see the change. Not a
+  // `popstate`: other code would take that for a back/forward navigation.
+  window.dispatchEvent(new CustomEvent('keeno:navigate', { detail: { url: url.href, state: options.state ?? null } }))
   current.set(readLocation())
-  if (options.scroll !== false && !url.hash && typeof window.scrollTo === 'function') {
+  if (options.scroll === false) return
+  if (url.hash) scrollToHash(url.hash)
+  else if (typeof window.scrollTo === 'function') {
     try {
       window.scrollTo(0, 0)
     } catch {
@@ -131,8 +197,10 @@ function isExternalClick(e: MouseEvent, a: HTMLAnchorElement): boolean {
 export function link(e: MouseEvent): void {
   const a = (e.currentTarget as Element | null)?.closest('a') as HTMLAnchorElement | null
   if (!a || isExternalClick(e, a)) return
-  e.preventDefault()
   const url = new URL(a.href, location.href)
+  // Outside the app's base: another app on this origin, so a normal page load.
+  if (!underBase(url.pathname, base.peek())) return
+  e.preventDefault()
   navigate(stripBase(url.pathname, base.peek()) + url.search + url.hash, { replace: a.hasAttribute('data-replace') })
 }
 
@@ -187,6 +255,8 @@ export function matchPath(pattern: string | RouteDefinition, path: string): Para
 // Router
 
 const RouteContext = createContext<Route | null>(null, 'route')
+/** The `base` of the closest <Router>: on the server, links can't use the shared browser one. */
+const BaseContext = createContext<string | null>(null, 'route-base')
 
 function pathIsActive(here: string, path: string, exact: boolean): boolean {
   if (here === path) return true
@@ -221,9 +291,12 @@ export function Router(props: RouterProps): unknown {
     base.set(routerBase)
     sync()
   }
+  // URLs outside the base aren't this app's: they match nothing.
+  const outside = (l: Loc) => !underBase(l.pathname, routerBase)
   const info = derived(() => {
     const l = loc.get()
     const path = stripBase(l.pathname, routerBase)
+    if (outside(l)) return { l, path, matched: null, params: {} as Params }
     for (const r of props.routes) {
       const params = matchPath(r, path)
       if (params) return { l, path, matched: r, params }
@@ -249,6 +322,7 @@ export function Router(props: RouterProps): unknown {
     },
   }
   provide(RouteContext, route)
+  provide(BaseContext, routerBase)
   return () => {
     const r = matched.get()
     if (!r) return props.fallback ? untrack(props.fallback) : null
@@ -265,7 +339,7 @@ export function Router(props: RouterProps): unknown {
 /** The current route of the closest `<Router>` (call it while the component is created). */
 export function useRoute(): Route {
   const route = inject(RouteContext)
-  if (!route) throw new Error('[lux-router] useRoute() must be called inside a <Router>')
+  if (!route) throw new Error('[keeno-router] useRoute() must be called inside a <Router>')
   return route
 }
 
@@ -296,12 +370,13 @@ export function Link(props: LinkProps): unknown {
   const scope = callerScope()
   // Inside a <Router>, follow its location (which is the request URL when rendering on the server).
   const route = inject(RouteContext)
+  const routerBase = inject(BaseContext)
   if (!route) sync()
   const active = derived(() => {
     const path = props.href.split(/[?#]/)[0]
     return route ? pathIsActive(route.path, path, !!props.exact) : isActive(path, props.exact)
   })
-  attr(a, 'href', () => href(props.href))
+  attr(a, 'href', () => withBase(routerBase ?? base.get(), props.href))
   attr(a, 'class', () => [props.class, active.get() && (props.activeClass ?? 'active')], scope ?? undefined)
   attr(a, 'aria-current', () => (active.get() ? 'page' : null))
   on(a, 'click', (e: MouseEvent) => {

@@ -1,0 +1,66 @@
+<script lang="ts">
+  // A state write (with what changed) or an error, in the timeline.
+  import Change from './Change.kn'
+  import IconButton from './IconButton.kn'
+  import { diff, formatTime, preview, useActions, type DevEvent } from '../shared'
+
+  const { event } = props<{ event: DevEvent }>()
+  const actions = useActions()
+
+  const write = derived(() => (event.type === 'write' ? event : null))
+  const failure = derived(() => (event.type === 'error' ? event : null))
+  const changes = derived(() => (write ? diff(write.old, write.next, '', 0) : []))
+</script>
+
+<div class={['event', failure && 'error']}>
+  <span class="time">{formatTime(event.time)}</span>
+  {event.component !== null ? (
+    <button class="link tag" onClick={() => actions.select(event.component, true)}>
+      {'<'}
+      <span class="name">{event.componentName ?? '?'}</span>
+      {'>'}
+    </button>
+  ) : (
+    <span class="store-mark" title="Store">
+      ◆
+    </span>
+  )}
+  {failure && <span class="v-err grow">{preview(failure.error)}</span>}
+  {write && <span class="ev-name">{write.name}</span>}
+  {write && (
+    <span class="changes">
+      {changes.slice(0, 3).map((c) => <Change key={c.path} change={c} />)}
+      {changes.length > 3 && <span class="muted small">+{changes.length - 3} more</span>}
+    </span>
+  )}
+  {write && write.source !== 'local' && <span class={['badge', `src-${write.source}`]}>{write.source}</span>}
+  {write && (
+    <IconButton
+      icon="revert"
+      small
+      extra="revert"
+      title={`Set ${write.name} back to ${preview(write.old)}`}
+      onClick={() => actions.api.set(write!.signal, write!.old)}
+    />
+  )}
+</div>
+
+<style>
+  .event {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    padding: 4px 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    flex-wrap: wrap;
+  }
+  .event:hover { background: var(--hover); }
+  .event.error { background: rgba(255, 107, 107, 0.07); }
+  .time { color: var(--muted); font-size: 10px; width: 62px; flex: none; font-variant-numeric: tabular-nums; }
+  .ev-name { color: var(--key); }
+  .changes { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+  .grow { flex: 1; }
+  /* The revert button (an IconButton) shows on hover. */
+  .event :global(.revert) { opacity: 0; }
+  .event:hover :global(.revert) { opacity: 1; }
+</style>

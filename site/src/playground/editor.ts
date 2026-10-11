@@ -1,5 +1,5 @@
 // The playground's code editor: CodeMirror 6 with one state per file (so each keeps its own
-// undo history), Lux-flavoured HTML highlighting for `.lx` files, and the site's colours.
+// undo history), Keeno-flavoured HTML highlighting for `.kn` files, and the site's colours.
 import { autocompletion, closeBrackets, closeBracketsKeymap, completionKeymap } from '@codemirror/autocomplete'
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands'
 import { css } from '@codemirror/lang-css'
@@ -25,7 +25,7 @@ import { tags as t } from '@lezer/highlight'
 const ts = javascript({ typescript: true, jsx: true })
 
 function language(name: string): Extension {
-  if (name.endsWith('.lx') || name.endsWith('.html')) {
+  if (name.endsWith('.kn') || name.endsWith('.html')) {
     return html({
       nestedLanguages: [{ tag: 'script', attrs: () => true, parser: ts.language.parser }],
       selfClosingTags: true,

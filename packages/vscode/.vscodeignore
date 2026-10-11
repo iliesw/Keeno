@@ -1,7 +1,7 @@
 **
 !dist/**
 !images/icon.png
-!images/file-icon.svg
+!images/file-icon-*.svg
 !syntaxes/**
 !language-configuration.json
 !package.json

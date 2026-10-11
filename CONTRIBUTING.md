@@ -2,7 +2,7 @@
 
 ## Setup
 
-Lux uses [Bun](https://bun.sh) 1.4 for packages, scripts and tests.
+Keeno uses [Bun](https://bun.sh) 1.4 for packages, scripts and tests.
 
 ```bash
 bun install
@@ -31,6 +31,10 @@ CI runs the unit tests and builds on Linux, Windows and macOS, the end-to-end te
 ## Scripts
 
 Every script must work on Windows. Don't use `&&`, `||`, `rm -rf` or inline `VAR=x` prefixes in `package.json` scripts. Write anything more complex as a Bun script in `scripts/`.
+
+## Dev tools panel
+
+The in-page dev tools panel is written in Keeno: its components are in `packages/keeno/src/devtools/ui/*.kn`. They are compiled into `packages/keeno/src/devtools/gen/` (committed, so the runtime package and its tests need no `.kn` loader). After editing a `.kn` file there, run `bun run devtools`; `bun run build` does it too, and a unit test fails when the generated files are out of date. Each component's styles are in its scoped `<style>` block. The generator collects them into `gen/styles.ts`, and the panel puts them in its shadow root together with `devtools/styles.ts`, which holds the theme tokens and the utility classes several components share (`.muted`, `.kv`, `.badge`, the value colors).
 
 ## Changes and releases
 

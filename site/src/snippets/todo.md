@@ -1,4 +1,4 @@
-```html Todos.lx
+```html Todos.kn
 <script lang="ts">
   const todos = state([{ id: 1, text: 'Write docs', done: false }])
   const draft = state('')

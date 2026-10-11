@@ -18,10 +18,10 @@ const dryRun = process.argv.includes('--dry-run')
 const ci = !!process.env.GITHUB_ACTIONS
 // npm rejects provenance from private repositories.
 const provenance = ci && process.env.REPO_VISIBILITY === 'public'
-const out = path.join(tmpdir(), 'lux-release')
+const out = path.join(tmpdir(), 'keeno-release')
 
 /** Publish order: dependencies first. */
-const npmPackages = ['lux', 'router', 'compiler', 'vite-plugin-lux', 'language-server', 'lux-check']
+const npmPackages = ['keeno', 'router', 'compiler', 'vite-plugin-keeno', 'language-server', 'keeno-check']
 
 const readPkg = (dir: string) => JSON.parse(readFileSync(path.join(root, 'packages', dir, 'package.json'), 'utf8'))
 
@@ -83,7 +83,7 @@ if (await hasTag(vscodeTag)) {
 } else {
   const cwd = path.join(root, 'packages', 'vscode')
   await $`bun run package`.cwd(cwd)
-  const vsix = path.join(cwd, 'lux-vscode.vsix')
+  const vsix = path.join(cwd, 'keeno-vscode.vsix')
   if (dryRun) {
     console.log(`[release] would publish ${vscodeTag} from ${vsix}`)
   } else {

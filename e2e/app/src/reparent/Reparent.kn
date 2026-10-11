@@ -1,0 +1,14 @@
+<script lang="ts">
+  import { reparentable } from '@inflector/keeno'
+  import Player from './Player.kn'
+
+  const expanded = state(false)
+  const player = reparentable(() => <Player />)
+  ;(window as any).toggle = () => expanded.set(!expanded)
+  ;(window as any).toCorner = () => player.moveTo('#corner')
+  ;(window as any).hide = () => player.remove()
+</script>
+
+<p class="native">{'moveBefore' in Element.prototype ? 'native' : 'fallback'}</p>
+{expanded ? <dialog open class="modal">{player}</dialog> : <aside class="sidebar">{player}</aside>}
+<div id="corner"></div>

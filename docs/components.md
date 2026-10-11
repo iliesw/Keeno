@@ -1,6 +1,6 @@
 # Components
 
-A `.lx` file is one component. It has up to three parts, in any order:
+A `.kn` file is one component. It has up to three parts, in any order:
 
 - `<script>` or `<script lang="ts">`: runs once per component instance.
 - Markup: everything outside `<script>` and `<style>`, parsed as JSX.
@@ -12,7 +12,7 @@ Imports and TypeScript `type`/`interface` declarations in the script stay at mod
 
 Call `props()` and destructure it. Destructured props stay reactive, because the compiler rewrites `title` to a getter read (`$$props.title`).
 
-```html Greeting.lx
+```html Greeting.kn
 <script lang="ts">
   const { name, greeting = 'Hello', onClose } = props<{ name: string; greeting?: string; onClose: () => void }>()
 </script>
@@ -21,17 +21,18 @@ Call `props()` and destructure it. Destructured props stay reactive, because the
 ```
 
 - Defaults use `??`: `greeting = 'Hello'` applies when the prop is `undefined` or `null`.
+- A default that creates an object (`items = []`, `{}`, a function, `new …`) is evaluated once, when `props()` runs, so every read gets the same object.
 - Renames work: `const { 'aria-label': label } = props()`.
 - Rest destructuring (`...rest`) is not supported. Use `const p = props()` and read `p.x` instead.
 - Callbacks are ordinary props.
 - Never reassign a destructured prop: that is a compile error.
-- The type argument also types the component for its parents: the editor and `lux-check` report a missing required prop or a prop of the wrong type where the component is used, and complete prop names. Without a type argument, props are `any`.
+- The type argument also types the component for its parents: the editor and `keeno-check` report a missing required prop or a prop of the wrong type where the component is used, and complete prop names. Without a type argument, props are `any`.
 
 Pass props like JSX. Dynamic values become getters, so the child sees updates:
 
-```html Parent.lx
+```html Parent.kn
 <script lang="ts">
-  import Greeting from './Greeting.lx'
+  import Greeting from './Greeting.kn'
   const who = state('Ada')
 </script>
 
@@ -44,9 +45,9 @@ Spread props work on components: `<Item {...item} selected={isSelected} />`. Lat
 
 Nested content arrives as the `children` prop, a function that renders it. Type it as `Children` and put `{children}` where it should appear:
 
-```html Card.lx
+```html Card.kn
 <script lang="ts">
-  import type { Children } from '@inflector/lux'
+  import type { Children } from '@inflector/keeno'
   const { title, children } = props<{ title: string; children?: Children }>()
 </script>
 
@@ -56,9 +57,9 @@ Nested content arrives as the `children` prop, a function that renders it. Type 
 </section>
 ```
 
-```html UsesCard.lx
+```html UsesCard.kn
 <script lang="ts">
-  import Card from './Card.lx'
+  import Card from './Card.kn'
 </script>
 
 <Card title="Hi"><p>Card body</p></Card>
@@ -81,7 +82,7 @@ Order:
 - Within a component, `init` and `update` run in declaration order.
 - On unmount, children are destroyed before parents, and callbacks run in registration order.
 
-```html Clock.lx
+```html Clock.kn
 <script lang="ts">
   const now = state(new Date())
   init(() => {

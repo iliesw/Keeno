@@ -1,0 +1,52 @@
+<script lang="ts">
+  import Icon from './Icon.kn'
+  import type { IconName } from '../shared'
+
+  const {
+    icon,
+    title,
+    onClick,
+    on = false,
+    small = false,
+    disabled = false,
+    danger = false,
+    extra = '',
+  } = props<{
+    icon: IconName
+    title: string
+    onClick: (e: MouseEvent) => void
+    on?: boolean
+    small?: boolean
+    disabled?: boolean
+    danger?: boolean
+    extra?: string
+  }>()
+</script>
+
+<button
+  class={['ib', small && 'sm', on && 'on', danger && 'rec', extra]}
+  title={title}
+  aria-label={title}
+  aria-pressed={on ? 'true' : undefined}
+  disabled={disabled}
+  onClick={(e) => onClick(e)}
+>
+  <Icon name={icon} size={small ? 12 : 14} />
+</button>
+
+<style>
+  .ib {
+    display: inline-grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    color: var(--muted);
+    flex: none;
+  }
+  .ib:hover:not(:disabled) { color: var(--text); background: var(--hover); }
+  .ib.on { color: var(--accent); background: var(--accent-dim); }
+  .ib.sm { width: 20px; height: 20px; }
+  .ib:disabled { opacity: 0.3; cursor: default; }
+  .ib.rec { color: var(--err); }
+</style>

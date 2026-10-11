@@ -8,17 +8,19 @@ export const traverse: typeof _traverse = (_traverse as any).default ?? _travers
 export const generate: typeof _generate = (_generate as any).default ?? _generate
 
 /** Module the runtime APIs are imported from. */
-export const RUNTIME = '@inflector/lux'
-/** Names injected from `@inflector/lux` when used without an import. */
-export const LUX_APIS = ['state', 'derived', 'props', 'init', 'update', 'destroy', 'ref'] as const
+export const RUNTIME = '@inflector/keeno'
+/** Names injected from `@inflector/keeno` when used without an import. */
+export const KEENO_APIS = ['state', 'derived', 'props', 'init', 'update', 'destroy', 'ref'] as const
 /** Members of a state (or derived) that are not unwrapped. */
 export const RESERVED_MEMBERS = new Set(['set', 'onUpdate', 'get', 'peek', 'undo', 'redo', 'canUndo', 'canRedo'])
 /** Callee name of the placeholder that pass 1 emits for keyed `.map()` calls. */
-export const MAP_PLACEHOLDER = '__lux_mapKeyed__'
+export const MAP_PLACEHOLDER = '__keeno_mapKeyed__'
 
 export interface PropBinding {
   key: string
   default?: t.Expression
+  /** A constant holding the default, evaluated once, for defaults that create a new object each time. */
+  defaultRef?: t.Identifier
 }
 
 export class CompileContext {
@@ -32,9 +34,11 @@ export class CompileContext {
   /** Declaring identifiers of destructured props. */
   propIds = new WeakMap<t.Identifier, PropBinding>()
   propDeclarators = new WeakSet<t.VariableDeclarator>()
+  /** Development mode: `state()`/`derived()` declarations to name for the dev tools. */
+  labels: t.VariableDeclarator[] | null = null
   /** State references passed as the state itself instead of being read (`provide(ctx, theme)`). */
   rawStateRefs = new WeakSet<t.Identifier>()
-  /** `@inflector/lux/internal` helpers used by the generated code: name -> local identifier name. */
+  /** `@inflector/keeno/internal` helpers used by the generated code: name -> local identifier name. */
   helpers = new Map<string, string>()
   /** Hoisted templates, keyed by html (prefixed with `svg:` for SVG fragments). */
   templates = new Map<string, { id: string; html: string; svg: boolean }>()

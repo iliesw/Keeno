@@ -1,10 +1,10 @@
-# Lux
+# Keeno
 
-> Lux is a compiled, signal-based frontend framework. Components are `.lx` files with HTML-first JSX markup, a `<script>` block and a scoped `<style>` block. The compiler (via `@inflector/vite-plugin-lux`) turns them into direct DOM code with fine-grained updates: no virtual DOM, no re-rendering components. Tooling is Bun (packages, scripts, `bun test`) plus Vite.
+> Keeno is a compiled, signal-based frontend framework. Components are `.kn` files with HTML-first JSX markup, a `<script>` block and a scoped `<style>` block. The compiler (via `@inflector/vite-plugin-keeno`) turns them into direct DOM code with fine-grained updates: no virtual DOM, no re-rendering components. Tooling is Bun (packages, scripts, `bun test`) plus Vite.
 
 Rules that differ from React, Svelte and Vue, which models get wrong most often:
 
-- **Reading state:** in `.lx` files, read a local state by name (`count`), not `count()` or `count.value`. Write with `count.set(v)`, never `count = v`.
+- **Reading state:** in `.kn` files, read a local state by name (`count`), not `count()` or `count.value`. Write with `count.set(v)`, never `count = v`.
 - **Reserved members:** `x.set`, `x.get`, `x.peek`, `x.onUpdate`, `x.undo`, `x.redo`, `x.canUndo` and `x.canRedo` stay on the state. Any other member (`x.length`, `x.map`) reads the value.
 - **Immutable updates:** `todos.set([...todos, item])`. In-place mutation (`todos.push`) does not update anything.
 - **Computed values:** use `derived(() => …)`. Don't copy values between states in `update()`.
@@ -14,10 +14,10 @@ Rules that differ from React, Svelte and Vue, which models get wrong most often:
 - **Lists:** `{list.map(item => <li key={item.id}>…</li>)}` is keyed. The callback must return JSX directly.
 - **Lifecycle:** `init(fn)` runs after mount and its return value is cleanup. `update(fn)` runs when a value read inside `fn` changes (deps inferred by the compiler), and `update(fn, [a, b])` only when `a` or `b` changes; neither runs on mount. `destroy(fn)` runs on unmount.
 - **State options:** `persist`, `url`, `history`, `equals`, `validate`, `debounce` and `throttle`.
-- **Built-ins:** `ErrorBoundary`, `Await`, `Dynamic`, `Portal`, `Transition`, `lazy()` and `reparentable()` are imported from `@inflector/lux`. Render props such as `fallback={(error, reset) => <p>…</p>}` and `fulfilled={(value) => …}` are functions.
+- **Built-ins:** `ErrorBoundary`, `Await`, `Dynamic`, `Portal`, `Transition`, `lazy()` and `reparentable()` are imported from `@inflector/keeno`. Render props such as `fallback={(error, reset) => <p>…</p>}` and `fulfilled={(value) => …}` are functions.
 - **Reparenting:** to move content between places without re-creating it, `const player = reparentable(() => <Video />)` and render `{player}` wherever it should be now. Use `keyedReparentable((id) => <Card id={id} />)` for items moving between lists. Imperatively: `player.moveTo(el)`, `player.remove()`, and `moveNode(node, parent)` for any DOM node.
 - **Context:** `provide(Ctx, value)` and `inject(Ctx)` are called in `<script>`. To make the value reactive, provide a state. An injected state is a plain object, so use `.get()`.
-- **Packages:** `@inflector/lux` (runtime), `@inflector/lux/server` (`renderToString`), `@inflector/lux-router`, `@inflector/vite-plugin-lux` and `@inflector/lux-check`.
+- **Packages:** `@inflector/keeno` (runtime), `@inflector/keeno/server` (`renderToString`), `@inflector/keeno-router`, `@inflector/vite-plugin-keeno` and `@inflector/keeno-check`.
 
 ## Docs
 
@@ -29,15 +29,14 @@ Rules that differ from React, Svelte and Vue, which models get wrong most often:
 - [Styles](docs/styles.md): scoped CSS, `:global()`, Tailwind CSS (`@apply` in `<style>`, auto `@reference`)
 - [Context](docs/context.md): createContext, provide and inject
 - [Built-in components](docs/built-ins.md): ErrorBoundary, Await, lazy, Dynamic, Portal, reparentable, Transition
-- [Routing](docs/routing.md): @inflector/lux-router: Router, Link, navigate, useRoute
+- [Routing](docs/routing.md): @inflector/keeno-router: Router, Link, navigate, useRoute
 - [Server rendering](docs/ssr.md): renderToString, hydrate, Vite SSR setup
 - [Security](docs/security.md): what is escaped, innerHTML, javascript: URLs, CSP
-- [Tooling](docs/tooling.md): Vite plugin, HMR, dev mode, VS Code extension, lux-check, testing with `bun test`
+- [Tooling](docs/tooling.md): Vite plugin, HMR, dev mode, VS Code extension, keeno-check, testing with `bun test`
 - [API reference](docs/api.md): every export, and the compile rules in one table
 - [Versioning and support](docs/stability.md): semver policy, public API, supported browsers, Node and Vite versions
 
 ## Optional
 
 - [Full docs in one file](llms-full.txt): all of the above concatenated, for loading into a model's context
-- [Design spec](PLAN.md): the original architecture and semantics
 - [Examples](examples/): `examples/counter` and `examples/todo`

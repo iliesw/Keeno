@@ -6,7 +6,7 @@ Markup is JSX, written HTML-first: use `class` and `for` (`className` and `htmlF
 
 `{expr}` is a live text node or attribute. It updates when the states it reads change, and nothing else is touched.
 
-```html Profile.lx
+```html Profile.kn
 <script lang="ts">
   const user = state({ name: 'Ada', avatar: '/ada.png' })
 </script>
@@ -19,7 +19,7 @@ Attribute values: `null`, `undefined` and `false` remove the attribute, and `tru
 
 ## Conditionals
 
-```html Status.lx
+```html Status.kn
 <script lang="ts">
   const count = state(0)
   const user = state<{ name: string } | null>(null)
@@ -35,7 +35,7 @@ Attribute values: `null`, `undefined` and `false` remove the attribute, and `tru
 
 ## Lists
 
-```html List.lx
+```html List.kn
 <script lang="ts">
   const todos = state([{ id: 1, text: 'Write docs', done: false }])
 </script>
@@ -57,7 +57,7 @@ Attribute values: `null`, `undefined` and `false` remove the attribute, and `tru
 
 `onClick={fn}`, `onInput={fn}`, `onKeyDown={fn}` and so on: the name is lowercased after `on`, so `onDblClick` listens to `dblclick`. Handlers receive the DOM event.
 
-```html Form.lx
+```html Form.kn
 <script lang="ts">
   const sent = state(false)
 </script>
@@ -71,7 +71,7 @@ Attribute values: `null`, `undefined` and `false` remove the attribute, and `tru
 
 `bind:value={myState}` (inputs, textareas, selects) and `bind:checked={myState}` (checkboxes) take the state itself:
 
-```html Settings.lx
+```html Settings.kn
 <script lang="ts">
   const name = state('')
   const volume = state(5)
@@ -90,7 +90,7 @@ Number and range inputs store numbers. Binding a prop or a derived is a compile 
 
 `ref()` creates a reference; `ref={myRef}` points it at an element. `myRef.current` is the element, or `null` before mount and after the element is removed. Reading `current` is reactive, so `update` re-runs when the element appears or goes away:
 
-```html Search.lx
+```html Search.kn
 <script lang="ts">
   const input = ref<HTMLInputElement>()
 
@@ -106,7 +106,7 @@ Number and range inputs store numbers. Binding a prop or a derived is a compile 
 
 `class` accepts a string, an array (falsy entries skipped, nested arrays allowed) or an object of `name: condition`:
 
-```html Button.lx
+```html Button.kn
 <script lang="ts">
   const active = state(false)
   const size = state('big')
@@ -121,7 +121,7 @@ The component's scope class is always kept.
 
 Spread works on components and on DOM elements. Attributes apply in order, and later ones win:
 
-```html Field.lx
+```html Field.kn
 <script lang="ts">
   const attrs = state({ placeholder: 'Email', type: 'email', required: true })
   const touched = state(false)
@@ -136,7 +136,7 @@ Spread objects can include `class`, `onX` event handlers and any attribute. When
 
 Inline `<svg>` works as in HTML. Conditionals, lists and components inside it render SVG elements:
 
-```html Dot.lx
+```html Dot.kn
 <script lang="ts">
   const { x, y } = props()
 </script>
@@ -144,9 +144,9 @@ Inline `<svg>` works as in HTML. Conditionals, lists and components inside it re
 <circle cx={x} cy={y} r="4" />
 ```
 
-```html Chart.lx
+```html Chart.kn
 <script lang="ts">
-  import Dot from './Dot.lx'
+  import Dot from './Dot.kn'
   const points = state([{ id: 1, x: 10, y: 20 }])
   const grid = state(true)
 </script>
@@ -165,7 +165,7 @@ Inline `<svg>` works as in HTML. Conditionals, lists and components inside it re
 
 Write tables with their full structure. Rows go in `<tbody>`, `<thead>` or `<tfoot>`, and cells go in `<tr>`:
 
-```html Stock.lx
+```html Stock.kn
 <script lang="ts">
   const items = state([{ id: 1, name: 'apples', qty: 3 }])
 </script>
@@ -182,7 +182,7 @@ Write tables with their full structure. Rows go in `<tbody>`, `<thead>` or `<tfo
 </table>
 ```
 
-- **Compile errors:** HTML parsers rewrite misplaced table content. `<table><tr>` gets an implied `<tbody>`, and text or a `<div>` inside a `<tr>` is moved out of the table. Lux reports these as compile errors instead of rendering a different tree, for example: `<tr> cannot be a direct child of <table>: the HTML parser would insert a <tbody> and break the template. Wrap it in <tbody> (or <thead>/<tfoot>).`
+- **Compile errors:** HTML parsers rewrite misplaced table content. `<table><tr>` gets an implied `<tbody>`, and text or a `<div>` inside a `<tr>` is moved out of the table. Keeno reports these as compile errors instead of rendering a different tree, for example: `<tr> cannot be a direct child of <table>: the HTML parser would insert a <tbody> and break the template. Wrap it in <tbody> (or <thead>/<tfoot>).`
 - **Allowed children:** `<table>` takes `<caption>`, `<colgroup>`, `<thead>`, `<tbody>` and `<tfoot>`. `<thead>`, `<tbody>` and `<tfoot>` take `<tr>`. `<tr>` takes `<td>` and `<th>`. `<colgroup>` takes `<col>`. `{expressions}`, components, whitespace, `<template>`, `<script>` and `<style>` are allowed anywhere.
 - **Row components:** a component can have `<tr>` or `<td>` as its root.
 

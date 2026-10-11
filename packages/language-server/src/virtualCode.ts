@@ -1,24 +1,24 @@
-// Turn an .lx file into a TSX virtual file that TypeScript understands, plus a CSS virtual file.
+// Turn an .kn file into a TSX virtual file that TypeScript understands, plus a CSS virtual file.
 //
-//   <script> imports            -> module level (`from '@inflector/lux'` becomes `from '@inflector/lux/lx'`)
-//   auto-imported lux APIs      -> `import { state, ... } from '@inflector/lux/lx'` (editor typings)
-//   rest of <script>            -> body of `export default function __LuxComponent($$props) { … }`
+//   <script> imports            -> module level (`from '@inflector/keeno'` becomes `from '@inflector/keeno/kn'`)
+//   auto-imported keeno APIs      -> `import { state, ... } from '@inflector/keeno/kn'` (editor typings)
+//   rest of <script>            -> body of `export default function __KeenoComponent($$props) { … }`
 //   markup                      -> `return (<> … </>)` at the end of that body
 //
-// Typed props: when the script calls `props<P>()`, the body goes in `function __LuxRender()`
+// Typed props: when the script calls `props<P>()`, the body goes in `function __KeenoRender()`
 // instead, which returns `[P, markup]`. The type argument is copied (unmapped) to the end of the
 // body, where every type the script declares is in scope. The default export then takes
-// `LxComponentProps<P>`, read back through `ReturnType<typeof __LuxRender>`. Without a type
+// `KnComponentProps<P>`, read back through `ReturnType<typeof __KeenoRender>`. Without a type
 // argument, or in plain JS, props stay `Record<string, any>`.
 //
 // Source text is copied verbatim and mapped back, so TypeScript's completions, hovers,
-// diagnostics and go-to-definition land on the right spot in the .lx file. Parsing uses the
+// diagnostics and go-to-definition land on the right spot in the .kn file. Parsing uses the
 // TypeScript parser, which tolerates the half-typed code an editor sends.
-import { split, type SplitResult } from '@inflector/lux-compiler/split'
+import { split, type SplitResult } from '@inflector/keeno-compiler/split'
 import type { CodeInformation, CodeMapping, VirtualCode } from '@volar/language-core'
 import type * as TS from 'typescript'
 
-const LUX_APIS = ['state', 'derived', 'props', 'init', 'update', 'destroy', 'ref']
+const KEENO_APIS = ['state', 'derived', 'props', 'init', 'update', 'destroy', 'ref']
 
 export const FEATURES: CodeInformation = {
   completion: true,
@@ -37,7 +37,7 @@ class Builder {
     this.text += s
   }
 
-  /** Append `s`, mapped to `sourceOffset` in the .lx file. */
+  /** Append `s`, mapped to `sourceOffset` in the .kn file. */
   map(sourceOffset: number, s: string) {
     if (!s) return
     this.mappings.push({
@@ -127,9 +127,9 @@ export function generateScript(ts: typeof TS, source: string, parts = safeSplit(
   for (const imp of imports) {
     const start = imp.getStart(sf)
     const spec = ts.isImportDeclaration(imp) ? imp.moduleSpecifier : undefined
-    if (spec && ts.isStringLiteral(spec) && spec.text === '@inflector/lux') {
+    if (spec && ts.isStringLiteral(spec) && spec.text === '@inflector/keeno') {
       b.map(offset + start, script.slice(start, spec.getStart(sf)))
-      b.add(`'@inflector/lux/lx'`)
+      b.add(`'@inflector/keeno/kn'`)
       b.map(offset + spec.end, script.slice(spec.end, imp.end))
     } else {
       b.map(offset + start, script.slice(start, imp.end))
@@ -137,11 +137,11 @@ export function generateScript(ts: typeof TS, source: string, parts = safeSplit(
     b.add('\n')
   }
   const declared = declaredNames(ts, sf)
-  const missing = LUX_APIS.filter((n) => !declared.has(n))
-  if (missing.length) b.add(`import { ${missing.join(', ')} } from '@inflector/lux/lx';\n`)
+  const missing = KEENO_APIS.filter((n) => !declared.has(n))
+  if (missing.length) b.add(`import { ${missing.join(', ')} } from '@inflector/keeno/kn';\n`)
 
   const propsType = parts.lang === 'ts' ? propsTypeText(ts, sf) : undefined
-  b.add(propsType ? 'function __LuxRender() {\n' : 'export default function __LuxComponent($$props: Record<string, any>) {\n')
+  b.add(propsType ? 'function __KeenoRender() {\n' : 'export default function __KeenoComponent($$props: Record<string, any>) {\n')
   let pos = 0
   for (const imp of imports) {
     b.map(offset + pos, script.slice(pos, imp.getStart(sf)))
@@ -163,8 +163,8 @@ export function generateScript(ts: typeof TS, source: string, parts = safeSplit(
   if (propsType) {
     b.add('\n</>)] as const;\n}\n')
     b.add(
-      "export default function __LuxComponent($$props: import('@inflector/lux/lx').LxComponentProps<ReturnType<typeof __LuxRender>[0]>) {\n" +
-        '  return __LuxRender()[1]\n}\n',
+      "export default function __KeenoComponent($$props: import('@inflector/keeno/kn').KnComponentProps<ReturnType<typeof __KeenoRender>[0]>) {\n" +
+        '  return __KeenoRender()[1]\n}\n',
     )
   } else b.add('\n</>);\n}\n')
 
@@ -179,9 +179,9 @@ function textSnapshot(text: string): TS.IScriptSnapshot {
   }
 }
 
-export class LuxVirtualCode implements VirtualCode {
+export class KeenoVirtualCode implements VirtualCode {
   id = 'root'
-  languageId = 'lux'
+  languageId = 'keeno'
   mappings: CodeMapping[]
   embeddedCodes: VirtualCode[] = []
   lang: 'ts' | 'js'

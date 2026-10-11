@@ -1,0 +1,71 @@
+<script lang="ts">
+  // Any value: primitives in color, objects and arrays expandable (recursively), DOM nodes
+  // outlined on the page on hover.
+  import Self from './Value.kn'
+  import { OBJECT_ENTRY_LIMIT, entriesOf, expandable, isNodeLike, nodeLabel, preview, typeName, useActions, valueClass } from '../shared'
+
+  const { value, depth = 0 } = props<{ value: unknown; depth?: number }>()
+  const actions = useActions()
+  const open = state(false)
+
+  const kind = derived(() => (expandable(value) && depth <= 10 ? 'object' : isNodeLike(value) ? 'node' : 'plain'))
+  const entries = derived(() => (open && kind === 'object' ? entriesOf(value as object) : []))
+  const summary = derived(() => (open ? typeName(value as object) || (Array.isArray(value) ? 'Array' : 'Object') : preview(value)))
+
+  function logNode() {
+    ;(globalThis as any).$keenoNode = value
+    console.log('%c$keenoNode', 'color:#f5b942', value)
+  }
+</script>
+
+{kind === 'object' && (
+  <span class="obj">
+    <span class="v-obj toggle" onClick={() => open.set(!open)}>
+      <span class="caret">{open ? '▾' : '▸'}</span>
+      {summary}
+    </span>
+    {open && (
+      <div class="children">
+        {entries.slice(0, OBJECT_ENTRY_LIMIT).map((e) => (
+          <div key={e[0]} class="kv nested">
+            <span class="key">{e[0]}</span>
+            <span class="colon">:</span>
+            <span class="val">
+              <Self value={e[1]} depth={depth + 1} />
+            </span>
+          </div>
+        ))}
+        {entries.length > OBJECT_ENTRY_LIMIT && <div class="muted small">… {entries.length - OBJECT_ENTRY_LIMIT} more</div>}
+        {entries.length === 0 && <div class="muted small">{Array.isArray(value) ? '(empty array)' : '(no keys)'}</div>}
+      </div>
+    )}
+  </span>
+)}
+{kind === 'node' && (
+  <span
+    class="v-obj node-ref"
+    title="Click to log as $keenoNode"
+    onMouseEnter={() => actions.highlightNodes([value as Node], nodeLabel(value as Node))}
+    onMouseLeave={() => actions.highlight(null)}
+    onClick={logNode}
+  >
+    {nodeLabel(value as Node)}
+  </span>
+)}
+{kind === 'plain' && (
+  <span class={valueClass(value)} title={typeof value === 'string' && value.length > 60 ? value : undefined}>
+    {preview(value)}
+  </span>
+)}
+
+<style>
+  .toggle { cursor: pointer; }
+  .toggle:hover { color: #fff; }
+  .obj { display: block; }
+  /* Collapsed summaries stay on one line inside the parent's value column. */
+  :global(.val) > .toggle,
+  :global(.val) > .obj > .toggle { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .children { padding-left: 14px; border-left: 1px dashed var(--border); margin-left: 5px; }
+  .kv.nested { min-height: 18px; padding: 1px 0; }
+  .node-ref { color: var(--tag); cursor: pointer; text-decoration: underline dotted; }
+</style>

@@ -1,4 +1,4 @@
-declare module '*.lx' {
-  const Component: import('@inflector/lux').Component
+declare module '*.kn' {
+  const Component: import('@inflector/keeno').Component
   export default Component
 }

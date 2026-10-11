@@ -1,3 +1,3 @@
 ```bash
-bun add @inflector/lux
+bun add @inflector/keeno
 ```

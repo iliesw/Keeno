@@ -1,0 +1,35 @@
+<script lang="ts">
+  const todos = state([
+    { id: 1, text: 'Write docs', done: true },
+    { id: 2, text: 'Ship Keeno', done: false },
+  ])
+  const draft = state('')
+  const left = derived(() => todos.filter((t) => !t.done).length)
+
+  function add() {
+    if (!draft.trim()) return
+    todos.set([...todos, { id: Date.now(), text: draft, done: false }])
+    draft.set('')
+  }
+  const toggle = (id: number) => todos.set(todos.map((t) => (t.id === id ? { ...t, done: !t.done } : t)))
+  const remove = (id: number) => todos.set(todos.filter((t) => t.id !== id))
+</script>
+
+<div class="flex w-full max-w-xs flex-col gap-3">
+  <input
+    bind:value={draft}
+    onKeyDown={(e: KeyboardEvent) => e.key === 'Enter' && add()}
+    placeholder="What needs doing? ⏎"
+    class="w-full rounded-lg border bg-white px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-orange-400 dark:bg-neutral-800"
+  />
+  <ul class="flex flex-col gap-1">
+    {todos.map((t) => (
+      <li key={t.id} class="group flex items-center gap-2 rounded-md px-2 py-1 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800">
+        <input type="checkbox" checked={t.done} onChange={() => toggle(t.id)} class="accent-orange-500" />
+        <span class={['flex-1', t.done && 'line-through opacity-50']}>{t.text}</span>
+        <button type="button" class="cursor-pointer opacity-0 group-hover:opacity-60" aria-label="Remove" onClick={() => remove(t.id)}>×</button>
+      </li>
+    ))}
+  </ul>
+  <p class="font-code text-xs opacity-60">{left} left</p>
+</div>

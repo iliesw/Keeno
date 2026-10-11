@@ -1,0 +1,490 @@
+<script lang="ts">
+  // The dev tools panel: owns the UI state and talks to the runtime through `__KEENO_DEVTOOLS__`.
+  // It is mounted with `mountDevtools`, so the dev tools never inspect or react to it.
+  import { provide } from '@inflector/keeno'
+  import Components from './Components.kn'
+  import IconButton from './IconButton.kn'
+  import Overlay from './Overlay.kn'
+  import Perf from './Perf.kn'
+  import Timeline from './Timeline.kn'
+  import {
+    ActionsContext,
+    DEFAULT_PREFS,
+    STORES,
+    getApi,
+    rectOf,
+    type Actions,
+    type Box,
+    type DevComponent,
+    type DevEvent,
+    type Prefs,
+    type Tab,
+    type TreeRow,
+  } from '../shared'
+
+  const { host } = props<{ host: HTMLElement }>()
+  const api = getApi()
+  const TABS: { id: Tab; label: string }[] = [
+    { id: 'components', label: 'Components' },
+    { id: 'timeline', label: 'Timeline' },
+    { id: 'perf', label: 'Perf' },
+  ]
+
+  const prefs = state<Prefs>(DEFAULT_PREFS, {
+    persist: 'keeno-devtools',
+    validate: (next) => ({ ...DEFAULT_PREFS, ...(next && typeof next === 'object' ? next : {}) }),
+  })
+  /** Bumped (coalesced) whenever the app changes: everything read from the API follows it. */
+  const tick = state(0)
+  const selected = state<number | null>(null)
+  const query = state('')
+  const collapsed = state<number[]>([])
+  const picking = state(false)
+  const highlight = state<{ box: Box; label: string } | null>(null)
+  const flashes = state<{ key: number; box: Box }[]>([])
+  /** Updates per component since the panel opened: tree rows pulse when theirs changes. */
+  const pulses = state<Record<number, number>>({})
+  const errorCount = state(0)
+  /** The timeline as it was when recording was paused. */
+  const frozen = state<DevEvent[] | null>(null)
+  const timelineQuery = state('')
+  /** The panel width while it is being resized (saved on release). */
+  const liveWidth = state<number | null>(null)
+
+  const tree = derived(() => {
+    tick
+    return api.components()
+  })
+  const names = derived(() => {
+    const m = new Map<number, string>()
+    const go = (list: DevComponent[]) => {
+      for (const c of list) {
+        m.set(c.id, c.name)
+        go(c.children)
+      }
+    }
+    go(tree)
+    return m
+  })
+  const count = derived(() => names.size)
+  const rows = derived(() => {
+    const q = query.trim().toLowerCase()
+    const closed = new Set(collapsed)
+    const keep = new Map<number, boolean>()
+    const mark = (n: DevComponent): boolean => {
+      let any = !q || n.name.toLowerCase().includes(q) || !!n.file?.toLowerCase().includes(q)
+      for (const c of n.children) if (mark(c)) any = true
+      keep.set(n.id, any)
+      return any
+    }
+    for (const r of tree) mark(r)
+    const out: TreeRow[] = []
+    const add = (n: DevComponent, depth: number) => {
+      if (!keep.get(n.id)) return
+      const isClosed = !q && closed.has(n.id)
+      out.push({
+        id: n.id,
+        name: n.name,
+        file: n.file,
+        depth,
+        hasKids: n.children.some((c) => keep.get(c.id)),
+        collapsed: isClosed,
+        updates: n.updates,
+        errors: n.errors,
+      })
+      if (!isClosed) for (const c of n.children) add(c, depth + 1)
+    }
+    for (const r of tree) add(r, 0)
+    return out
+  })
+  const stores = derived(() => {
+    tick
+    return api.stores()
+  })
+  const details = derived(() => {
+    tick
+    return selected === null || selected === STORES ? null : api.details(selected)
+  })
+  const events = derived(() => {
+    tick
+    return (frozen ?? api.log()).slice().reverse()
+  })
+  const stats = derived(() => {
+    tick
+    return prefs.open && prefs.tab === 'perf' ? api.stats() : null
+  })
+  const width = derived(() => liveWidth ?? prefs.width)
+
+  // A selected component that unmounted.
+  update(() => {
+    if (selected !== null && selected !== STORES && !names.has(selected)) selected.set(null)
+  })
+
+  // A timer rather than requestAnimationFrame, which doesn't fire while the page isn't painted.
+  let queued = false
+  function refresh() {
+    if (queued) return
+    queued = true
+    setTimeout(() => {
+      queued = false
+      tick.set(tick.peek() + 1)
+    }, 60)
+  }
+
+  function setPref<K extends keyof Prefs>(key: K, value: Prefs[K]) {
+    prefs.set({ ...prefs, [key]: value })
+  }
+
+  function setOpen(open: boolean) {
+    setPref('open', open)
+    pulses.set({})
+    if (!open) highlight.set(null)
+  }
+
+  function setTab(tab: Tab) {
+    setPref('tab', tab)
+    pulses.set({})
+  }
+
+  function select(id: number | null, reveal = false) {
+    if (id !== null && id !== STORES) {
+      if (reveal) {
+        const above = api.path(id).slice(0, -1)
+        collapsed.set(collapsed.filter((c) => !above.includes(c)))
+      }
+      api.expose(id, false)
+    }
+    selected.set(id)
+    if (!prefs.open) setOpen(true)
+    if (prefs.tab !== 'components') setTab('components')
+  }
+
+  function toggle(id: number) {
+    collapsed.set(collapsed.includes(id) ? collapsed.filter((c) => c !== id) : [...collapsed, id])
+  }
+
+  function highlightNodes(nodes: Node[], label: string) {
+    const box = nodes.length ? rectOf(nodes) : null
+    highlight.set(box ? { box, label } : null)
+  }
+
+  function showHighlight(id: number | null) {
+    if (id === null || id === STORES) return highlight.set(null)
+    highlightNodes(api.nodes(id), `<${names.peek().get(id) ?? api.details(id)?.name ?? '?'}>`)
+  }
+
+  function scrollTo(id: number) {
+    const nodes = api.nodes(id)
+    const el = nodes.find((n): n is Element => n.nodeType === 1) ?? nodes[0]?.parentElement
+    el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    setTimeout(() => showHighlight(id), 350)
+    setTimeout(() => highlight.set(null), 1600)
+  }
+
+  let flashKey = 0
+  function flash(ids: number[]) {
+    const added: { key: number; box: Box }[] = []
+    for (const id of ids.slice(0, 60)) {
+      const box = rectOf(api.nodes(id))
+      if (box) added.push({ key: ++flashKey, box })
+    }
+    if (!added.length) return
+    flashes.set([...flashes.peek(), ...added])
+    const done = new Set(added.map((f) => f.key))
+    setTimeout(() => flashes.set(flashes.peek().filter((f) => !done.has(f.key))), 700)
+  }
+
+  function openFile(file: string) {
+    fetch(`/__open-in-editor?file=${encodeURIComponent(file)}`).catch(() => {
+      console.warn(`[keeno] could not open ${file}: the dev server has no /__open-in-editor endpoint`)
+    })
+  }
+
+  // Picker: hover to outline, click to select. Events on the page are swallowed meanwhile.
+  const ours = (e: Event) => e.composedPath().includes(host)
+  const swallow = (e: Event) => {
+    if (ours(e)) return
+    e.preventDefault()
+    e.stopPropagation()
+  }
+  const pickerEvents: [string, EventListener][] = [
+    ['pointermove', (e) => ours(e) || showHighlight(api.at(e.target as Node))],
+    ['pointerdown', swallow],
+    ['mousedown', swallow],
+    ['pointerup', swallow],
+    ['mouseup', swallow],
+    [
+      'click',
+      (e) => {
+        if (ours(e)) return
+        swallow(e)
+        const id = api.at(e.target as Node)
+        stopPicker()
+        if (id !== null) select(id, true)
+      },
+    ],
+    [
+      'keydown',
+      (e) => {
+        if ((e as KeyboardEvent).key !== 'Escape') return
+        swallow(e)
+        stopPicker()
+      },
+    ],
+  ]
+  let cursorBefore = ''
+
+  function startPicker() {
+    if (picking.peek()) return
+    picking.set(true)
+    cursorBefore = document.documentElement.style.cursor
+    document.documentElement.style.cursor = 'crosshair'
+    for (const [type, fn] of pickerEvents) window.addEventListener(type, fn, true)
+  }
+
+  function stopPicker() {
+    if (!picking.peek()) return
+    picking.set(false)
+    document.documentElement.style.cursor = cursorBefore
+    for (const [type, fn] of pickerEvents) window.removeEventListener(type, fn, true)
+    highlight.set(null)
+  }
+
+  function startResize(e: PointerEvent) {
+    e.preventDefault()
+    const handle = e.currentTarget as HTMLElement
+    handle.setPointerCapture(e.pointerId)
+    handle.classList.add('dragging')
+    const onMove = (ev: PointerEvent) => {
+      const w = prefs.peek().side === 'right' ? innerWidth - ev.clientX : ev.clientX
+      liveWidth.set(Math.max(300, Math.min(innerWidth, Math.round(w))))
+    }
+    const onUp = () => {
+      handle.removeEventListener('pointermove', onMove)
+      handle.removeEventListener('pointerup', onUp)
+      handle.classList.remove('dragging')
+      const w = liveWidth.peek()
+      if (w !== null) setPref('width', w)
+      liveWidth.set(null)
+    }
+    handle.addEventListener('pointermove', onMove)
+    handle.addEventListener('pointerup', onUp)
+  }
+
+  function pause() {
+    frozen.set(frozen ? null : api.log())
+  }
+
+  function clear() {
+    api.clearLog()
+    frozen.set(frozen ? [] : null)
+    errorCount.set(0)
+    refresh()
+  }
+
+  const actions: Actions = {
+    api,
+    select,
+    toggle,
+    highlight: showHighlight,
+    highlightNodes,
+    scrollTo,
+    openFile,
+    startPicker,
+    setSplit: (fraction) => setPref('split', fraction),
+    refresh,
+  }
+  provide(ActionsContext, actions)
+
+  init(() => {
+    const off = api.subscribe((m) => {
+      if (m.type === 'flush' && m.rendered.length) {
+        if (prefs.peek().open) {
+          const next = { ...pulses.peek() }
+          for (const id of m.rendered) next[id] = (next[id] ?? 0) + 1
+          pulses.set(next)
+        }
+        if (prefs.peek().flash) flash(m.rendered)
+      } else if (m.type === 'error') errorCount.set(errorCount.peek() + 1)
+      if (m.type === 'write' && frozen.peek()) return
+      refresh()
+    })
+    const onKey = (e: KeyboardEvent) => {
+      if (!e.altKey || !e.shiftKey || e.ctrlKey || e.metaKey) return
+      if (e.code === 'KeyD') {
+        e.preventDefault()
+        setOpen(!prefs.peek().open)
+      } else if (e.code === 'KeyC') {
+        e.preventDefault()
+        if (picking.peek()) stopPicker()
+        else startPicker()
+      }
+    }
+    const unhighlight = () => picking.peek() || highlight.set(null)
+    window.addEventListener('keydown', onKey, true)
+    window.addEventListener('resize', unhighlight)
+    window.addEventListener('scroll', unhighlight, true)
+    console.info(
+      '%c◆ Keeno%c dev tools ready: Alt+Shift+D to open, Alt+Shift+C to pick a component.',
+      'color:#f5b942;font-weight:bold',
+      'color:inherit',
+    )
+    return () => {
+      off()
+      stopPicker()
+      window.removeEventListener('keydown', onKey, true)
+      window.removeEventListener('resize', unhighlight)
+      window.removeEventListener('scroll', unhighlight, true)
+    }
+  })
+</script>
+
+<Overlay highlight={highlight} flashes={flashes} />
+{!prefs.open && (
+  <button class="fab" title="Keeno dev tools (Alt+Shift+D)" onClick={() => setOpen(true)}>
+    <span class="logo-mark" />
+    <span class="fab-name">Keeno</span>
+    <span class="fab-count">{count}</span>
+    {errorCount > 0 && <span class="fab-err">{errorCount}</span>}
+  </button>
+)}
+{prefs.open && (
+  <div
+    class={['panel', prefs.side === 'left' && 'left']}
+    style={`width:min(${width}px, 100vw)`}
+    role="dialog"
+    aria-label="Keeno dev tools"
+  >
+    <div class="resize" onPointerDown={startResize} />
+    <header>
+      <div class="logo">
+        <span class="logo-mark" />
+        <span>Keeno</span>
+      </div>
+      <div class="tabs" role="tablist">
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            class={['tab', prefs.tab === t.id && 'active']}
+            role="tab"
+            aria-selected={prefs.tab === t.id ? 'true' : 'false'}
+            onClick={() => setTab(t.id)}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+      <div class="spacer" />
+      <IconButton
+        icon="pick"
+        title="Pick a component on the page (Alt+Shift+C)"
+        on={picking}
+        onClick={() => (picking ? stopPicker() : startPicker())}
+      />
+      <IconButton icon="flash" title="Highlight updates" on={prefs.flash} onClick={() => setPref('flash', !prefs.flash)} />
+      <IconButton
+        icon="dock"
+        title="Dock to the other side"
+        onClick={() => setPref('side', prefs.side === 'right' ? 'left' : 'right')}
+      />
+      <IconButton icon="close" title="Close (Alt+Shift+D)" onClick={() => setOpen(false)} />
+    </header>
+    <div class="body">
+      {prefs.tab === 'components' && (
+        <Components
+          rows={rows}
+          selected={selected}
+          query={query}
+          onQuery={(q) => query.set(q)}
+          pulses={pulses}
+          details={details}
+          stores={stores}
+          split={prefs.split}
+        />
+      )}
+      {prefs.tab === 'timeline' && (
+        <Timeline
+          events={events}
+          paused={frozen !== null}
+          query={timelineQuery}
+          onQuery={(q) => timelineQuery.set(q)}
+          onPause={pause}
+          onClear={clear}
+        />
+      )}
+      {prefs.tab === 'perf' && <Perf stats={stats} />}
+    </div>
+  </div>
+)}
+
+<style>
+  /* Floating button */
+  .fab {
+    position: fixed;
+    left: 12px;
+    bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px 6px 8px;
+    background: rgba(13, 15, 20, 0.92);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+    backdrop-filter: blur(8px);
+    transition: transform 0.15s, border-color 0.15s;
+  }
+  .fab:hover { transform: translateY(-1px); border-color: var(--accent); }
+  .fab-name { font-weight: 700; letter-spacing: 0.02em; }
+  .fab-count { color: var(--muted); }
+  .fab-count:empty { display: none; }
+  .fab-err { background: var(--err); color: #fff; border-radius: 999px; padding: 0 6px; font-size: 11px; font-weight: 700; }
+
+  /* Docked panel */
+  .panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg);
+    border-left: 1px solid var(--border);
+    box-shadow: -12px 0 40px rgba(0, 0, 0, 0.35);
+    min-width: 300px;
+  }
+  .panel.left {
+    right: auto;
+    left: 0;
+    border-left: 0;
+    border-right: 1px solid var(--border);
+    box-shadow: 12px 0 40px rgba(0, 0, 0, 0.35);
+  }
+  .resize { position: absolute; top: 0; bottom: 0; left: -3px; width: 7px; cursor: ew-resize; z-index: 2; }
+  .panel.left .resize { left: auto; right: -3px; }
+  .resize:hover,
+  .resize.dragging {
+    background: linear-gradient(90deg, transparent 3px, var(--accent) 3px, var(--accent) 4px, transparent 4px);
+  }
+  header {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    height: 38px;
+    padding: 0 6px 0 10px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    flex: none;
+  }
+  .logo { display: flex; align-items: center; gap: 7px; font-weight: 700; margin-right: 8px; }
+  .tabs { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; }
+  .tab { padding: 5px 9px; border-radius: 6px; color: var(--muted); white-space: nowrap; }
+  .tab:hover { color: var(--text); background: var(--hover); }
+  .tab.active { color: var(--text); background: var(--raised); box-shadow: inset 0 -2px 0 var(--accent); }
+  .body { flex: 1; min-height: 0; display: flex; }
+
+  @media (max-width: 520px) {
+    .panel { min-width: 0; left: 0; width: 100vw !important; }
+    .logo span:last-child { display: none; }
+  }
+</style>

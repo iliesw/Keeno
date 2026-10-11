@@ -1,21 +1,21 @@
 {
-  "name": "@inflector/lux-compiler",
+  "name": "@inflector/keeno-compiler",
   "version": "0.2.0",
-  "description": "Compiler for Lux (.lx) single-file components",
+  "description": "Compiler for Keeno (.kn) single-file components",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/iliesw/Lux.git",
+    "url": "git+https://github.com/iliesw/Keeno.git",
     "directory": "packages/compiler"
   },
-  "homepage": "https://github.com/iliesw/Lux/tree/main/packages/compiler#readme",
+  "homepage": "https://github.com/iliesw/Keeno/tree/main/packages/compiler#readme",
   "bugs": {
-    "url": "https://github.com/iliesw/Lux/issues"
+    "url": "https://github.com/iliesw/Keeno/issues"
   },
   "keywords": [
-    "lux",
+    "keeno",
     "compiler",
-    "lx",
+    "kn",
     "components"
   ],
   "type": "module",
@@ -23,13 +23,13 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "lux-source": "./src/index.ts",
+      "keeno-source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
     "./split": {
-      "lux-source": "./src/split.ts",
+      "keeno-source": "./src/split.ts",
       "types": "./dist/split.d.ts",
       "import": "./dist/split.js",
       "default": "./dist/split.js"
@@ -55,7 +55,7 @@
     "postcss-selector-parser": "^7.0.0"
   },
   "devDependencies": {
-    "@inflector/lux": "workspace:*",
+    "@inflector/keeno": "workspace:*",
     "@types/babel__generator": "^7.6.8",
     "@types/babel__traverse": "^7.20.6"
   },

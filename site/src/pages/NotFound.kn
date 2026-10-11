@@ -1,0 +1,51 @@
+<script lang="ts">
+  import { Link } from '@inflector/keeno-router'
+  import Icon from '../components/Icon.kn'
+  import Navbar from '../components/Navbar.kn'
+  import { logo } from '../icons'
+  import { searchOpen } from '../search'
+  import { VERSION } from '../version'
+
+  init(() => {
+    document.title = 'Not found · Keeno'
+  })
+
+  const links = [
+    { label: 'Quick start', href: '/docs/getting-started', icon: 'sparkles' as const },
+    { label: 'Examples', href: '/examples', icon: 'grid' as const },
+    { label: 'Playground', href: '/playground', icon: 'play' as const },
+  ]
+</script>
+
+<Navbar />
+<div class="relative flex min-h-svh w-full items-center justify-center overflow-hidden px-6">
+  <div class="hero-grid pointer-events-none absolute inset-0"></div>
+  <div class="animate-fade-up relative flex w-full max-w-md flex-col gap-2">
+    <span class="animate-float mb-4 w-fit opacity-80" innerHTML={logo('size-12')}></span>
+    <div class="flex justify-between font-code">
+      <h1 class="text-6xl">404</h1>
+      <div class="flex flex-col items-end">
+        <p class="text-xs opacity-50">V {VERSION}</p>
+        <p class="text-sm">Keeno</p>
+        <p class="text-xs opacity-50">Page not found</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <div class="h-0.5 w-full bg-black/50 dark:bg-white/50"></div>
+      <p class="font-code text-[8px]">ERROR</p>
+    </div>
+    <p class="mt-4 text-sm text-neutral-500">This page doesn't exist, or it moved. Try one of these:</p>
+    <div class="mt-2 grid grid-cols-3 gap-2">
+      {links.map((l) => (
+        <Link key={l.href} href={l.href} class="flex flex-col items-start gap-2 rounded-xl border bg-white/60 p-3 text-sm font-bold backdrop-blur transition hover:border-orange-400 dark:bg-neutral-900/60">
+          <span class="text-orange-500"><Icon name={l.icon} /></span>
+          {l.label}
+        </Link>
+      ))}
+    </div>
+    <button type="button" onClick={() => searchOpen.set(true)} class="mt-2 flex cursor-pointer items-center gap-2 rounded-xl border border-dashed px-3 py-2.5 text-sm text-neutral-500 transition hover:border-solid hover:text-neutral-900 dark:hover:text-white">
+      <Icon name="search" /> Search the docs…
+      <kbd class="search-kbd ml-auto">/</kbd>
+    </button>
+  </div>
+</div>

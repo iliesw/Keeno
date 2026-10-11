@@ -1,9 +1,0 @@
-<script lang="ts">
-  import { inject } from '@inflector/lux'
-  import { Theme, User } from './theme'
-  const theme = inject(Theme)
-  const user = inject(User)
-</script>
-
-<p class="leaf">{theme} {user.name} {user.color}</p>
-<button class="dark" onClick={() => theme.set('dark')}>dark</button>

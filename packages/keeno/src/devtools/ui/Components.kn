@@ -1,0 +1,67 @@
+<script lang="ts">
+  // The Components tab: search + tree on top, inspector below, with a draggable split.
+  import Inspector from './Inspector.kn'
+  import Tree from './Tree.kn'
+  import { useActions, type DevDetails, type DevSignal, type TreeRow } from '../shared'
+
+  const { rows, selected, query, onQuery, pulses, details, stores, split } = props<{
+    rows: TreeRow[]
+    selected: number | null
+    query: string
+    onQuery: (q: string) => void
+    pulses: Record<number, number>
+    details: DevDetails | null
+    stores: DevSignal[]
+    split: number
+  }>()
+  const actions = useActions()
+  const view = ref<HTMLDivElement>()
+  /** The split while the splitter is dragged (saved on release). */
+  const live = state<number | null>(null)
+
+  function startSplit(e: PointerEvent) {
+    e.preventDefault()
+    const handle = e.currentTarget as HTMLElement
+    handle.setPointerCapture(e.pointerId)
+    handle.classList.add('dragging')
+    const onMove = (ev: PointerEvent) => {
+      const r = view.current!.getBoundingClientRect()
+      live.set(Math.max(0.15, Math.min(0.85, (ev.clientY - r.top) / r.height)))
+    }
+    const onUp = () => {
+      handle.removeEventListener('pointermove', onMove)
+      handle.removeEventListener('pointerup', onUp)
+      handle.classList.remove('dragging')
+      if (live.peek() !== null) actions.setSplit(live.peek()!)
+      live.set(null)
+    }
+    handle.addEventListener('pointermove', onMove)
+    handle.addEventListener('pointerup', onUp)
+  }
+</script>
+
+<div class="view components" ref={view} style={`--split:${Math.round((live ?? split) * 100)}%`}>
+  <div class="tree-wrap">
+    <div class="toolbar">
+      <input
+        class="search"
+        type="search"
+        placeholder="Find component…"
+        spellcheck="false"
+        value={query}
+        onInput={(e) => onQuery((e.currentTarget as HTMLInputElement).value)}
+      />
+    </div>
+    <Tree rows={rows} selected={selected} storesCount={stores.length} query={query} pulses={pulses} />
+  </div>
+  <div class="splitter" onPointerDown={startSplit} />
+  <Inspector selected={selected} details={details} stores={stores} />
+</div>
+
+<style>
+  .components { flex-direction: column; }
+  .tree-wrap { flex: 0 0 var(--split, 45%); min-height: 60px; display: flex; flex-direction: column; }
+  .splitter { flex: none; height: 6px; cursor: ns-resize; border-top: 1px solid var(--border); background: var(--surface); }
+  .splitter:hover,
+  .splitter.dragging { background: var(--accent-dim); }
+</style>

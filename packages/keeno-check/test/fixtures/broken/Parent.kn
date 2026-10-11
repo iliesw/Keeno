@@ -1,0 +1,8 @@
+<script lang="ts">
+  import Child from './Child.kn'
+
+  const total = state(0)
+  total.set('many')
+</script>
+
+<Child label="items" count="3" />

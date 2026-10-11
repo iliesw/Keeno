@@ -17,7 +17,7 @@ async function addTodo(page: Page, text: string) {
 test.describe('keyed list', () => {
   test('toggling, adding and removing touch only the affected <li>', async ({ page }) => {
     await open(page)
-    await expect(items(page)).toHaveText(['Read the plan✕', 'Build Lux✕'])
+    await expect(items(page)).toHaveText(['Read the plan✕', 'Build Keeno✕'])
 
     // Record every mutation under the <ul>, and tag the current <li> nodes.
     await page.evaluate(() => {
@@ -98,8 +98,8 @@ test.describe('scoped styles', () => {
     expect(await page.locator('p.count').evaluate((el) => getComputedStyle(el).color)).toBe('rgb(85, 85, 85)')
     const appScope = await page.locator('main').getAttribute('class')
     const itemScope = await page.locator('main li').first().getAttribute('class')
-    expect(appScope).toMatch(/^lux-[0-9a-f]{8}$/)
-    expect(itemScope).toMatch(/lux-[0-9a-f]{8}/)
+    expect(appScope).toMatch(/^keeno-[0-9a-f]{8}$/)
+    expect(itemScope).toMatch(/keeno-[0-9a-f]{8}/)
     expect(itemScope).not.toContain(appScope!)
   })
 })
@@ -113,18 +113,18 @@ test.describe('lifecycle', () => {
     await open(page)
     await expect(items(page)).toHaveCount(2)
     await expect.poll(() => logs.length).toBe(3)
-    expect([...logs].sort()).toEqual(['[App] init', '[TodoItem] init Build Lux', '[TodoItem] init Read the plan'])
+    expect([...logs].sort()).toEqual(['[App] init', '[TodoItem] init Build Keeno', '[TodoItem] init Read the plan'])
 
     logs.length = 0
     await page.click('button.toggle-list')
     await expect(page.locator('main ul')).toHaveCount(0)
     await expect(page.locator('button.toggle-list')).toHaveText('Show list')
-    await expect.poll(() => [...logs].sort()).toEqual(['[TodoItem] destroy Build Lux', '[TodoItem] destroy Read the plan'])
+    await expect.poll(() => [...logs].sort()).toEqual(['[TodoItem] destroy Build Keeno', '[TodoItem] destroy Read the plan'])
 
     logs.length = 0
     await page.click('button.toggle-list')
     await expect(items(page)).toHaveCount(2)
-    await expect.poll(() => logs).toEqual(['[TodoItem] init Read the plan', '[TodoItem] init Build Lux'])
+    await expect.poll(() => logs).toEqual(['[TodoItem] init Read the plan', '[TodoItem] init Build Keeno'])
   })
 })
 
@@ -134,8 +134,8 @@ test.describe('state options', () => {
     await addTodo(page, 'Persist me')
     await expect(items(page)).toHaveCount(3)
     await page.reload()
-    await expect(items(page)).toHaveText(['Read the plan✕', 'Build Lux✕', 'Persist me✕'])
-    expect(JSON.parse((await page.evaluate(() => localStorage.getItem('lux-todos')))!)).toHaveLength(3)
+    await expect(items(page)).toHaveText(['Read the plan✕', 'Build Keeno✕', 'Persist me✕'])
+    expect(JSON.parse((await page.evaluate(() => localStorage.getItem('keeno-todos')))!)).toHaveLength(3)
   })
 
   test('persist: changes sync to another tab', async ({ context }) => {
@@ -145,7 +145,7 @@ test.describe('state options', () => {
     await open(b)
 
     await addTodo(a, 'From tab A')
-    await expect(items(b)).toHaveText(['Read the plan✕', 'Build Lux✕', 'From tab A✕'])
+    await expect(items(b)).toHaveText(['Read the plan✕', 'Build Keeno✕', 'From tab A✕'])
 
     await items(b).first().locator('input[type=checkbox]').uncheck()
     await expect(items(a).first()).not.toHaveClass(/done/)
@@ -163,7 +163,7 @@ test.describe('state options', () => {
 
     await filter('active').click()
     await expect(page).toHaveURL(/\?filter=active$/)
-    await expect(items(page)).toHaveText(['Build Lux✕'])
+    await expect(items(page)).toHaveText(['Build Keeno✕'])
 
     await page.goBack()
     await expect(page).toHaveURL(/\?filter=done$/)
@@ -180,7 +180,7 @@ test.describe('state options', () => {
 
     // Loading a URL applies it; an invalid value is rejected by `validate`.
     await open(page, '?filter=active')
-    await expect(items(page)).toHaveText(['Build Lux✕'])
+    await expect(items(page)).toHaveText(['Build Keeno✕'])
     await open(page, '?filter=bogus')
     await expect(items(page)).toHaveCount(2)
     await expect(filter('all')).toHaveClass(/selected/)
@@ -231,7 +231,7 @@ test.describe('undo / redo', () => {
     await undo.click()
     await expect(page.locator('p.count')).toHaveText('3 of 4 left')
     await undo.click()
-    await expect(items(page)).toHaveText(['Read the plan✕', 'Build Lux✕', 'One✕'])
+    await expect(items(page)).toHaveText(['Read the plan✕', 'Build Keeno✕', 'One✕'])
     await expect(redo).toBeEnabled()
 
     await redo.click()

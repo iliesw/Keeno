@@ -1,0 +1,71 @@
+<script lang="ts">
+  import { Link } from '@inflector/keeno-router'
+  import Logo from './Logo.kn'
+  import { GITHUB } from '../icons'
+
+  const columns = [
+    {
+      title: 'Learn',
+      links: [
+        { label: 'Introduction', href: '/docs/introduction' },
+        { label: 'Quick start', href: '/docs/getting-started' },
+        { label: 'Reactivity', href: '/docs/reactivity' },
+        { label: 'Templates', href: '/docs/templates' },
+      ],
+    },
+    {
+      title: 'Build',
+      links: [
+        { label: 'Examples', href: '/examples' },
+        { label: 'Playground', href: '/playground' },
+        { label: 'Routing', href: '/docs/routing' },
+        { label: 'Server rendering', href: '/docs/ssr' },
+      ],
+    },
+    {
+      title: 'Reference',
+      links: [
+        { label: 'API reference', href: '/docs/api' },
+        { label: 'Tooling', href: '/docs/tooling' },
+        { label: 'Versioning', href: '/docs/stability' },
+        { label: 'llms.txt', href: `${GITHUB}/blob/main/llms.txt` },
+      ],
+    },
+    {
+      title: 'Community',
+      links: [
+        { label: 'GitHub', href: GITHUB },
+        { label: 'Issues', href: `${GITHUB}/issues` },
+        { label: 'Contributing', href: `${GITHUB}/blob/main/CONTRIBUTING.md` },
+        { label: 'Security', href: '/docs/security' },
+      ],
+    },
+  ]
+</script>
+
+<footer class="mt-32 border-t">
+  <div class="mx-auto grid w-full max-w-400 gap-10 px-6 py-14 md:grid-cols-[1.4fr_repeat(4,1fr)] md:px-10">
+    <div class="flex flex-col gap-3">
+      <Link href="/" class="w-fit"><Logo /></Link>
+      <p class="max-w-64 text-sm leading-relaxed text-neutral-500">The compiled, signal-based UI framework. HTML-first components, fine-grained updates, no virtual DOM.</p>
+    </div>
+    {columns.map((c) => (
+      <div key={c.title} class="flex flex-col gap-2.5 text-sm">
+        <p class="font-bold">{c.title}</p>
+        {c.links.map((l) => (
+          <span key={l.label} class="contents">
+            {l.href.startsWith('http') ? (
+              <a href={l.href} target="_blank" rel="noreferrer" class="w-fit text-neutral-500 transition-colors hover:text-neutral-900 dark:hover:text-white">{l.label}</a>
+            ) : (
+              <Link href={l.href} class="w-fit text-neutral-500 transition-colors hover:text-neutral-900 dark:hover:text-white">{l.label}</Link>
+            )}
+          </span>
+        ))}
+      </div>
+    ))}
+  </div>
+  <div class="mx-auto flex w-full max-w-400 flex-col justify-between gap-2 border-t px-6 py-6 text-xs text-neutral-500 sm:flex-row md:px-10">
+    <p>Released under the MIT License.</p>
+    <p>This site is built with Keeno: server-rendered, then hydrated.</p>
+  </div>
+</footer>

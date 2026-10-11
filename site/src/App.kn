@@ -1,0 +1,26 @@
+<script lang="ts">
+  import { Router, type RouteDefinition } from '@inflector/keeno-router'
+  import Search from './components/Search.kn'
+  import DocPage from './pages/DocPage.kn'
+  import Home from './pages/Home.kn'
+  import Example from './pages/Example.kn'
+  import Examples from './pages/Examples.kn'
+  import NotFound from './pages/NotFound.kn'
+  import Playground from './pages/Playground.kn'
+
+  // `url` is only passed on the server; in the browser the router follows the location.
+  const { url } = props<{ url?: string }>()
+
+  const routes: RouteDefinition[] = [
+    { path: '/', component: Home },
+    { path: '/docs', component: DocPage },
+    { path: '/docs/:slug', component: DocPage },
+    { path: '/examples', component: Examples },
+    { path: '/examples/:slug', component: Example },
+    { path: '/playground', component: Playground },
+    { path: '*', component: NotFound },
+  ]
+</script>
+
+<Router routes={routes} url={url} />
+<Search />

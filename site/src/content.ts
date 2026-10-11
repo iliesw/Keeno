@@ -1,4 +1,4 @@
-import { navigate } from '@inflector/lux-router'
+import { navigate } from '@inflector/keeno-router'
 
 /**
  * Click handler for rendered markdown (set with `innerHTML`): copy buttons of code blocks,
@@ -22,14 +22,14 @@ export function onContentClick(e: MouseEvent) {
     // Remembered across pages and visits; index.html applies it before the first paint.
     document.documentElement.dataset.pm = pm.dataset.pm
     try {
-      localStorage.setItem('lux-pm', pm.dataset.pm)
+      localStorage.setItem('keeno-pm', pm.dataset.pm)
     } catch {}
     return
   }
   const play = target.closest('[data-playground]')
   if (play) {
     const code = play.closest('.code-block')?.querySelector('pre code')?.textContent ?? ''
-    import('./playground/share').then(async ({ playgroundUrl }) => navigate(await playgroundUrl({ files: [{ name: 'App.lx', code }] })))
+    import('./playground/share').then(async ({ playgroundUrl }) => navigate(await playgroundUrl({ files: [{ name: 'App.kn', code }] })))
     return
   }
   const a = target.closest('a')

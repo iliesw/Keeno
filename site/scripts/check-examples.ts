@@ -1,12 +1,12 @@
-// Compile every example with the Lux compiler (the playground does the same in the browser).
-import { compile } from '@inflector/lux-compiler'
+// Compile every example with the Keeno compiler (the playground does the same in the browser).
+import { compile } from '@inflector/keeno-compiler'
 import { readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 
 const dir = path.resolve(import.meta.dir, '../src/examples')
 let failed = 0
 for (const ex of readdirSync(dir, { withFileTypes: true }).filter((d) => d.isDirectory())) {
-  for (const f of readdirSync(path.join(dir, ex.name)).filter((f) => f.endsWith('.lx'))) {
+  for (const f of readdirSync(path.join(dir, ex.name)).filter((f) => f.endsWith('.kn'))) {
     try {
       compile(readFileSync(path.join(dir, ex.name, f), 'utf8'), { filename: f })
     } catch (e: any) {

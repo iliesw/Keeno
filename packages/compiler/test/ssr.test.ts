@@ -2,17 +2,17 @@
 // (linkedom) as with mount() in the browser DOM, before any init/update callback runs.
 import { plugin } from 'bun'
 import { afterEach, beforeAll, describe, expect, test } from 'bun:test'
-import { createComponent } from '@inflector/lux/internal'
-import { renderToString } from '@inflector/lux/server'
-import { Owner, runWithOwner } from '../../lux/src/signal'
-import { insert } from '../../lux/src/dom'
+import { createComponent } from '@inflector/keeno/internal'
+import { renderToString } from '@inflector/keeno/server'
+import { Owner, runWithOwner } from '../../keeno/src/signal'
+import { insert } from '../../keeno/src/dom'
 import { compile } from '../src/index'
 
 beforeAll(() => {
   plugin({
-    name: 'lux-ssr-test',
+    name: 'keeno-ssr-test',
     setup(build) {
-      build.onLoad({ filter: /\.lx$/ }, async ({ path }) => ({
+      build.onLoad({ filter: /\.kn$/ }, async ({ path }) => ({
         contents: compile(await Bun.file(path).text(), { filename: path }).js,
         loader: 'ts',
       }))
@@ -70,13 +70,13 @@ const cases: [string, Record<string, any>][] = [
 
 describe('renderToString matches the client DOM', () => {
   test('input values are written as attributes', async () => {
-    const Comp = (await import('./fixtures/Features.lx')).default
+    const Comp = (await import('./fixtures/Features.kn')).default
     expect(await renderToString(Comp)).toContain('value="a"')
   })
 
   for (const [name, props] of cases) {
     test(name, async () => {
-      const Comp = (await import(`./fixtures/${name}.lx`)).default
+      const Comp = (await import(`./fixtures/${name}.kn`)).default
       const server = await renderToString(Comp, props)
       expect(server.length).toBeGreaterThan(0)
       expect(normalize(server)).toBe(normalize(clientHtml(Comp, props)))

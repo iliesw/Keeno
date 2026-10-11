@@ -1,5 +1,5 @@
 // Consumer smoke test: pack every publishable package, install the tarballs into a fresh project
-// with npm, then build it with Vite, type-check it with lux-check and server-render it, all on
+// with npm, then build it with Vite, type-check it with keeno-check and server-render it, all on
 // Node (not Bun). Catches packaging mistakes (missing files, unresolved `workspace:` ranges,
 // wrong exports) and incompatibilities with a Vite major.
 //
@@ -14,11 +14,11 @@ import path from 'node:path'
 const root = path.resolve(import.meta.dir, '..')
 const viteMajor = process.argv.find((a) => a.startsWith('--vite='))?.slice(7) ?? '8'
 const keep = process.argv.includes('--keep')
-const work = path.join(tmpdir(), `lux-smoke-vite${viteMajor}`)
+const work = path.join(tmpdir(), `keeno-smoke-vite${viteMajor}`)
 const tarballs = path.join(work, 'tarballs')
 const app = path.join(work, 'app')
 
-const packages = ['lux', 'router', 'compiler', 'vite-plugin-lux', 'language-server', 'lux-check']
+const packages = ['keeno', 'router', 'compiler', 'vite-plugin-keeno', 'language-server', 'keeno-check']
 
 function step(name: string) {
   console.log(`\n[smoke] ${name}`)
@@ -49,32 +49,32 @@ step(`create app (vite@${viteMajor})`)
 const files: Record<string, string> = {
   'package.json': JSON.stringify(
     {
-      name: 'lux-smoke-app',
+      name: 'keeno-smoke-app',
       private: true,
       type: 'module',
-      dependencies: { '@inflector/lux': deps['@inflector/lux'], '@inflector/lux-router': deps['@inflector/lux-router'] },
+      dependencies: { '@inflector/keeno': deps['@inflector/keeno'], '@inflector/keeno-router': deps['@inflector/keeno-router'] },
       devDependencies: {
-        '@inflector/vite-plugin-lux': deps['@inflector/vite-plugin-lux'],
-        '@inflector/lux-check': deps['@inflector/lux-check'],
+        '@inflector/vite-plugin-keeno': deps['@inflector/vite-plugin-keeno'],
+        '@inflector/keeno-check': deps['@inflector/keeno-check'],
         // Transitive tarball dependencies must resolve to the local tarballs too.
-        '@inflector/lux-compiler': deps['@inflector/lux-compiler'],
-        '@inflector/lux-language-server': deps['@inflector/lux-language-server'],
+        '@inflector/keeno-compiler': deps['@inflector/keeno-compiler'],
+        '@inflector/keeno-language-server': deps['@inflector/keeno-language-server'],
         vite: `^${viteMajor}.0.0`,
         typescript: '^5.6.0',
         linkedom: '^0.18.0',
       },
       overrides: {
-        '@inflector/lux': deps['@inflector/lux'],
-        '@inflector/lux-compiler': deps['@inflector/lux-compiler'],
-        '@inflector/lux-language-server': deps['@inflector/lux-language-server'],
+        '@inflector/keeno': deps['@inflector/keeno'],
+        '@inflector/keeno-compiler': deps['@inflector/keeno-compiler'],
+        '@inflector/keeno-language-server': deps['@inflector/keeno-language-server'],
       },
     },
     null,
     2,
   ),
   'vite.config.mjs': `import { defineConfig } from 'vite'
-import lux from '@inflector/vite-plugin-lux'
-export default defineConfig({ plugins: [lux()] })
+import keeno from '@inflector/vite-plugin-keeno'
+export default defineConfig({ plugins: [keeno()] })
 `,
   'tsconfig.json': JSON.stringify(
     {
@@ -93,16 +93,16 @@ export default defineConfig({ plugins: [lux()] })
     2,
   ),
   'index.html': `<!doctype html><html><body><div id="app"></div><script type="module" src="/src/main.ts"></script></body></html>`,
-  'src/env.d.ts': `declare module '*.lx' {
-  const Component: import('@inflector/lux').Component
+  'src/env.d.ts': `declare module '*.kn' {
+  const Component: import('@inflector/keeno').Component
   export default Component
 }
 `,
-  'src/main.ts': `import { mount } from '@inflector/lux'
-import App from './App.lx'
+  'src/main.ts': `import { mount } from '@inflector/keeno'
+import App from './App.kn'
 mount(App, document.getElementById('app')!)
 `,
-  'src/Item.lx': `<script lang="ts">
+  'src/Item.kn': `<script lang="ts">
   const { text, onRemove } = props<{ text: string; onRemove: () => void }>()
 </script>
 
@@ -112,10 +112,10 @@ mount(App, document.getElementById('app')!)
   .item { color: rebeccapurple }
 </style>
 `,
-  'src/App.lx': `<script lang="ts">
-  import { ErrorBoundary } from '@inflector/lux'
-  import { Link } from '@inflector/lux-router'
-  import Item from './Item.lx'
+  'src/App.kn': `<script lang="ts">
+  import { ErrorBoundary } from '@inflector/keeno'
+  import { Link } from '@inflector/keeno-router'
+  import Item from './Item.kn'
   const items = state<{ id: number; text: string }[]>([{ id: 1, text: 'first' }])
   const count = derived(() => items.length)
 </script>
@@ -130,8 +130,8 @@ mount(App, document.getElementById('app')!)
   h1 { font-weight: 300 }
 </style>
 `,
-  'src/entry-server.ts': `import { renderToString } from '@inflector/lux/server'
-import App from './App.lx'
+  'src/entry-server.ts': `import { renderToString } from '@inflector/keeno/server'
+import App from './App.kn'
 export const render = () => renderToString(App)
 `,
   // Dev SSR: load the server entry through Vite, so the app and renderToString share one runtime.
@@ -165,12 +165,12 @@ await $`node node_modules/vite/bin/vite.js build`.cwd(app)
 const assets = path.join(app, 'dist', 'assets')
 const js = readdirSync(assets).filter((f) => f.endsWith('.js')).map((f) => readFileSync(path.join(assets, f), 'utf8')).join('')
 const css = readdirSync(assets).filter((f) => f.endsWith('.css')).map((f) => readFileSync(path.join(assets, f), 'utf8')).join('')
-if (!/\.lux-[0-9a-f]{8}/.test(css)) fail('built CSS has no scoped selectors')
+if (!/\.keeno-[0-9a-f]{8}/.test(css)) fail('built CSS has no scoped selectors')
 if (!js.includes('Smoke ')) fail('built JS is missing the App template')
-if (js.includes('__LUX_DEV__ = true') || js.includes('__LUX_DEV__=!0')) fail('production build turns on development mode')
+if (js.includes('__KEENO_DEV__ = true') || js.includes('__KEENO_DEV__=!0')) fail('production build turns on development mode')
 
-step('lux-check (node)')
-await $`node node_modules/@inflector/lux-check/dist/cli.js`.cwd(app)
+step('keeno-check (node)')
+await $`node node_modules/@inflector/keeno-check/dist/cli.js`.cwd(app)
 
 step('server render through the Vite dev server (node)')
 const devSsr = await $`node ssr.mjs`.cwd(app).quiet()

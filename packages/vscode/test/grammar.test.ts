@@ -1,4 +1,4 @@
-// Tokenize .lx code with our grammar plus VS Code's own TSX and CSS grammars.
+// Tokenize .kn code with our grammar plus VS Code's own TSX and CSS grammars.
 import { describe, expect, test } from 'bun:test'
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
@@ -22,7 +22,7 @@ async function loadGrammar() {
   const wasm = readFileSync(require.resolve('vscode-oniguruma/release/onig.wasm'))
   await oniguruma.loadWASM(wasm.buffer.slice(wasm.byteOffset, wasm.byteOffset + wasm.byteLength))
   const files: Record<string, string> = {
-    'source.lux': path.join(root, 'syntaxes/lux.tmLanguage.json'),
+    'source.keeno': path.join(root, 'syntaxes/keeno.tmLanguage.json'),
     'source.tsx': path.join(ext!, 'typescript-basics/syntaxes/TypeScriptReact.tmLanguage.json'),
     'source.css': path.join(ext!, 'css/syntaxes/css.tmLanguage.json'),
   }
@@ -33,7 +33,7 @@ async function loadGrammar() {
     }),
     loadGrammar: async (scope) => (files[scope] ? textmate.parseRawGrammar(readFileSync(files[scope], 'utf8'), files[scope]) : null),
   })
-  return (await registry.loadGrammar('source.lux'))!
+  return (await registry.loadGrammar('source.keeno'))!
 }
 
 /** Scopes for each token, as `text => innermost scopes`. */
@@ -69,7 +69,7 @@ const SAMPLE = `<!-- Counter -->
 describe.skipIf(!ext)('grammar', () => {
   test('script is TypeScript', async () => {
     const scope = await tokenize(SAMPLE)
-    expect(scope('const')).toContain('meta.embedded.block.lux.script')
+    expect(scope('const')).toContain('meta.embedded.block.keeno.script')
     expect(scope('const')).toContain('storage.type')
     expect(scope('number')).toContain('support.type.primitive')
     expect(scope('script')).toContain('entity.name.tag.script.html')
@@ -86,7 +86,7 @@ describe.skipIf(!ext)('grammar', () => {
 
   test('style is CSS', async () => {
     const scope = await tokenize(SAMPLE)
-    expect(scope('color')).toContain('meta.embedded.block.lux.style')
+    expect(scope('color')).toContain('meta.embedded.block.keeno.style')
     expect(scope('color')).toContain('support.type.property-name.css')
   })
 
