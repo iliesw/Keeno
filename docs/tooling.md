@@ -2,7 +2,7 @@
 
 ## Vite plugin
 
-`@inflector/vite-plugin-lux` compiles `.lx` files, serves their CSS, strips TypeScript (with Oxc on Vite 8, and esbuild on Vite 5 to 7) and chains source maps. It supports Vite 5, 6, 7 and 8. Options: `lux({ hmr?: boolean })`.
+`@inflector/vite-plugin-lux` compiles `.lx` files, serves their CSS, strips TypeScript (with Oxc on Vite 8, and esbuild on Vite 5 to 7) and chains source maps. It supports Vite 5, 6, 7 and 8. Options: `lux({ hmr?: boolean, tailwind?: boolean | { reference?: string } })`. `tailwind` defaults to on when `@tailwindcss/vite` is in the plugins (see [Styles](styles.md#tailwind-css)).
 
 During `vite dev` the plugin also turns on development mode: warnings such as duplicate keys in a list, and a console hook for inspecting the component tree (below). Production builds have neither.
 
@@ -31,7 +31,7 @@ Outside Vite, turn on development mode with `globalThis.__LUX_DEV__ = true` befo
 - TypeScript IntelliSense in `.lx` files, through a Volar-based language server:
   - completions, hover, go to definition and type errors
   - HTML tag, attribute and event completions
-  - CSS completions
+  - CSS completions, including Tailwind directives (`@apply`, `@theme`, `@utility`, `@variant`, ...) with no "unknown at-rule" warnings
 - `.lx` semantics in the types: a local state reads as its value plus `set`, `get`, `peek`, `onUpdate`, `undo`, `redo`, `canUndo` and `canRedo`.
 - Typed props: a component's props type is the type argument of its `props<P>()` call. Using it with a missing or mistyped prop is an error, and prop names complete on its tag. Parents write `children` as nested markup; inside the component it is a `Children` function.
 
@@ -41,6 +41,10 @@ Install "Lux" (`inflector.lux-vscode`) from the VS Code Marketplace or Open VSX.
 bun run --cwd packages/vscode package
 code --install-extension packages/vscode/lux-vscode.vsix
 ```
+
+### Tailwind CSS IntelliSense
+
+With the [Tailwind CSS IntelliSense](https://marketplace.visualstudio.com/items?itemName=bradlc.vscode-tailwindcss) extension installed, `.lx` files get class completions, hover previews and linting in `class="…"`, in `class={…}` strings and in `@apply`. The Lux extension sets `"tailwindCSS.includeLanguages": { "lux": "html" }` by default. If you set `tailwindCSS.includeLanguages` yourself, add `"lux": "html"` to it.
 
 Limitations:
 - Props of a component without a `props<P>()` type argument are untyped (`any`).

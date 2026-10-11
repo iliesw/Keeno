@@ -4,7 +4,8 @@
   "workspaces": [
     "packages/*",
     "examples/*",
-    "e2e/app"
+    "e2e/app",
+    "site"
   ],
   "scripts": {
     "test": "bun test",
@@ -19,7 +20,9 @@
     "docs:llms": "bun run scripts/build-llms.ts",
     "changeset": "changeset",
     "version-packages": "bun run scripts/version.ts",
-    "release": "bun run scripts/release.ts"
+    "release": "bun run scripts/release.ts",
+    "docs:dev": "bun run --cwd site dev",
+    "docs:build": "bun run --cwd site build"
   },
   "devDependencies": {
     "@changesets/changelog-github": "^1.0.1",

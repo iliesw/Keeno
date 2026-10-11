@@ -1,6 +1,6 @@
 # @inflector/lux
 
-The runtime of [Lux](https://github.com/iliesw/Lux), a compiled, signal-based frontend framework: reactivity (`state`, `derived`), lifecycle (`init`, `update`, `destroy`), context, built-in components (`ErrorBoundary`, `Await`, `lazy`, `Dynamic`, `Portal`, `Transition`), `mount` and `hydrate`, and server rendering (`@inflector/lux/server`).
+The runtime of [Lux](https://github.com/iliesw/Lux), a compiled, signal-based frontend framework: reactivity (`state`, `derived`), lifecycle (`init`, `update`, `destroy`), context, built-in components (`ErrorBoundary`, `Await`, `lazy`, `Dynamic`, `Portal`, `Transition`), reparenting (`reparentable`, `keyedReparentable`), `mount` and `hydrate`, and server rendering (`@inflector/lux/server`).
 
 ```bash
 bun add @inflector/lux

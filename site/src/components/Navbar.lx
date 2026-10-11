@@ -1,0 +1,67 @@
+<script lang="ts">
+  import { Link, useRoute } from '@inflector/lux-router'
+  import Icon from './Icon.lx'
+  import Logo from './Logo.lx'
+  import { nav } from '../docs'
+  import { GITHUB } from '../icons'
+
+  const route = useRoute()
+  const menu = state(false)
+
+  const tabs = [
+    { name: 'Docs', href: '/docs/introduction', match: (p: string) => p.startsWith('/docs') && p !== '/docs/api' },
+    { name: 'API', href: '/docs/api', match: (p: string) => p === '/docs/api' },
+    { name: 'Examples', href: `${GITHUB}/tree/main/examples`, match: () => false },
+  ]
+
+  function toggleTheme() {
+    const dark = document.documentElement.classList.toggle('dark')
+    try {
+      localStorage.setItem('lux-theme', dark ? 'dark' : 'light')
+    } catch {}
+  }
+
+  // Close the mobile menu on navigation.
+  update(() => {
+    route.path
+    menu.set(false)
+  })
+</script>
+
+<header class="fixed top-0 left-1/2 z-40 w-full max-w-400 -translate-x-1/2 bg-linear-to-b from-white to-transparent py-3 dark:from-ink">
+  <div class="flex w-full items-center justify-between px-4">
+    <div class="flex items-center gap-2">
+      <Link href="/" class="mr-1"><Logo /></Link>
+      {tabs.map((t) =>
+        t.href.startsWith('http') ? (
+          <a key={t.name} href={t.href} target="_blank" rel="noreferrer" class="hidden rounded-lg p-1 px-2 font-black transition-all hover:bg-neutral-200 sm:block dark:hover:bg-neutral-800">{t.name}</a>
+        ) : (
+          <Link key={t.name} href={t.href} class={['hidden rounded-lg p-1 px-2 font-black transition-all hover:bg-neutral-200 sm:block dark:hover:bg-neutral-800', t.match(route.path) ? 'bg-neutral-200 dark:bg-neutral-800' : 'opacity-80']}>{t.name}</Link>
+        ),
+      )}
+    </div>
+    <div class="flex h-8.5 w-fit items-center gap-1">
+      <a href={GITHUB} target="_blank" rel="noreferrer" aria-label="GitHub" class="rounded-lg p-2 transition-all hover:bg-neutral-200 dark:hover:bg-neutral-800">
+        <Icon name="github" />
+      </a>
+      <button type="button" aria-label="Toggle theme" onClick={toggleTheme} class="cursor-pointer rounded-lg p-2 transition-all hover:bg-neutral-200 dark:hover:bg-neutral-800">
+        <Icon name="theme" />
+      </button>
+      <button type="button" aria-label="Menu" aria-expanded={menu} onClick={() => menu.set(!menu)} class="cursor-pointer rounded-lg p-2 transition-all hover:bg-neutral-200 min-[1080px]:hidden dark:hover:bg-neutral-800">
+        <Icon name={menu ? 'close' : 'menu'} />
+      </button>
+    </div>
+  </div>
+  {menu && (
+    <nav class="mx-4 mt-2 max-h-[75svh] overflow-y-auto rounded-xl border bg-white p-3 shadow-xl min-[1080px]:hidden dark:bg-neutral-900">
+      {nav.map((group) => (
+        <div key={group.title} class="mb-3 flex flex-col gap-1">
+          <p class="px-2 text-sm opacity-70">{group.title}</p>
+          {group.items.map((item) => (
+            <Link key={item.slug} href={`/docs/${item.slug}`} exact class="rounded-md px-2 py-1.25 text-sm font-black hover:bg-neutral-200 dark:hover:bg-neutral-800 [&.active]:bg-neutral-200 dark:[&.active]:bg-neutral-800">{item.title}</Link>
+          ))}
+        </div>
+      ))}
+    </nav>
+  )}
+</header>

@@ -14,7 +14,8 @@ Rules that differ from React, Svelte and Vue, which models get wrong most often:
 - **Lists:** `{list.map(item => <li key={item.id}>…</li>)}` is keyed. The callback must return JSX directly.
 - **Lifecycle:** `init(fn)` runs after mount and its return value is cleanup. `update(fn)` is an auto-tracked effect. `update(fn, [a, b])` runs only when `a` or `b` changes, not on mount. `destroy(fn)` runs on unmount.
 - **State options:** `persist`, `url`, `history`, `equals`, `validate`, `debounce` and `throttle`.
-- **Built-ins:** `ErrorBoundary`, `Await`, `Dynamic`, `Portal`, `Transition` and `lazy()` are imported from `@inflector/lux`. Render props such as `fallback={(error, reset) => <p>…</p>}` and `fulfilled={(value) => …}` are functions.
+- **Built-ins:** `ErrorBoundary`, `Await`, `Dynamic`, `Portal`, `Transition`, `lazy()` and `reparentable()` are imported from `@inflector/lux`. Render props such as `fallback={(error, reset) => <p>…</p>}` and `fulfilled={(value) => …}` are functions.
+- **Reparenting:** to move content between places without re-creating it, `const player = reparentable(() => <Video />)` and render `{player}` wherever it should be now. Use `keyedReparentable((id) => <Card id={id} />)` for items moving between lists. Imperatively: `player.moveTo(el)`, `player.remove()`, and `moveNode(node, parent)` for any DOM node.
 - **Context:** `provide(Ctx, value)` and `inject(Ctx)` are called in `<script>`. To make the value reactive, provide a state. An injected state is a plain object, so use `.get()`.
 - **Packages:** `@inflector/lux` (runtime), `@inflector/lux/server` (`renderToString`), `@inflector/lux-router`, `@inflector/vite-plugin-lux` and `@inflector/lux-check`.
 
@@ -25,9 +26,9 @@ Rules that differ from React, Svelte and Vue, which models get wrong most often:
 - [Reactivity](docs/reactivity.md): state read and write rules, derived, update vs onUpdate, stores, batching
 - [State options](docs/state-options.md): persist, url, history (undo/redo), equals, validate, debounce, throttle
 - [Templates](docs/templates.md): expressions, conditionals, keyed lists, events, bind, class arrays, spread
-- [Styles](docs/styles.md): scoped CSS and `:global()`
+- [Styles](docs/styles.md): scoped CSS, `:global()`, Tailwind CSS (`@apply` in `<style>`, auto `@reference`)
 - [Context](docs/context.md): createContext, provide and inject
-- [Built-in components](docs/built-ins.md): ErrorBoundary, Await, lazy, Dynamic, Portal, Transition
+- [Built-in components](docs/built-ins.md): ErrorBoundary, Await, lazy, Dynamic, Portal, reparentable, Transition
 - [Routing](docs/routing.md): @inflector/lux-router: Router, Link, navigate, useRoute
 - [Server rendering](docs/ssr.md): renderToString, hydrate, Vite SSR setup
 - [Security](docs/security.md): what is escaped, innerHTML, javascript: URLs, CSP
@@ -626,7 +627,56 @@ The `<style>` block of a component is scoped to it.
 
 Styles don't leak between components, and parent styles don't reach into children. Dynamic `class` values keep the scope class.
 
-The CSS is served as a virtual module (`Foo.lx?lux&type=style.css`). Vite injects it in dev with hot updates and extracts it in builds.
+## Tailwind CSS
+
+Lux works with Tailwind CSS v4. Add `@tailwindcss/vite` next to the Lux plugin and import Tailwind from a stylesheet:
+
+```bash
+bun add -d tailwindcss @tailwindcss/vite
+```
+
+```ts
+// vite.config.ts
+import { defineConfig } from 'vite'
+import tailwindcss from '@tailwindcss/vite'
+import lux from '@inflector/vite-plugin-lux'
+
+export default defineConfig({ plugins: [lux(), tailwindcss()] })
+```
+
+```css
+/* src/app.css, imported once from main.ts */
+@import 'tailwindcss';
+```
+
+- **Utilities in markup:** Tailwind scans `.lx` files, so classes in `class="…"` and in `class={[…]}` arrays and ternaries are generated. Write class names in full (`'bg-red-500'`, not `` `bg-${color}-500` ``).
+- **Directives in `<style>`:** `@apply`, `@variant`, `theme()`, `--theme()`, `--spacing()` and `--alpha()` work in component styles, and the result stays scoped.
+- **No `@reference` needed:** a component style that uses Tailwind gets `@reference` to your main stylesheet added for you. That's the shallowest `.css` file in the project that imports `tailwindcss`, so your `@theme` tokens are available. Write your own `@reference` to choose another file, or set `lux({ tailwind: { reference: 'src/app.css' } })`.
+- **Not scoped:** rules inside `@utility`, `@theme` and `@custom-variant`, which define global things.
+
+```html Button.lx
+<script lang="ts">
+  import type { Children } from '@inflector/lux'
+  const { children } = props<{ children: Children }>()
+</script>
+
+<button class="btn">{children}</button>
+
+<style>
+  .btn {
+    @apply rounded-lg bg-sky-600 px-4 py-2 text-white;
+    @variant hover {
+      @apply bg-sky-700;
+    }
+  }
+</style>
+```
+
+This is on whenever `@tailwindcss/vite` is in the plugins. Turn it off with `lux({ tailwind: false })`. For editor support, see [Tooling](tooling.md#tailwind-css-intellisense). `examples/tailwind` is a complete app.
+
+## Virtual CSS module
+
+The CSS is served as a virtual module (`Foo.lx?lux&type=style&lang.css`). Vite injects it in dev with hot updates and extracts it in builds.
 
 ---
 
@@ -681,7 +731,7 @@ Any component inside it reads the value with `inject(context)`:
 
 # Built-in components
 
-`@inflector/lux` exports a few components for things plain markup can't express: catching errors, waiting for promises, loading code on demand, rendering elsewhere in the page, and animating elements in and out. Import them like any component.
+`@inflector/lux` exports a few components for things plain markup can't express: catching errors, waiting for promises, loading code on demand, rendering elsewhere in the page, moving live content around without re-creating it, and animating elements in and out. Import them like any component.
 
 ## ErrorBoundary
 
@@ -792,6 +842,82 @@ Use `Chart` like any other component. `Chart.preload()` starts loading earlier, 
 - `target` is an element or a CSS selector. It defaults to `document.body`, and is read once, when the portal is created.
 - The children stay part of this component: its scoped styles, context, error boundaries and `destroy` all apply, and their nodes are removed when the portal is destroyed.
 - DOM events bubble through the real DOM, that is through the target and not through the portal's position in the tree.
+
+## reparentable
+
+`reparentable()` renders content once and lets you show it in different places while it keeps its state: the same component instances and the same DOM nodes move, instead of being destroyed in one place and created again in another. Put the handle in markup wherever the content should appear now:
+
+```html Lesson.lx
+<script lang="ts">
+  import { reparentable } from '@inflector/lux'
+  import Video from './Video.lx'
+  const { src } = props<{ src: string }>()
+  const theater = state(false)
+  const player = reparentable(() => <Video src={src} />)
+</script>
+
+{theater ? <dialog open class="theater">{player}</dialog> : <aside class="inline">{player}</aside>}
+<button onClick={() => theater.set(!theater)}>Theater mode</button>
+```
+
+In browsers with the native [`moveBefore`](https://developer.mozilla.org/docs/Web/API/Element/moveBefore) (Chrome and Edge 133+ and recent Firefox, not yet Safari), the move also keeps what the DOM itself holds: an iframe or a video keeps playing, focus and text selection stay, and CSS animations and transitions continue. Elsewhere the nodes are re-inserted, so component state is kept but an iframe reloads.
+
+- The content is created the first time it is rendered and lives as long as the component that called `reparentable()`, not as long as the place showing it. `player.dispose()` destroys it earlier.
+- While it is shown nowhere it stays alive, with its `update` callbacks still running, so it comes back as it was. Show it in one place at a time.
+- Context and error boundaries are the ones around the `reparentable()` call. Its scoped styles are those of the component that renders it.
+- Called outside a component (in a store module), the content lives until `dispose()`: for example a player that keeps going across route changes.
+
+### Moving it imperatively
+
+Code that works with elements directly, like drag and drop, a layout engine or a picture-in-picture toggle, can move the content itself:
+
+```html Lesson.lx
+<script lang="ts">
+  import { reparentable } from '@inflector/lux'
+  import Video from './Video.lx'
+  const player = reparentable(() => <Video src="/intro.mp4" />)
+
+  function dropInto(e: DragEvent) {
+    player.moveTo(e.currentTarget as Element)
+  }
+</script>
+
+<aside>{player}</aside>
+<div class="dropzone" onDragover={(e) => e.preventDefault()} onDrop={dropInto}></div>
+<button onClick={() => player.moveTo('#pip')}>Picture in picture</button>
+<button onClick={() => player.remove()}>Hide</button>
+```
+
+- `player.moveTo(target, before?)` moves the content into `target` (an element or a CSS selector), before `before` or at the end. It creates the content if it was never rendered. The move happens right away and is native where the browser supports it. The content stays there and keeps following its own updates.
+- `player.remove()` takes the content out of the page. It stays alive and can be shown again as it was.
+- `player.nodes()` returns its current nodes, wherever they are, for example to measure them.
+- After `moveTo()` or `remove()`, a place in markup that was already showing the content does not take it back just because it updates. A place that renders it anew does, such as a branch of a condition that switches back, and from then on markup is in charge again.
+
+For a single DOM node that isn't Lux content, `moveNode(node, parent, before?)` does the same native-when-possible move.
+
+For items that move between lists, such as cards on a kanban board, use `keyedReparentable()`. It creates one entry per key on first use, and every entry belongs to the component that called it, even when it is first rendered inside a list row:
+
+```html Board.lx
+<script lang="ts">
+  import { keyedReparentable } from '@inflector/lux'
+  import Card from './Card.lx'
+  const cards = state([{ id: 1, column: 'todo' }, { id: 2, column: 'done' }])
+  const cardView = keyedReparentable((id: number) => <Card id={id} />)
+
+  function remove(id: number) {
+    cards.set(cards.filter((c) => c.id !== id))
+    cardView.delete(id)
+  }
+</script>
+
+{['todo', 'done'].map((column) => (
+  <ul key={column}>
+    {cards.filter((c) => c.column === column).map((c) => <li key={c.id}>{cardView(c.id)}</li>)}
+  </ul>
+))}
+```
+
+Moving a card to the other column re-creates its `<li>`, but the `<Card>` inside moves with its state. `cardView.delete(id)` destroys an entry and `cardView.keys()` lists the live ones.
 
 ## Transition
 
@@ -1009,7 +1135,7 @@ Please report security issues privately through [GitHub security advisories](htt
 
 ## Vite plugin
 
-`@inflector/vite-plugin-lux` compiles `.lx` files, serves their CSS, strips TypeScript (with Oxc on Vite 8, and esbuild on Vite 5 to 7) and chains source maps. It supports Vite 5, 6, 7 and 8. Options: `lux({ hmr?: boolean })`.
+`@inflector/vite-plugin-lux` compiles `.lx` files, serves their CSS, strips TypeScript (with Oxc on Vite 8, and esbuild on Vite 5 to 7) and chains source maps. It supports Vite 5, 6, 7 and 8. Options: `lux({ hmr?: boolean, tailwind?: boolean | { reference?: string } })`. `tailwind` defaults to on when `@tailwindcss/vite` is in the plugins (see [Styles](styles.md#tailwind-css)).
 
 During `vite dev` the plugin also turns on development mode: warnings such as duplicate keys in a list, and a console hook for inspecting the component tree (below). Production builds have neither.
 
@@ -1038,7 +1164,7 @@ Outside Vite, turn on development mode with `globalThis.__LUX_DEV__ = true` befo
 - TypeScript IntelliSense in `.lx` files, through a Volar-based language server:
   - completions, hover, go to definition and type errors
   - HTML tag, attribute and event completions
-  - CSS completions
+  - CSS completions, including Tailwind directives (`@apply`, `@theme`, `@utility`, `@variant`, ...) with no "unknown at-rule" warnings
 - `.lx` semantics in the types: a local state reads as its value plus `set`, `get`, `peek`, `onUpdate`, `undo`, `redo`, `canUndo` and `canRedo`.
 - Typed props: a component's props type is the type argument of its `props<P>()` call. Using it with a missing or mistyped prop is an error, and prop names complete on its tag. Parents write `children` as nested markup; inside the component it is a `Children` function.
 
@@ -1048,6 +1174,10 @@ Install "Lux" (`inflector.lux-vscode`) from the VS Code Marketplace or Open VSX.
 bun run --cwd packages/vscode package
 code --install-extension packages/vscode/lux-vscode.vsix
 ```
+
+### Tailwind CSS IntelliSense
+
+With the [Tailwind CSS IntelliSense](https://marketplace.visualstudio.com/items?itemName=bradlc.vscode-tailwindcss) extension installed, `.lx` files get class completions, hover previews and linting in `class="…"`, in `class={…}` strings and in `@apply`. The Lux extension sets `"tailwindCSS.includeLanguages": { "lux": "html" }` by default. If you set `tailwindCSS.includeLanguages` yourself, add `"lux": "html"` to it.
 
 Limitations:
 - Props of a component without a `props<P>()` type argument are untyped (`any`).
@@ -1159,6 +1289,14 @@ See [Context](context.md).
 
 ```ts
 lazy(load: () => Promise<{ default: Component } | Component>, options?: { pending?: () => unknown }): Component & { preload(): Promise<Component> }
+```
+
+```ts
+reparentable(render: () => unknown): Reparentable
+// { (): Node[]; moveTo(target: Node | selector, before?: Node | null): void; remove(): void;
+//   nodes(): Node[]; dispose(): void; readonly disposed: boolean }
+keyedReparentable<K>(render: (key: K) => unknown): KeyedReparentable<K>  // { (key): Reparentable; delete(key): void; keys(): K[] }
+moveNode(node: Node, parent: Node, before?: Node | null): void   // native moveBefore when possible
 ```
 
 See [Built-in components](built-ins.md).

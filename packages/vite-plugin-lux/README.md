@@ -14,7 +14,14 @@ import lux from '@inflector/vite-plugin-lux'
 export default defineConfig({ plugins: [lux()] })
 ```
 
-Options: `lux({ hmr?: boolean })`. Hot module replacement is on by default.
+Options:
+- `hmr?: boolean`: hot module replacement (default on).
+- `tailwind?: boolean | { reference?: string }`: Tailwind CSS v4 in component `<style>` blocks (`@apply`, `@variant`, `--spacing()`, ...), with the `@reference` to your main stylesheet added for you. On by default when `@tailwindcss/vite` is in the plugins:
+
+```ts
+import tailwindcss from '@tailwindcss/vite'
+export default defineConfig({ plugins: [lux(), tailwindcss()] })
+```
 
 To type `.lx` imports in `.ts` files, add a `src/env.d.ts`:
 

@@ -375,9 +375,13 @@ function enqueueDerived(d: Derived<any>) {
   schedule()
 }
 
-/** Queue a job to run after pending render computations, before user computations. */
-export function queueMount(fn: () => void) {
-  mountQueue.push(fn)
+/**
+ * Queue a job to run after pending render computations, before user computations. With `first`,
+ * it runs before the mount jobs already queued.
+ */
+export function queueMount(fn: () => void, first = false) {
+  if (first) mountQueue.unshift(fn)
+  else mountQueue.push(fn)
   schedule()
 }
 

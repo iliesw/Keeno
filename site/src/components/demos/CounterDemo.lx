@@ -1,0 +1,18 @@
+<script lang="ts">
+  const count = state(0)
+  const doubled = derived(() => count * 2)
+</script>
+
+<div class="flex flex-col items-center gap-4 text-center">
+  <h3 class="text-2xl font-black text-orange-500">Clicked {count} times ({doubled} doubled)</h3>
+  <div class="flex gap-2">
+    <button type="button" class="demo-btn" onClick={() => count.set(count - 1)}>-1</button>
+    <button type="button" class="demo-btn" onClick={() => count.set(count + 1)}>+1</button>
+  </div>
+</div>
+
+<style>
+  .demo-btn {
+    @apply cursor-pointer rounded-lg bg-neutral-900 px-4 py-1.5 font-black text-white transition active:scale-95 dark:bg-white dark:text-black;
+  }
+</style>

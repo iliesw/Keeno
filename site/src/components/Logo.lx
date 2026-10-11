@@ -1,0 +1,11 @@
+<script lang="ts">
+  import { spark } from '../icons'
+</script>
+
+<span class="flex cursor-pointer items-center gap-2">
+  <span class="relative rounded-lg p-1 transition-colors hover:bg-neutral-200 dark:hover:bg-neutral-800">
+    <span class="absolute top-1/2 left-1/2 -translate-1/2 opacity-60 blur-md" innerHTML={spark()}></span>
+    <span class="relative block" innerHTML={spark()}></span>
+  </span>
+  <span class="font-rubik text-lg font-black tracking-tight">Lux</span>
+</span>

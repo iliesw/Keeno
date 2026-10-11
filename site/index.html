@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#141413" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="stylesheet" href="/src/app.css" />
+    <script>
+      try {
+        if (localStorage.getItem('lux-theme') === 'light') document.documentElement.classList.remove('dark')
+      } catch {}
+    </script>
+    <!--app-head-->
+    <script type="module" src="/src/entry-client.ts"></script>
+  </head>
+  <body>
+    <div id="app"><!--app-html--></div>
+  </body>
+</html>

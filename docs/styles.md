@@ -19,4 +19,53 @@ The `<style>` block of a component is scoped to it.
 
 Styles don't leak between components, and parent styles don't reach into children. Dynamic `class` values keep the scope class.
 
-The CSS is served as a virtual module (`Foo.lx?lux&type=style.css`). Vite injects it in dev with hot updates and extracts it in builds.
+## Tailwind CSS
+
+Lux works with Tailwind CSS v4. Add `@tailwindcss/vite` next to the Lux plugin and import Tailwind from a stylesheet:
+
+```bash
+bun add -d tailwindcss @tailwindcss/vite
+```
+
+```ts
+// vite.config.ts
+import { defineConfig } from 'vite'
+import tailwindcss from '@tailwindcss/vite'
+import lux from '@inflector/vite-plugin-lux'
+
+export default defineConfig({ plugins: [lux(), tailwindcss()] })
+```
+
+```css
+/* src/app.css, imported once from main.ts */
+@import 'tailwindcss';
+```
+
+- **Utilities in markup:** Tailwind scans `.lx` files, so classes in `class="…"` and in `class={[…]}` arrays and ternaries are generated. Write class names in full (`'bg-red-500'`, not `` `bg-${color}-500` ``).
+- **Directives in `<style>`:** `@apply`, `@variant`, `theme()`, `--theme()`, `--spacing()` and `--alpha()` work in component styles, and the result stays scoped.
+- **No `@reference` needed:** a component style that uses Tailwind gets `@reference` to your main stylesheet added for you. That's the shallowest `.css` file in the project that imports `tailwindcss`, so your `@theme` tokens are available. Write your own `@reference` to choose another file, or set `lux({ tailwind: { reference: 'src/app.css' } })`.
+- **Not scoped:** rules inside `@utility`, `@theme` and `@custom-variant`, which define global things.
+
+```html Button.lx
+<script lang="ts">
+  import type { Children } from '@inflector/lux'
+  const { children } = props<{ children: Children }>()
+</script>
+
+<button class="btn">{children}</button>
+
+<style>
+  .btn {
+    @apply rounded-lg bg-sky-600 px-4 py-2 text-white;
+    @variant hover {
+      @apply bg-sky-700;
+    }
+  }
+</style>
+```
+
+This is on whenever `@tailwindcss/vite` is in the plugins. Turn it off with `lux({ tailwind: false })`. For editor support, see [Tooling](tooling.md#tailwind-css-intellisense). `examples/tailwind` is a complete app.
+
+## Virtual CSS module
+
+The CSS is served as a virtual module (`Foo.lx?lux&type=style&lang.css`). Vite injects it in dev with hot updates and extracts it in builds.

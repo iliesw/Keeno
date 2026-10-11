@@ -1,6 +1,6 @@
 # Built-in components
 
-`@inflector/lux` exports a few components for things plain markup can't express: catching errors, waiting for promises, loading code on demand, rendering elsewhere in the page, and animating elements in and out. Import them like any component.
+`@inflector/lux` exports a few components for things plain markup can't express: catching errors, waiting for promises, loading code on demand, rendering elsewhere in the page, moving live content around without re-creating it, and animating elements in and out. Import them like any component.
 
 ## ErrorBoundary
 
@@ -111,6 +111,82 @@ Use `Chart` like any other component. `Chart.preload()` starts loading earlier, 
 - `target` is an element or a CSS selector. It defaults to `document.body`, and is read once, when the portal is created.
 - The children stay part of this component: its scoped styles, context, error boundaries and `destroy` all apply, and their nodes are removed when the portal is destroyed.
 - DOM events bubble through the real DOM, that is through the target and not through the portal's position in the tree.
+
+## reparentable
+
+`reparentable()` renders content once and lets you show it in different places while it keeps its state: the same component instances and the same DOM nodes move, instead of being destroyed in one place and created again in another. Put the handle in markup wherever the content should appear now:
+
+```html Lesson.lx
+<script lang="ts">
+  import { reparentable } from '@inflector/lux'
+  import Video from './Video.lx'
+  const { src } = props<{ src: string }>()
+  const theater = state(false)
+  const player = reparentable(() => <Video src={src} />)
+</script>
+
+{theater ? <dialog open class="theater">{player}</dialog> : <aside class="inline">{player}</aside>}
+<button onClick={() => theater.set(!theater)}>Theater mode</button>
+```
+
+In browsers with the native [`moveBefore`](https://developer.mozilla.org/docs/Web/API/Element/moveBefore) (Chrome and Edge 133+ and recent Firefox, not yet Safari), the move also keeps what the DOM itself holds: an iframe or a video keeps playing, focus and text selection stay, and CSS animations and transitions continue. Elsewhere the nodes are re-inserted, so component state is kept but an iframe reloads.
+
+- The content is created the first time it is rendered and lives as long as the component that called `reparentable()`, not as long as the place showing it. `player.dispose()` destroys it earlier.
+- While it is shown nowhere it stays alive, with its `update` callbacks still running, so it comes back as it was. Show it in one place at a time.
+- Context and error boundaries are the ones around the `reparentable()` call. Its scoped styles are those of the component that renders it.
+- Called outside a component (in a store module), the content lives until `dispose()`: for example a player that keeps going across route changes.
+
+### Moving it imperatively
+
+Code that works with elements directly, like drag and drop, a layout engine or a picture-in-picture toggle, can move the content itself:
+
+```html Lesson.lx
+<script lang="ts">
+  import { reparentable } from '@inflector/lux'
+  import Video from './Video.lx'
+  const player = reparentable(() => <Video src="/intro.mp4" />)
+
+  function dropInto(e: DragEvent) {
+    player.moveTo(e.currentTarget as Element)
+  }
+</script>
+
+<aside>{player}</aside>
+<div class="dropzone" onDragover={(e) => e.preventDefault()} onDrop={dropInto}></div>
+<button onClick={() => player.moveTo('#pip')}>Picture in picture</button>
+<button onClick={() => player.remove()}>Hide</button>
+```
+
+- `player.moveTo(target, before?)` moves the content into `target` (an element or a CSS selector), before `before` or at the end. It creates the content if it was never rendered. The move happens right away and is native where the browser supports it. The content stays there and keeps following its own updates.
+- `player.remove()` takes the content out of the page. It stays alive and can be shown again as it was.
+- `player.nodes()` returns its current nodes, wherever they are, for example to measure them.
+- After `moveTo()` or `remove()`, a place in markup that was already showing the content does not take it back just because it updates. A place that renders it anew does, such as a branch of a condition that switches back, and from then on markup is in charge again.
+
+For a single DOM node that isn't Lux content, `moveNode(node, parent, before?)` does the same native-when-possible move.
+
+For items that move between lists, such as cards on a kanban board, use `keyedReparentable()`. It creates one entry per key on first use, and every entry belongs to the component that called it, even when it is first rendered inside a list row:
+
+```html Board.lx
+<script lang="ts">
+  import { keyedReparentable } from '@inflector/lux'
+  import Card from './Card.lx'
+  const cards = state([{ id: 1, column: 'todo' }, { id: 2, column: 'done' }])
+  const cardView = keyedReparentable((id: number) => <Card id={id} />)
+
+  function remove(id: number) {
+    cards.set(cards.filter((c) => c.id !== id))
+    cardView.delete(id)
+  }
+</script>
+
+{['todo', 'done'].map((column) => (
+  <ul key={column}>
+    {cards.filter((c) => c.column === column).map((c) => <li key={c.id}>{cardView(c.id)}</li>)}
+  </ul>
+))}
+```
+
+Moving a card to the other column re-creates its `<li>`, but the `<Card>` inside moves with its state. `cardView.delete(id)` destroys an entry and `cardView.keys()` lists the live ones.
 
 ## Transition
 

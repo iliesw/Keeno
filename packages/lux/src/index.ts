@@ -24,3 +24,5 @@ export {
   type LazyOptions,
 } from './control'
 export { Transition, type TransitionProps } from './transition'
+export { reparentable, keyedReparentable, type Reparentable, type KeyedReparentable } from './reparent'
+export { moveNode } from './dom'

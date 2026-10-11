@@ -79,6 +79,14 @@ See [Context](context.md).
 lazy(load: () => Promise<{ default: Component } | Component>, options?: { pending?: () => unknown }): Component & { preload(): Promise<Component> }
 ```
 
+```ts
+reparentable(render: () => unknown): Reparentable
+// { (): Node[]; moveTo(target: Node | selector, before?: Node | null): void; remove(): void;
+//   nodes(): Node[]; dispose(): void; readonly disposed: boolean }
+keyedReparentable<K>(render: (key: K) => unknown): KeyedReparentable<K>  // { (key): Reparentable; delete(key): void; keys(): K[] }
+moveNode(node: Node, parent: Node, before?: Node | null): void   // native moveBefore when possible
+```
+
 See [Built-in components](built-ins.md).
 
 ## Server rendering (`@inflector/lux/server`)

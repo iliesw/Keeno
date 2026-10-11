@@ -1,0 +1,27 @@
+<script lang="ts">
+  import { Link } from '@inflector/lux-router'
+  import Icon from './Icon.lx'
+  import { pages } from '../docs'
+
+  const { slug } = props<{ slug: string }>()
+  const index = derived(() => pages.findIndex((p) => p.slug === slug))
+  const prev = derived(() => (index > 0 ? pages[index - 1] : null))
+  const next = derived(() => (index >= 0 && index < pages.length - 1 ? pages[index + 1] : null))
+</script>
+
+<div class="mt-10 flex w-full flex-wrap justify-between gap-4">
+  {prev ? (
+    <Link href={`/docs/${prev.slug}`} class="flex items-center gap-2 rounded-md border bg-neutral-100 px-4 py-2 text-neutral-700 transition hover:bg-neutral-200 dark:bg-[#222222] dark:text-neutral-200 dark:hover:bg-neutral-800">
+      <Icon name="arrowLeft" /> Previous: {prev.title}
+    </Link>
+  ) : (
+    <div></div>
+  )}
+  {next ? (
+    <Link href={`/docs/${next.slug}`} class="ms-auto flex items-center gap-2 rounded-md border bg-neutral-100 px-4 py-2 text-neutral-700 transition hover:bg-neutral-200 dark:bg-[#222222] dark:text-neutral-200 dark:hover:bg-neutral-800">
+      Next: {next.title} <Icon name="arrowRight" />
+    </Link>
+  ) : (
+    <div></div>
+  )}
+</div>

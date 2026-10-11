@@ -32,6 +32,21 @@
       "port": 5174
     },
     {
+      "name": "tailwind",
+      "runtimeExecutable": "bun",
+      "runtimeArgs": [
+        "run",
+        "--cwd",
+        "examples/tailwind",
+        "dev",
+        "--",
+        "--port",
+        "5176",
+        "--strictPort"
+      ],
+      "port": 5176
+    },
+    {
       "name": "todo-alt",
       "runtimeExecutable": "bun",
       "runtimeArgs": [
@@ -45,6 +60,20 @@
         "--strictPort"
       ],
       "port": 5175
+    },
+    {
+      "name": "docs",
+      "runtimeExecutable": "bun",
+      "runtimeArgs": [
+        "run",
+        "--cwd",
+        "site",
+        "dev",
+        "--",
+        "--port",
+        "5177"
+      ],
+      "port": 5177
     }
   ]
 }

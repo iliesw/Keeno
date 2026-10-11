@@ -15,7 +15,7 @@ function setup(command: 'serve' | 'build') {
 describe('@inflector/vite-plugin-lux', () => {
   test('transforms .lx to JS without TypeScript, importing the scoped CSS', async () => {
     const out = await setup('build').transform(source, file)
-    expect(out.code).toContain(`import "${file}?lux&type=style.css"`)
+    expect(out.code).toContain(`import "${file}?lux&type=style&lang.css"`)
     expect(out.code).toContain('from "@inflector/lux/internal"')
     expect(out.code).not.toContain('import.meta.hot')
     expect(out.code).not.toContain('__LUX_DEV__')
@@ -30,14 +30,14 @@ describe('@inflector/vite-plugin-lux', () => {
   })
 
   test('serves the scoped CSS from the virtual module', () => {
-    const css = setup('serve').load(`${file}?lux&type=style.css`)
+    const css = setup('serve').load(`${file}?lux&type=style&lang.css`)
     expect(css).toMatch(/li\.lux-[0-9a-f]{8} \{/)
   })
 
   test('ignores other files and queries', async () => {
     const p = setup('serve')
     expect(await p.transform('x', '/a/b.ts')).toBeUndefined()
-    expect(await p.transform('x', `${file}?lux&type=style.css`)).toBeUndefined()
+    expect(await p.transform('x', `${file}?lux&type=style&lang.css`)).toBeUndefined()
     expect(p.load('/a/b.ts')).toBeUndefined()
   })
 
@@ -48,4 +48,52 @@ describe('@inflector/vite-plugin-lux', () => {
     expect(err.message).toMatch(/Cannot reassign state "a"/)
     expect(err.id).toBe(file)
   })
+})
+
+describe('Tailwind', () => {
+  const twRoot = path.resolve(import.meta.dir, '../../../examples/tailwind')
+  const posix = (p: string) => p.replaceAll(path.sep, '/')
+  const app = posix(path.join(twRoot, 'src/App.lx'))
+  const entry = posix(path.join(twRoot, 'src/app.css'))
+  const css = (options: Parameters<typeof lux>[0], plugins: { name: string }[], id = app, root = twRoot) => {
+    const p = lux(options) as any
+    p.configResolved({ root, command: 'build', isProduction: true, plugins })
+    return p.load(`${id}?lux&type=style&lang.css`) as string
+  }
+  const withTailwind = [{ name: '@tailwindcss/vite:scan' }]
+
+  test('with @tailwindcss/vite, styles using Tailwind @reference the project stylesheet that imports it', () => {
+    expect(css({}, withTailwind).startsWith(`@reference "${entry}";\n`)).toBe(true)
+  })
+
+  test('nothing is added without @tailwindcss/vite, with tailwind: false, or to styles that do not use Tailwind', () => {
+    expect(css({}, [])).not.toMatch(/^@reference/m)
+    expect(css({ tailwind: false }, withTailwind)).not.toMatch(/^@reference/m)
+    expect(css({}, withTailwind, file, root)).not.toMatch(/^@reference/m)
+  })
+
+  test('the reference can be set explicitly', () => {
+    const out = css({ tailwind: { reference: 'styles/theme.css' } }, [])
+    expect(out.startsWith(`@reference "${posix(path.join(twRoot, 'styles/theme.css'))}";`)).toBe(true)
+  })
+
+  test('vite build compiles @apply, @variant and --spacing() in scoped component styles', async () => {
+    const { build } = await import('vite')
+    const tailwindcss = (await import('@tailwindcss/vite')).default
+    const out: any = await build({
+      root: twRoot,
+      configFile: false,
+      logLevel: 'silent',
+      plugins: [lux(), tailwindcss()],
+      resolve: { conditions: ['lux-source'] },
+      build: { write: false },
+    })
+    const assets = (Array.isArray(out) ? out[0] : out).output
+    const built = assets.find((a: any) => a.fileName.endsWith('.css')).source as string
+    expect(built).not.toMatch(/@apply|@variant|@reference|--spacing\(/)
+    // The custom theme color from src/app.css reaches the component's scoped `.btn`.
+    expect(built).toMatch(/\.btn\.lux-[0-9a-f]{8}\{[^}]*background-color:var\(--color-brand/)
+    // Utilities written in .lx markup are generated.
+    expect(built).toContain('.text-amber-600')
+  }, 60_000)
 })

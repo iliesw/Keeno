@@ -1,0 +1,22 @@
+<script lang="ts">
+  import { Link } from '@inflector/lux-router'
+  const version = '0.1.0'
+</script>
+
+<div class="relative flex h-svh w-full items-center justify-center overflow-hidden">
+  <div class="relative flex w-96 flex-col gap-2 px-6">
+    <div class="flex justify-between font-code">
+      <h1 class="text-5xl">404</h1>
+      <div class="flex flex-col items-end">
+        <p class="text-xs opacity-50">V {version}</p>
+        <p class="text-sm">Lux</p>
+        <p class="text-xs opacity-50">Page not found</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <div class="h-0.5 w-full bg-black/50 dark:bg-white/50"></div>
+      <p class="font-code text-[8px]">ERROR</p>
+    </div>
+    <Link href="/docs/introduction" class="mt-4 font-code text-sm underline underline-offset-2 opacity-70 hover:opacity-100">← Back to the docs</Link>
+  </div>
+</div>

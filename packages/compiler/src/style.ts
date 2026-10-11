@@ -9,6 +9,16 @@ function isKeyframes(rule: Rule) {
   return parent?.type === 'atrule' && /keyframes$/i.test((parent as postcss.AtRule).name)
 }
 
+/** Tailwind at-rules whose bodies define global things (utilities, theme, variants), not this component's elements. */
+const UNSCOPED_AT_RULES = new Set(['utility', 'theme', 'custom-variant'])
+
+function inUnscopedAtRule(rule: Rule) {
+  for (let p: postcss.Node | undefined = rule.parent; p; p = p.parent) {
+    if (p.type === 'atrule' && UNSCOPED_AT_RULES.has((p as postcss.AtRule).name.toLowerCase())) return true
+  }
+  return false
+}
+
 function isGlobal(n: SelNode): n is selectorParser.Pseudo {
   return n.type === 'pseudo' && n.value === ':global'
 }
@@ -46,7 +56,7 @@ function scopeSelector(sel: selectorParser.Selector, scope: string) {
 export function scopeStyle(css: string, scope: string, filename?: string): string {
   const root = postcss.parse(css, { from: filename })
   root.walkRules((rule) => {
-    if (isKeyframes(rule)) return
+    if (isKeyframes(rule) || inUnscopedAtRule(rule)) return
     rule.selector = selectorParser((selectors) => {
       selectors.each((sel) => scopeSelector(sel, scope))
     }).processSync(rule.selector)

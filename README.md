@@ -45,8 +45,8 @@ npm, pnpm and yarn work too. Continue with [Getting started](docs/getting-starte
 
 - **Fine-grained reactivity:** `state()`, `derived()`, batched DOM updates, and `persist`, `url`, `history`, `debounce` and `validate` options on states.
 - **Templates:** conditionals, keyed lists, two-way `bind:value`, class arrays and spread props.
-- **Scoped CSS** per component, with a `:global()` escape hatch.
-- **Built-in components:** error boundaries, `<Await>` for promises, `lazy()` code splitting, portals, enter/leave transitions and `<Dynamic>`. See [Built-in components](docs/built-ins.md).
+- **Scoped CSS** per component, with a `:global()` escape hatch, and first-class [Tailwind CSS](docs/styles.md#tailwind-css) (utilities in markup, `@apply` in `<style>`).
+- **Built-in components:** error boundaries, `<Await>` for promises, `lazy()` code splitting, portals, state-preserving reparenting (native `moveBefore`), enter/leave transitions and `<Dynamic>`. See [Built-in components](docs/built-ins.md).
 - **Context**, server rendering with `hydrate`, and a router.
 - **Tooling:** a Vite plugin with HMR, a VS Code extension with full TypeScript IntelliSense in `.lx` files, and `lux-check` for type-checking in CI.
 

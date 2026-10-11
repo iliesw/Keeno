@@ -1,0 +1,182 @@
+<script lang="ts">
+  import { Link } from '@inflector/lux-router'
+  import Icon from '../components/Icon.lx'
+  import Navbar from '../components/Navbar.lx'
+  import BindingDemo from '../components/demos/BindingDemo.lx'
+  import CounterDemo from '../components/demos/CounterDemo.lx'
+  import TodoDemo from '../components/demos/TodoDemo.lx'
+  import { onContentClick } from '../content'
+  import { GITHUB, type IconName } from '../icons'
+  import binding from '../snippets/binding.md'
+  import counter from '../snippets/counter.md'
+  import install from '../snippets/install.md'
+  import todo from '../snippets/todo.md'
+
+  init(() => {
+    document.title = 'Lux · The compiled, signal-based UI framework'
+  })
+
+  const tabs = [
+    { id: 'counter', name: 'Counter', html: counter.html, blurb: 'state() and derived() — read a state like a value, write it with .set().' },
+    { id: 'todo', name: 'Todo', html: todo.html, blurb: 'Keyed lists compile to fine-grained reconciliation: only the rows that change are touched.' },
+    { id: 'binding', name: 'Binding', html: binding.html, blurb: 'bind:value and bind:checked give two-way binding straight to a state.' },
+  ]
+  const tab = state('counter')
+  const current = derived(() => tabs.find((t) => t.id === tab)!)
+
+  const tools = ['vite', 'bun', 'typescript', 'tailwindcss', 'vscode', 'nodejs', 'deno', 'vitest', 'playwright']
+
+  const features: { icon: IconName; title: string; text: string; points: string[]; wide?: boolean }[] = [
+    {
+      icon: 'zap',
+      title: 'Fine-grained signals',
+      text: 'state() creates a signal, derived() computes from others. Templates subscribe to exactly what they read, so a change updates one text node, not a component tree.',
+      points: ['No virtual DOM', 'Batched DOM updates', 'persist, url, history & debounce options'],
+      wide: true,
+    },
+    { icon: 'palette', title: 'Scoped CSS', text: 'Every <style> is scoped to its component, with :global() as the escape hatch and first-class Tailwind CSS v4.', points: [] },
+    { icon: 'cpu', title: 'Compiled', text: 'The compiler turns HTML-first .lx files into direct DOM code. Components run once and never re-render.', points: [] },
+    { icon: 'server', title: 'SSR & hydration', text: 'renderToString on Node, Bun or Deno, hydrate in the browser. This site is rendered that way.', points: [] },
+    { icon: 'route', title: 'Router', text: 'A tiny History API router with params, lazy routes, active links and server rendering.', points: [] },
+    {
+      icon: 'wrench',
+      title: 'Tooling',
+      text: 'A Vite plugin with HMR, a VS Code extension with full TypeScript IntelliSense in .lx files, and lux-check for CI.',
+      points: ['Vite plugin + HMR', 'VS Code extension', 'lux-check type checker'],
+      wide: true,
+    },
+  ]
+</script>
+
+<Navbar />
+<div class="mx-auto flex w-full max-w-400 flex-col gap-2 overflow-x-hidden pt-28 pb-18" onClick={onContentClick}>
+  <section class="animate-fade-up flex w-full flex-col items-center justify-center px-6 pt-24 text-center md:pt-32">
+    <a href={GITHUB} target="_blank" rel="noreferrer" class="rounded-full border bg-neutral-200 px-4 py-0.5 font-s3 dark:bg-neutral-800">Lux 0.1 is here ✨</a>
+    <h1 class="mt-4 font-s2 text-5xl leading-none sm:text-7xl lg:text-8xl">
+      Build UIs that <span class="font-s3 text-orange-400">shine.</span>
+    </h1>
+    <p class="mt-6 max-w-2xl text-center font-s2 text-lg md:text-xl">
+      Lux is a compiled, signal-based frontend framework. Write HTML-first <code class="font-code">.lx</code> components, get fine-grained DOM updates — no virtual DOM, no re-renders.
+    </p>
+    <div class="mt-6 flex gap-2">
+      <Link href="/docs/getting-started" class="rounded-md border bg-neutral-800 px-3 py-1 font-s2 text-white transition hover:opacity-90 dark:bg-neutral-50 dark:text-black">Get Started</Link>
+      <Link href="/docs/introduction" class="rounded-md border bg-neutral-50 px-3 py-1 font-s2 text-black transition hover:opacity-90 dark:bg-neutral-800 dark:text-white">Read Docs</Link>
+    </div>
+  </section>
+
+  <section class="mx-auto mt-24 flex w-fit flex-wrap items-center justify-center gap-6 px-6 md:mt-32 md:gap-10">
+    <div class="flex items-center gap-3">
+      <img src="/icons/lx.svg" alt="" width="28" height="28" />
+      <p class="font-rubik text-3xl font-black">Lux</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <img src="/icons/vite.svg" alt="" width="28" height="28" />
+      <p class="font-s2 text-3xl font-black">Vite</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <img src="/icons/bun.svg" alt="" width="28" height="28" />
+      <p class="font-open text-3xl font-black">Bun</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <img src="/icons/tailwindcss.svg" alt="" width="28" height="28" />
+      <p class="font-s2 text-3xl font-black">Tailwind</p>
+    </div>
+  </section>
+
+  <section class="mt-24 flex w-full flex-col gap-8 px-6 md:mt-32 md:px-10">
+    <div class="flex w-full flex-col justify-between gap-4 md:flex-row md:items-end">
+      <div>
+        <p class="font-s2 text-xl">Components that read like HTML</p>
+        <p class="font-s2 text-sm opacity-70">{current.blurb}</p>
+      </div>
+      <div class="flex w-fit gap-0.5 rounded-lg bg-neutral-200 p-1 font-s2 text-sm font-black dark:bg-[#212121]" role="tablist">
+        {tabs.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            role="tab"
+            aria-selected={tab === t.id}
+            onClick={() => tab.set(t.id)}
+            class={['cursor-pointer rounded-sm px-4 py-1.5 transition', tab === t.id ? 'bg-white dark:bg-ink' : 'opacity-70 hover:opacity-100']}
+          >
+            {t.name}
+          </button>
+        ))}
+      </div>
+    </div>
+    <div class="grid w-full grid-cols-1 gap-6 overflow-hidden rounded-3xl border bg-orange-400 p-4 md:p-12 lg:grid-cols-[3fr_2fr] lg:p-16">
+      <div class="min-w-0 text-left" innerHTML={current.html}></div>
+      <div class="flex min-h-64 flex-col overflow-hidden rounded-xl border bg-white text-black shadow-2xl dark:bg-ink dark:text-white">
+        <div class="flex items-center gap-1.5 border-b px-3 py-2">
+          <span class="size-2.5 rounded-full bg-red-400"></span>
+          <span class="size-2.5 rounded-full bg-yellow-400"></span>
+          <span class="size-2.5 rounded-full bg-green-400"></span>
+          <span class="ml-2 font-code text-xs opacity-50">live — running on Lux</span>
+        </div>
+        <div class="flex flex-1 items-center justify-center p-6">
+          {tab === 'counter' && <CounterDemo />}
+          {tab === 'todo' && <TodoDemo />}
+          {tab === 'binding' && <BindingDemo />}
+        </div>
+      </div>
+    </div>
+    <div class="flex w-full flex-col justify-between gap-4 md:flex-row md:items-end">
+      <p class="font-s2 text-5xl md:text-6xl">Get Started</p>
+      <p class="font-s2 text-sm opacity-50 md:w-1/2">
+        A script, some markup and a scoped style — that's a component. The compiler rewrites state reads for you, so <code class="font-code">count</code> is just a value in your template, and <code class="font-code">count.set()</code> updates exactly the nodes that read it.
+      </p>
+    </div>
+  </section>
+
+  <section class="grid h-auto w-full grid-cols-1 gap-4 px-6 pt-24 md:grid-cols-3 md:px-10">
+    {features.map((f) => (
+      <div key={f.title} class={['h-auto md:h-80', f.wide && 'md:col-span-2']}>
+        <div class="h-full w-full overflow-hidden rounded-xl border bg-neutral-100 p-1 dark:bg-neutral-900">
+          <div class="relative flex h-full w-full flex-col gap-4 overflow-hidden rounded-lg border border-black/5 bg-white p-6 md:p-8 dark:border-white/5 dark:bg-ink">
+            <div class="flex items-center gap-2">
+              <Icon name={f.icon} />
+              <h2 class="font-open text-2xl font-bold">{f.title}</h2>
+            </div>
+            <p class={['font-s2 text-sm leading-relaxed text-neutral-600 dark:text-neutral-400', f.wide && 'md:w-1/2']}>{f.text}</p>
+            {f.points.length > 0 && (
+              <div class="mt-auto flex flex-col gap-2 font-code text-xs">
+                {f.points.map((p) => (
+                  <p key={p} class="flex items-center gap-2"><Icon name="checkSm" /> {p}</p>
+                ))}
+              </div>
+            )}
+            <img src="/icons/lx.svg" alt="" width="220" height="220" class={['pointer-events-none absolute -right-10 -bottom-10 opacity-[0.06] blur-[1px]', !f.wide && 'hidden']} />
+          </div>
+        </div>
+      </div>
+    ))}
+  </section>
+
+  <section class="mt-24 flex w-full flex-col items-center justify-between gap-12 px-6 md:flex-row md:px-10">
+    <div class="flex h-full w-full flex-col justify-center md:w-130">
+      <h2 class="mb-4 font-s2 text-4xl font-black md:text-5xl">
+        Seamless with <br /> your favorite tools
+      </h2>
+      <p class="font-s2 opacity-70">
+        Lux runs on Vite for dev and builds, Bun for packages and tests, and renders on Node, Bun or Deno. Bring TypeScript and Tailwind — they just work.
+      </p>
+      <div class="mt-8 w-72" innerHTML={install.html}></div>
+    </div>
+    <div class="grid w-full max-w-80 grid-cols-3 gap-2">
+      {tools.map((t) => (
+        <div key={t} class="flex aspect-square items-center justify-center rounded-xl p-5 transition hover:bg-neutral-100 dark:hover:bg-neutral-900">
+          <img src={`/icons/${t}.svg`} alt={t} width="56" height="56" />
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <footer class="mt-32 flex w-full flex-col items-center justify-between gap-4 border-t px-6 pt-8 font-s2 text-sm opacity-70 md:flex-row md:px-10">
+    <p>MIT Licensed · Built with Lux, server-rendered and hydrated.</p>
+    <div class="flex gap-4">
+      <Link href="/docs/introduction" class="hover:underline">Docs</Link>
+      <Link href="/docs/api" class="hover:underline">API</Link>
+      <a href={GITHUB} target="_blank" rel="noreferrer" class="hover:underline">GitHub</a>
+    </div>
+  </footer>
+</div>

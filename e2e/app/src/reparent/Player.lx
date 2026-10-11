@@ -1,0 +1,14 @@
+<script lang="ts">
+  const typed = state('')
+  init(() => {
+    ;(window as any).playerInits = ((window as any).playerInits ?? 0) + 1
+  })
+  // The iframe keeps its own state (a click counter): it is lost if the iframe is ever detached.
+  const doc = '<button id="inc" onclick="this.textContent=+this.textContent+1">0</button>'
+</script>
+
+<div class="player">
+  <iframe class="frame" srcdoc={doc}></iframe>
+  <input class="note" bind:value={typed} />
+  <span class="typed">{typed}</span>
+</div>

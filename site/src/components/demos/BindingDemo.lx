@@ -1,0 +1,11 @@
+<script lang="ts">
+  const name = state('')
+  const loud = state(false)
+  const greeting = derived(() => `Hello, ${name || 'stranger'}`)
+</script>
+
+<div class="flex w-full max-w-xs flex-col gap-3">
+  <input bind:value={name} placeholder="Your name" class="w-full rounded-lg border bg-white px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-orange-400 dark:bg-neutral-800" />
+  <label class="flex items-center gap-2 text-sm"><input type="checkbox" bind:checked={loud} class="accent-orange-500" /> Loud</label>
+  <p class="text-2xl font-black">{loud ? greeting.toUpperCase() + '!' : greeting}</p>
+</div>

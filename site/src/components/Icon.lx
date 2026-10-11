@@ -1,0 +1,6 @@
+<script lang="ts">
+  import { icons, type IconName } from '../icons'
+  const { name, class: cls = '' } = props<{ name: IconName; class?: string }>()
+</script>
+
+<span class={['inline-flex shrink-0', cls]} aria-hidden="true" innerHTML={icons[name]}></span>

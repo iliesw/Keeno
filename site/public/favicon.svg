@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2a1f4d"/>
+      <stop offset="1" stop-color="#110d22"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffb020" stop-opacity="0.55"/>
+      <stop offset="0.6" stop-color="#ff7a1a" stop-opacity="0.12"/>
+      <stop offset="1" stop-color="#ff7a1a" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="star" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fff3b0"/>
+      <stop offset="0.45" stop-color="#ffc233"/>
+      <stop offset="1" stop-color="#ff7a1a"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="56" fill="url(#bg)"/>
+  <circle cx="120" cy="136" r="104" fill="url(#glow)"/>
+  <!-- main spark -->
+  <path fill="url(#star)" d="M120 40 Q128 128 216 136 Q128 144 120 232 Q112 144 24 136 Q112 128 120 40Z"/>
+  <!-- small spark -->
+  <path fill="#fff3b0" d="M196 36 Q199 61 224 64 Q199 67 196 92 Q193 67 168 64 Q193 61 196 36Z"/>
+</svg>

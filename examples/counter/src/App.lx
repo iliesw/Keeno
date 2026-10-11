@@ -14,7 +14,7 @@
 </script>
 
 <h1>Counter</h1>
-<Display value={count} label="Current" />
+<Display value={count} label="Live" />
 <p class="parity">The count is {parity}.</p>
 <label>
   Step <input type="number" min="1" bind:value={step} />

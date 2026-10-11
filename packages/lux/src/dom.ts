@@ -1,6 +1,6 @@
 // DOM helpers used by compiled templates.
 import { isDev, warn } from './dev'
-import { Owner, createComputation, memo, runWithOwner, untrack } from './signal'
+import { Owner, createComputation, memo, queueMount, runWithOwner, untrack } from './signal'
 import { State } from './state'
 
 let serverDocument: Document | null = null
@@ -68,8 +68,157 @@ export function isStatic(value: unknown): boolean {
   return true
 }
 
+// ---------------------------------------------------------------------------
+// moving nodes
+
+/**
+ * Insert `node` before `ref`. A node that is already in the document is moved with the native
+ * `moveBefore` where the browser has it, which keeps its state: focus, selection, iframes that
+ * stay loaded, playing media and running CSS animations and transitions.
+ */
+function move(parent: Node, node: Node, ref: Node | null): void {
+  if (node.isConnected && parent.isConnected && typeof (parent as any).moveBefore === 'function') {
+    try {
+      ;(parent as any).moveBefore(node, ref)
+      return
+    } catch {
+      // Not movable here (for example across shadow roots): fall back to a plain insert.
+    }
+  }
+  parent.insertBefore(node, ref)
+}
+
+// Reparentable content (see reparent.ts) gets two extra guarantees, so that it is moved natively
+// wherever it goes, whatever order the regions involved update in:
+// - A region that drops it leaves it in place until the end of the update (the "sweep"), and it
+//   is only removed then if no region rendered it again since. The same goes for a dropped node
+//   that contains reparentable content waiting to move (the branch it is moving out of).
+// - A region that renders it into a parent that is not in the document yet (a branch that was
+//   just created) puts a comment there instead, and the node moves to the comment at the sweep,
+//   once the new branch has been attached.
+
+/** Nodes of live `reparentable()` content. */
+const kept = new WeakSet<Node>()
+let keptCount = 0
+/** Order of claims and drops within an update. */
+let stamp = 0
+/** When each kept node was last rendered by a region. */
+const claims = new Map<Node, number>()
+/** Kept nodes a region dropped: the parent they were dropped from, and when. */
+const dropped = new Map<Node, { parent: Node; at: number }>()
+/** Kept nodes waiting for their new parent to be attached, and the comment holding their spot. */
+const standIns = new Map<Node, Comment>()
+const standInOf = new Map<Comment, Node>()
+let sweepQueued = false
+
+/** @internal Mark `nodes` as reparentable content. */
+export function keep(nodes: Node[]): void {
+  for (const n of nodes) kept.add(n)
+}
+
+/** @internal Count live reparentables: regions only do the extra work while some exist. */
+export function trackKept(delta: number): void {
+  keptCount += delta
+}
+
+function queueSweep() {
+  if (sweepQueued) return
+  sweepQueued = true
+  // Before other mount jobs, so that `init` callbacks see the moved nodes in place.
+  queueMount(sweep, true)
+}
+
+function dropStandIn(node: Node) {
+  const c = standIns.get(node)
+  if (!c) return
+  standIns.delete(node)
+  standInOf.delete(c)
+  c.parentNode?.removeChild(c)
+}
+
+/** Finish the moves held by stand-ins, then remove the dropped nodes nothing rendered again. */
+function sweep() {
+  sweepQueued = false
+  for (const [node, c] of standIns) if (c.parentNode) move(c.parentNode, node, c)
+  for (const node of [...standIns.keys()]) dropStandIn(node)
+  for (const [n, { parent, at }] of dropped) {
+    if ((claims.get(n) ?? 0) < at && n.parentNode === parent) parent.removeChild(n)
+  }
+  dropped.clear()
+  claims.clear()
+}
+
+/**
+ * Move `node` into `parent`, before `before` (or at the end), keeping its state where the browser
+ * has the native `moveBefore`: focus, selection, loaded iframes, playing media and running CSS
+ * animations. Elsewhere, or when the node or `parent` is not in the document, it is a plain insert.
+ */
+export function moveNode(node: Node, parent: Node, before: Node | null = null): void {
+  dropStandIn(node)
+  move(parent, node, before)
+}
+
+/** @internal Take reparentable nodes out of the document (they stay alive). */
+export function unplace(nodes: Node[]): void {
+  for (const n of nodes) {
+    dropStandIn(n)
+    n.parentNode?.removeChild(n)
+  }
+}
+
+/** Insert or move `node` before `ref` (see the notes on reparentable content above). */
+function place(parent: Node, node: Node, ref: Node | null): void {
+  if (keptCount && kept.has(node)) {
+    if (node.isConnected && !parent.isConnected) {
+      dropStandIn(node)
+      const c = (parent.ownerDocument ?? getDocument()).createComment('')
+      standIns.set(node, c)
+      standInOf.set(c, node)
+      parent.insertBefore(c, ref)
+      queueSweep()
+      return
+    }
+    dropStandIn(node)
+  }
+  move(parent, node, ref)
+}
+
+/** True if `n` contains kept nodes waiting to move: removing it now would take them out of the document. */
+function holdsWaiting(n: Node): boolean {
+  if (!standIns.size) return false
+  for (const k of standIns.keys()) if (n.contains(k)) return true
+  return false
+}
+
+/** Remove `n` from `parent` (see the notes on reparentable content above). */
+function detach(parent: Node, n: Node) {
+  const held = standInOf.get(n as Comment)
+  if (held) {
+    dropStandIn(held)
+    n = held
+    parent = held.parentNode!
+    if (!parent) return
+  } else if (!(keptCount && (kept.has(n) || holdsWaiting(n)))) {
+    parent.removeChild(n)
+    return
+  }
+  dropped.set(n, { parent, at: ++stamp })
+  queueSweep()
+}
+
+/** The node that stands for `n` in the DOM right now: its stand-in while it waits to move. */
+const standFor = (n: Node): Node => standIns.get(n) ?? n
+
 /** Replace `current` with `next` before `marker`, moving only nodes that are out of place. */
 export function reconcile(parent: Node, current: Node[], next: Node[], marker: Node | null): void {
+  if (keptCount) {
+    for (const n of next) if (kept.has(n)) claims.set(n, ++stamp)
+    if (claims.size) queueSweep()
+    if (standIns.size) {
+      current = current.map(standFor)
+      next = next.map(standFor)
+    }
+  }
   if (next.length === current.length && next.every((n, i) => n === current[i])) return
   // The fast path assumes `current` is still in place; something else may have moved its nodes.
   if (current.some((n) => n.parentNode !== parent)) return reconcileSlow(parent, current, next, marker)
@@ -80,13 +229,13 @@ export function reconcile(parent: Node, current: Node[], next: Node[], marker: N
 function reconcileSlow(parent: Node, current: Node[], next: Node[], marker: Node | null) {
   if (current.length) {
     const keep = new Set(next)
-    for (const n of current) if (!keep.has(n) && n.parentNode === parent) parent.removeChild(n)
+    for (const n of current) if (!keep.has(n) && n.parentNode === parent) detach(parent, n)
   }
   let ref = marker
   for (let i = next.length - 1; i >= 0; i--) {
     const n = next[i]
-    if (n.parentNode !== parent || n.nextSibling !== ref) parent.insertBefore(n, ref)
-    ref = n
+    if (n.parentNode !== parent || n.nextSibling !== ref) place(parent, n, ref)
+    ref = standFor(n)
   }
 }
 
@@ -118,18 +267,18 @@ function reconcileArrays(parent: Node, a: Node[], b: Node[], after: Node | null)
     if (aEnd === aStart) {
       // Only insertions left: before the first node of the matched suffix.
       const ref = bEnd < b.length ? b[bEnd] : after
-      while (bStart < bEnd) parent.insertBefore(b[bStart++], ref)
+      while (bStart < bEnd) place(parent, b[bStart++], ref)
     } else if (bEnd === bStart) {
       // Only removals left.
       while (aStart < aEnd) {
         const n = a[aStart++]
-        if (!map?.has(n) && n.parentNode === parent) parent.removeChild(n)
+        if (!map?.has(n) && n.parentNode === parent) detach(parent, n)
       }
     } else if (a[aStart] === b[bEnd - 1] && b[bStart] === a[aEnd - 1]) {
       // The first and last nodes swapped places.
       const ref = a[--aEnd].nextSibling
-      parent.insertBefore(b[bStart++], a[aStart++].nextSibling)
-      parent.insertBefore(b[--bEnd], ref)
+      place(parent, b[bStart++], a[aStart++].nextSibling)
+      place(parent, b[--bEnd], ref)
       a[aEnd] = b[bEnd]
     } else {
       if (!map) {
@@ -139,7 +288,7 @@ function reconcileArrays(parent: Node, a: Node[], b: Node[], after: Node | null)
       const index = map.get(a[aStart])
       if (index == null) {
         // Not in `b` any more.
-        parent.removeChild(a[aStart++])
+        detach(parent, a[aStart++])
       } else if (bStart < index && index < bEnd) {
         // How many nodes from a[aStart] on are already in `b`'s order?
         let i = aStart
@@ -152,9 +301,11 @@ function reconcileArrays(parent: Node, a: Node[], b: Node[], after: Node | null)
         if (sequence > index - bStart) {
           // A long run stays in place: insert the nodes `b` wants before it.
           const ref = a[aStart]
-          while (bStart < index) parent.insertBefore(b[bStart++], ref)
+          while (bStart < index) place(parent, b[bStart++], ref)
         } else {
-          parent.replaceChild(b[bStart++], a[aStart++])
+          // Put b's node where a[aStart] is. a[aStart] is still in `b` further on and is moved
+          // there later; it is not removed first, so that move keeps its state too.
+          place(parent, b[bStart++], a[aStart++])
         }
       } else {
         aStart++

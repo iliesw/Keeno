@@ -1,0 +1,22 @@
+<script lang="ts">
+  import { Link } from '@inflector/lux-router'
+  import { nav } from '../docs'
+</script>
+
+<nav class="flex w-50 flex-col gap-2" aria-label="Documentation">
+  {nav.map((group) => (
+    <div key={group.title} class="mb-3 flex flex-col gap-1.5">
+      <p class="px-2 text-sm opacity-70">{group.title}</p>
+      {group.items.map((item) => (
+        <Link
+          key={item.slug}
+          href={`/docs/${item.slug}`}
+          exact
+          class="block w-full rounded-md px-2 py-1.25 text-start text-sm font-black transition-colors hover:bg-neutral-200 dark:hover:bg-neutral-800 [&.active]:bg-neutral-200 [&.active]:text-black dark:[&.active]:bg-neutral-800 dark:[&.active]:text-white"
+        >
+          {item.title}
+        </Link>
+      ))}
+    </div>
+  ))}
+</nav>

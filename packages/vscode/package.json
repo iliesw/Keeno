@@ -42,6 +42,16 @@
         "configuration": "./language-configuration.json"
       }
     ],
+    "css": {
+      "customData": [
+        "./dist/tailwind.css-data.json"
+      ]
+    },
+    "configurationDefaults": {
+      "tailwindCSS.includeLanguages": {
+        "lux": "html"
+      }
+    },
     "grammars": [
       {
         "language": "lux",

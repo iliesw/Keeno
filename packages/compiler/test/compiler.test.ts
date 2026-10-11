@@ -384,6 +384,17 @@ describe('scoped styles', () => {
     expect(s('@keyframes k { from { a: b } 50% { a: c } }')).toBe('@keyframes k { from { a: b } 50% { a: c } }')
   })
 
+  test('Tailwind: @apply and @variant are kept; @utility, @theme and @custom-variant bodies are not scoped', () => {
+    expect(s('.btn { @apply px-4 hover:bg-red-500/50; @variant dark { @apply text-white } }')).toBe(
+      '.btn.lux-x { @apply px-4 hover:bg-red-500/50; @variant dark { @apply text-white } }',
+    )
+    expect(s('@utility tab { tab-size: 4; &:hover { a: b } }')).toBe('@utility tab { tab-size: 4; &:hover { a: b } }')
+    expect(s('@theme { --color-x: red }')).toBe('@theme { --color-x: red }')
+    expect(s('@custom-variant pointer-fine { @media (pointer: fine) { @slot } }')).toBe(
+      '@custom-variant pointer-fine { @media (pointer: fine) { @slot } }',
+    )
+  })
+
   test('compile() returns scoped css and adds the class to every element', () => {
     const r = compile('<div><p>x</p></div><style>p { color: red }</style>', { filename: 'src/A.lx' })
     expect(r.css.trim()).toBe(`p.${r.scope} { color: red }`)

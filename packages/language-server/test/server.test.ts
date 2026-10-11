@@ -132,6 +132,16 @@ describe('completions', () => {
     const { uri, pos } = await open('<p>x</p>\n<style>\n  p { col| }\n</style>')
     expect(await labels(uri, pos)).toContain('color')
   })
+
+  test('Tailwind directives in <style> are known and complete', async () => {
+    const valid = await open(
+      '<p>x</p>\n<style>\n  @reference "tailwindcss";\n  p { @apply px-4 hover:bg-red-500/50; @variant dark { color: red } }\n  @utility tab-4 { tab-size: 4 }\n  @theme { --color-brand: red }\n</style>',
+    )
+    const report = (await server.sendDocumentDiagnosticRequest(valid.uri)) as any
+    expect((report.items ?? []).map((d: any) => d.message)).toEqual([])
+    const { uri, pos } = await open('<p>x</p>\n<style>\n  @|\n</style>')
+    expect(await labels(uri, pos)).toEqual(expect.arrayContaining(['@apply', '@theme', '@utility', '@variant']))
+  })
 })
 
 describe('derived, state options, spread, class arrays', () => {

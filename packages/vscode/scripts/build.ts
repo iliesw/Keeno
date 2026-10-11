@@ -1,7 +1,8 @@
 // Bundle the extension client and the language server into dist/ (CommonJS, for VS Code's Node).
 import type { BunPlugin } from 'bun'
-import { readFileSync, rmSync } from 'node:fs'
+import { readFileSync, rmSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
+import { tailwindCssData } from '../../language-server/src/tailwind'
 
 /**
  * Some vscode-* packages ship a UMD `main` whose dynamic requires a bundler cannot follow, plus an
@@ -52,3 +53,8 @@ for (const { entry, name } of builds) {
   }
   console.log(`built dist/${name}`)
 }
+
+// Tailwind's at-rules for VS Code's own CSS service (`contributes.css.customData`), so plain .css files
+// (e.g. the stylesheet with `@import "tailwindcss"`) don't warn "Unknown at rule @apply" either.
+writeFileSync(path.join(root, 'dist/tailwind.css-data.json'), JSON.stringify(tailwindCssData, null, 2))
+console.log('built dist/tailwind.css-data.json')

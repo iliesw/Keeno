@@ -1,0 +1,55 @@
+<script lang="ts">
+  import Aside from '../components/Aside.lx'
+  import CopyPage from '../components/CopyPage.lx'
+  import Navbar from '../components/Navbar.lx'
+  import Pager from '../components/Pager.lx'
+  import Sidebar from '../components/Sidebar.lx'
+  import NotFound from './NotFound.lx'
+  import { onContentClick } from '../content'
+  import { findPage, getDoc, loadDoc, pages, type DocModule } from '../docs'
+
+  const { params } = props<{ params: { slug?: string } }>()
+
+  const slug = derived(() => params.slug ?? pages[0].slug)
+  const page = derived(() => findPage(slug))
+  // Filled from the cache on the server and while hydrating; loaded on client-side navigation.
+  const doc = state<DocModule | undefined>(getDoc(slug))
+  const html = derived(() => (doc ? doc.html : ''))
+  const headings = derived(() => (doc ? doc.headings : []))
+  const raw = derived(() => (doc ? doc.raw : ''))
+
+  update(() => {
+    const s = slug
+    const p = page
+    if (p) document.title = `${p.title} · Lux`
+    const cached = getDoc(s)
+    if (cached) {
+      doc.set(cached)
+      return
+    }
+    loadDoc(s).then((d) => {
+      if (slug.peek() === s) doc.set(d)
+    })
+  })
+</script>
+
+<Navbar />
+{page ? (
+  <div class="mx-auto flex min-h-screen max-w-400 justify-between gap-2 px-0 pt-28 md:gap-16 md:px-4">
+    <aside class="sticky top-28 hidden max-h-[calc(100svh-8rem)] self-start overflow-y-auto min-[1080px]:block">
+      <Sidebar />
+    </aside>
+    <main class="relative mx-6 w-full min-w-0 max-w-3xl md:mr-16 xl:mr-0">
+      <article class="doxy pb-48" onClick={onContentClick}>
+        <div class="contents" innerHTML={html}></div>
+        <Pager slug={slug} />
+      </article>
+      <CopyPage raw={raw} slug={slug} />
+    </main>
+    <aside class="sticky top-28 hidden self-start xl:block">
+      <Aside headings={headings} />
+    </aside>
+  </div>
+) : (
+  <NotFound />
+)}
