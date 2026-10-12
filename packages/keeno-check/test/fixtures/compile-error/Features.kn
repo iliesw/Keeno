@@ -1,0 +1,7 @@
+<script lang="ts">
+  const FEATURES = [['Fast', 'No virtual DOM']]
+</script>
+
+<ul>
+  {FEATURES.map(([name, text]) => (<li key={name}>{text}</li>))}
+</ul>

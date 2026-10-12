@@ -71,7 +71,15 @@ export class CompileContext {
 }
 
 export function codeFrameError(path: NodePath | null, message: string): Error {
-  return path ? path.buildCodeFrameError(message) : new Error(message)
+  if (!path) return new Error(message)
+  const err: any = path.buildCodeFrameError(message)
+  // Like Babel parse errors: `loc` (column 0-based) and `pos` (see `compile`, which maps them to the .kn file).
+  const start = path.node.loc?.start
+  if (start) {
+    err.loc = { line: start.line, column: start.column }
+    err.pos = start.index
+  }
+  return err
 }
 
 /** `() => expr`, or the arrow itself if `expr` is an immediately-invoked, parameterless arrow. */
