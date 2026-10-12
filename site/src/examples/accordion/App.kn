@@ -1,0 +1,95 @@
+<script lang="ts">
+  const FAQ = [
+    { q: 'Does Keeno use a virtual DOM?', a: 'No. The compiler turns each component into direct DOM code, and only the text nodes and attributes that read a state update.' },
+    { q: 'Do components re-render?', a: 'Never. A component function runs once; after that, signals update exactly what depends on them.' },
+    { q: 'Can I use TypeScript?', a: 'Yes. Write <script lang="ts"> and the editor extension and keeno-check type-check your markup too.' },
+    { q: 'Does it work with Tailwind?', a: 'Yes: utilities in markup, and @apply in a component’s <style> block.' },
+  ]
+
+  // A Set of open indexes. Writes replace it, so the update is visible to whatever reads it.
+  const open = state(new Set<number>([0]))
+  const multiple = state(false)
+
+  function toggle(i: number) {
+    const next = new Set(multiple ? open : [])
+    if (open.has(i)) next.delete(i)
+    else next.add(i)
+    open.set(next)
+  }
+</script>
+
+<label class="mode"><input type="checkbox" bind:checked={multiple} /> Allow several open</label>
+
+<div class="list">
+  {FAQ.map((item, i) => (
+    <section key={item.q} class={{ open: open.has(i) }}>
+      <button aria-expanded={open.has(i)} onClick={() => toggle(i)}>
+        <span>{item.q}</span>
+        <span class="chevron" aria-hidden="true">›</span>
+      </button>
+      <div class="panel">
+        <p>{item.a}</p>
+      </div>
+    </section>
+  ))}
+</div>
+
+<style>
+  .mode {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+    color: var(--muted);
+    font-size: 0.8rem;
+    cursor: pointer;
+  }
+  .list {
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    overflow: hidden;
+  }
+  section + section {
+    border-top: 1px solid var(--border);
+  }
+  button {
+    justify-content: space-between;
+    width: 100%;
+    min-height: 2.75rem;
+    padding: 0 1rem;
+    border: none;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+    text-align: left;
+  }
+  button:active:not(:disabled) {
+    transform: none;
+  }
+  .chevron {
+    color: var(--faint);
+    font-size: 1.1rem;
+    transition: transform 0.25s var(--ease-spring);
+  }
+  .open .chevron {
+    transform: rotate(90deg);
+  }
+  /* Animating grid rows from 0fr to 1fr opens the panel to its natural height. */
+  .panel {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.3s var(--ease-spring);
+  }
+  .open .panel {
+    grid-template-rows: 1fr;
+  }
+  .panel p {
+    overflow: hidden;
+    margin: 0;
+    padding: 0 1rem;
+    color: var(--muted);
+  }
+  .open .panel p {
+    padding-bottom: 0.875rem;
+  }
+</style>

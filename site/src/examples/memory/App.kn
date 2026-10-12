@@ -1,0 +1,160 @@
+<script lang="ts">
+  const EMOJI = ['🍋', '🍉', '🍇', '🍓', '🥝', '🍑']
+
+  type Card = { id: number; face: string }
+  const shuffle = (): Card[] =>
+    [...EMOJI, ...EMOJI]
+      .map((face) => ({ face, r: Math.random() }))
+      .sort((a, b) => a.r - b.r)
+      .map(({ face }, id) => ({ id, face }))
+
+  const cards = state(shuffle())
+  const flipped = state<number[]>([])
+  const matched = state<string[]>([])
+  const moves = state(0)
+  const started = state(0)
+  const now = state(Date.now())
+
+  const won = derived(() => matched.length === EMOJI.length)
+  const seconds = derived(() => (started ? Math.max(0, Math.floor((now - started) / 1000)) : 0))
+  const best = state(0, { persist: 'keeno-example-memory-best' })
+
+  // The clock stops once the game is won.
+  init(() => {
+    const timer = setInterval(() => !won.peek() && now.set(Date.now()), 250)
+    return () => clearInterval(timer)
+  })
+
+  function flip(card: Card) {
+    if (flipped.length === 2 || flipped.includes(card.id) || matched.includes(card.face)) return
+    if (!started) {
+      now.set(Date.now())
+      started.set(Date.now())
+    }
+    const open = [...flipped, card.id]
+    flipped.set(open)
+    if (open.length < 2) return
+    moves.set(moves + 1)
+    const [a, b] = open.map((id) => cards.find((c) => c.id === id)!)
+    // A pair stays face up; a miss flips back after a moment.
+    setTimeout(
+      () => {
+        if (a.face === b.face) {
+          matched.set([...matched.peek(), a.face])
+          if (matched.peek().length === EMOJI.length && (!best.peek() || moves.peek() < best.peek())) best.set(moves.peek())
+        }
+        flipped.set([])
+      },
+      a.face === b.face ? 250 : 800,
+    )
+  }
+
+  function restart() {
+    cards.set(shuffle())
+    flipped.set([])
+    matched.set([])
+    moves.set(0)
+    started.set(0)
+  }
+</script>
+
+<div class="stats">
+  <span>Moves <b>{moves}</b></span>
+  <span>Time <b>{seconds}s</b></span>
+  <span>Best <b>{best || '–'}</b></span>
+  <button onClick={restart}>New game</button>
+</div>
+
+<div class="grid">
+  {cards.map((c) => (
+    <button
+      key={c.id}
+      class={['card', (flipped.includes(c.id) || matched.includes(c.face)) && 'up', matched.includes(c.face) && 'matched']}
+      aria-label={flipped.includes(c.id) || matched.includes(c.face) ? c.face : 'Hidden card'}
+      onClick={() => flip(c)}
+    >
+      <span class="inner">
+        <span class="back"></span>
+        <span class="front">{c.face}</span>
+      </span>
+    </button>
+  ))}
+</div>
+{won && <p class="win">🎉 Solved in {moves} moves and {seconds}s</p>}
+
+<style>
+  .stats {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+    color: var(--muted);
+    font-size: 0.8rem;
+  }
+  .stats b {
+    color: var(--fg);
+    font-variant-numeric: tabular-nums;
+  }
+  .stats button {
+    margin-left: auto;
+    font-size: 0.8rem;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.5rem;
+    max-width: 320px;
+    margin: 0 auto;
+  }
+  .card {
+    aspect-ratio: 1;
+    min-height: 0;
+    padding: 0;
+    border: none;
+    background: none;
+    box-shadow: none;
+    perspective: 400px;
+  }
+  .card:hover:not(:disabled) {
+    background: none;
+  }
+  .inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transform-style: preserve-3d;
+    transition: transform 0.4s var(--ease-spring);
+  }
+  .up .inner {
+    transform: rotateY(180deg);
+  }
+  .back,
+  .front {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    border-radius: 0.625rem;
+    backface-visibility: hidden;
+  }
+  .back {
+    background:
+      repeating-linear-gradient(45deg, transparent 0 6px, color-mix(in srgb, var(--bg) 12%, transparent) 6px 12px),
+      var(--fg);
+  }
+  .front {
+    border: 1px solid var(--border);
+    background: var(--surface);
+    font-size: 1.75rem;
+    transform: rotateY(180deg);
+  }
+  .matched .front {
+    border-color: color-mix(in srgb, var(--success) 50%, transparent);
+    background: color-mix(in srgb, var(--success) 10%, var(--bg));
+  }
+  .win {
+    margin: 0.75rem 0 0;
+    text-align: center;
+    font-weight: 500;
+  }
+</style>

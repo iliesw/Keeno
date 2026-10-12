@@ -1,0 +1,115 @@
+<script lang="ts">
+  type Point = { x: number; y: number }
+
+  // The same pointer position, written to three states on every move.
+  const raw = state<Point>({ x: 50, y: 50 })
+  const throttled = state<Point>({ x: 50, y: 50 }, { throttle: 200 })
+  const debounced = state<Point>({ x: 50, y: 50 }, { debounce: 200 })
+
+  const counts = state({ raw: 0, throttled: 0, debounced: 0 })
+  const bump = (k: 'raw' | 'throttled' | 'debounced') => counts.set({ ...counts.peek(), [k]: counts.peek()[k] + 1 })
+  // onUpdate() listens synchronously, each time a write is actually applied.
+  init(() => {
+    const offs = [raw.onUpdate(() => bump('raw')), throttled.onUpdate(() => bump('throttled')), debounced.onUpdate(() => bump('debounced'))]
+    return () => offs.forEach((off) => off())
+  })
+  const points = derived(() => ({ raw: raw, throttled: throttled, debounced: debounced }))
+
+  function move(e: PointerEvent) {
+    const box = (e.currentTarget as HTMLElement).getBoundingClientRect()
+    const p = { x: ((e.clientX - box.left) / box.width) * 100, y: ((e.clientY - box.top) / box.height) * 100 }
+    raw.set(p)
+    throttled.set(p)
+    debounced.set(p)
+  }
+
+  const DOTS = [
+    { key: 'raw', label: 'every write', color: 'var(--faint)' },
+    { key: 'throttled', label: 'throttle: 200', color: 'var(--info)' },
+    { key: 'debounced', label: 'debounce: 200', color: 'var(--danger)' },
+  ] as const
+</script>
+
+<div class="pad" onPointermove={move}>
+  {DOTS.map((d) => (
+    <span key={d.key} class="dot" style={`left:${points[d.key].x}%;top:${points[d.key].y}%;--c:${d.color}`}></span>
+  ))}
+  <p>Move your pointer here</p>
+</div>
+
+<ul>
+  {DOTS.map((d) => (
+    <li key={d.key} style={`--c:${d.color}`}>
+      <span class="swatch"></span>
+      <code>{d.label}</code>
+      <strong>{counts[d.key]}</strong>
+    </li>
+  ))}
+</ul>
+<button class="reset" onClick={() => counts.set({ raw: 0, throttled: 0, debounced: 0 })}>Reset counts</button>
+
+<style>
+  .pad {
+    position: relative;
+    height: 140px;
+    overflow: hidden;
+    border: 1px dashed var(--border-strong);
+    border-radius: 0.75rem;
+    background:
+      radial-gradient(circle, var(--border) 1px, transparent 1px) 0 0 / 14px 14px,
+      var(--bg);
+    touch-action: none;
+  }
+  .pad p {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    margin: 0;
+    color: var(--faint);
+    font-size: 0.8rem;
+    pointer-events: none;
+  }
+  .dot {
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    margin: -7px 0 0 -7px;
+    border-radius: 50%;
+    background: var(--c);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--c) 25%, transparent);
+    transition:
+      left 0.12s ease-out,
+      top 0.12s ease-out;
+    pointer-events: none;
+  }
+  ul {
+    display: grid;
+    gap: 2px;
+    margin: 0.75rem 0;
+    padding: 0;
+  }
+  li {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.3rem 0.5rem;
+    font-size: 0.85rem;
+  }
+  .swatch {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--c);
+  }
+  code {
+    flex: 1;
+    color: var(--muted);
+  }
+  strong {
+    font-variant-numeric: tabular-nums;
+  }
+  .reset {
+    font-size: 0.8rem;
+  }
+</style>

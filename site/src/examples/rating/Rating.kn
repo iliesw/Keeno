@@ -1,0 +1,67 @@
+<script lang="ts">
+  type Props = {
+    value: number
+    max?: number
+    size?: number
+    readonly?: boolean
+    onChange?: (value: number) => void
+  }
+  // Defaults in the destructuring apply when the prop is missing.
+  const { value, max = 5, size = 18, readonly = false, onChange } = props<Props>()
+
+  // While hovering, show the star under the pointer instead of the current value.
+  const hover = state(0)
+  const shown = derived(() => hover || value)
+  const fill = (i: number) => Math.round(Math.min(1, Math.max(0, shown - i)) * 2) * 50
+
+  const stars = derived(() => Array.from({ length: max }, (_, i) => i))
+</script>
+
+<div
+  class={['rating', readonly && 'readonly']}
+  role={readonly ? 'img' : 'radiogroup'}
+  aria-label={`${value} out of ${max}`}
+  style={`--size:${size}px`}
+  onPointerleave={() => hover.set(0)}
+>
+  {stars.map((i) => (
+    <button
+      key={i}
+      type="button"
+      role="radio"
+      aria-checked={Math.round(value) === i + 1}
+      aria-label={`${i + 1} star${i ? 's' : ''}`}
+      disabled={readonly}
+      tabIndex={readonly ? -1 : 0}
+      style={`--fill:${fill(i)}%`}
+      onPointerenter={() => !readonly && hover.set(i + 1)}
+      onClick={() => onChange?.(i + 1)}
+    >★</button>
+  ))}
+</div>
+
+<style>
+  .rating {
+    display: inline-flex;
+    gap: 2px;
+  }
+  button {
+    width: var(--size);
+    min-height: var(--size) !important;
+    padding: 0 !important;
+    border: none !important;
+    background: linear-gradient(90deg, var(--warning) var(--fill), var(--border) var(--fill)) !important;
+    background-clip: text !important;
+    box-shadow: none !important;
+    color: transparent !important;
+    font-size: var(--size);
+    line-height: 1;
+  }
+  button:hover:not(:disabled) {
+    transform: scale(1.15);
+  }
+  .readonly button:disabled {
+    opacity: 1;
+    cursor: default;
+  }
+</style>

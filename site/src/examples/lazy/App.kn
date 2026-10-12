@@ -1,0 +1,128 @@
+<script lang="ts">
+  import { ErrorBoundary, lazy } from '@inflector/keeno'
+
+  const fail = state(false)
+  const show = state(false)
+  const log = state<string[]>([])
+  const note = (line: string) => log.set([...log.peek(), `${new Date().toLocaleTimeString()}  ${line}`].slice(-4))
+
+  // The chart lives in its own chunk and is fetched the first time it renders.
+  // The delay stands in for a slow network.
+  const Chart = lazy(
+    () => {
+      note('loading Chart.kn…')
+      return new Promise((r) => setTimeout(r, 900)).then(() => {
+        if (fail.peek()) {
+          note('load failed')
+          throw new Error('Failed to fetch Chart.kn')
+        }
+        note('Chart.kn loaded')
+        return import('./Chart.kn')
+      })
+    },
+    { pending: () => <div class="pending"><span class="spinner"></span> Loading chart…</div> },
+  )
+</script>
+
+<div class="bar">
+  <!-- Hovering starts the download early, so the click often finds it ready. -->
+  <button class="primary" onPointerenter={() => Chart.preload().catch(() => {})} onClick={() => show.set(!show)}>
+    {show ? 'Hide chart' : 'Show chart'}
+  </button>
+  <label><input type="checkbox" bind:checked={fail} /> Fail the next load</label>
+</div>
+
+<div class="stage">
+  {show ? (
+    <ErrorBoundary
+      fallback={(error, reset) => (
+        <div class="error">
+          <span>{String(error)}</span>
+          <button onClick={() => { fail.set(false); reset() }}>Retry</button>
+        </div>
+      )}
+    >
+      <Chart />
+    </ErrorBoundary>
+  ) : (
+    <p class="empty">Nothing loaded until you ask for it.</p>
+  )}
+</div>
+
+<pre>{log.join('\n') || 'network log'}</pre>
+
+<style>
+  .bar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .bar label {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--muted);
+    font-size: 0.8rem;
+    cursor: pointer;
+  }
+  .primary {
+    border-color: var(--fg);
+    background: var(--fg);
+    color: var(--bg);
+  }
+  .primary:hover:not(:disabled) {
+    border-color: var(--fg);
+    background: color-mix(in srgb, var(--fg) 85%, var(--bg));
+  }
+  .stage {
+    display: grid;
+    min-height: 130px;
+    margin: 0.75rem 0;
+    padding: 0.75rem;
+    border: 1px dashed var(--border);
+    border-radius: 0.75rem;
+  }
+  .empty,
+  .pending {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin: 0;
+    color: var(--faint);
+    font-size: 0.8rem;
+  }
+  .spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid var(--border);
+    border-top-color: var(--fg);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  .error {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    background: color-mix(in srgb, var(--danger) 8%, transparent);
+    color: var(--danger);
+    font-size: 0.85rem;
+  }
+  pre {
+    margin: 0;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    background: var(--surface);
+    color: var(--muted);
+    font-size: 0.7rem;
+    white-space: pre-wrap;
+  }
+  @keyframes spin {
+    to {
+      transform: rotate(1turn);
+    }
+  }
+</style>

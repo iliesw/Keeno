@@ -1,0 +1,137 @@
+<script lang="ts">
+  import { deepEqual } from '@inflector/keeno'
+
+  type Settings = { name: string; plan: string; emails: boolean; tags: string[] }
+
+  const TAGS = ['frontend', 'backend', 'design', 'ops']
+
+  // What the "server" has, and the draft being edited.
+  const saved = state<Settings>({ name: 'Ada Lovelace', plan: 'pro', emails: true, tags: ['frontend'] })
+  const draft = state<Settings>(structuredClone(saved.peek()), { equals: deepEqual })
+
+  // Compare by value, so undoing an edit by hand also clears the "unsaved" state.
+  const dirty = derived(() => !deepEqual(draft, saved))
+  const changed = derived(() => (Object.keys(draft) as (keyof Settings)[]).filter((k) => !deepEqual(draft[k], saved[k])))
+  const saving = state(false)
+
+  const edit = <K extends keyof Settings>(key: K, value: Settings[K]) => draft.set({ ...draft, [key]: value })
+  const toggleTag = (t: string) => edit('tags', draft.tags.includes(t) ? draft.tags.filter((x) => x !== t) : [...draft.tags, t])
+
+  function save() {
+    saving.set(true)
+    setTimeout(() => {
+      saved.set(structuredClone(draft.peek()))
+      saving.set(false)
+    }, 600)
+  }
+</script>
+
+<form onSubmit={(e: SubmitEvent) => { e.preventDefault(); save() }}>
+  <label>
+    Name
+    <input value={draft.name} onInput={(e: Event) => edit('name', (e.target as HTMLInputElement).value)} class={{ changed: changed.includes('name') }} />
+  </label>
+  <label>
+    Plan
+    <select value={draft.plan} onChange={(e: Event) => edit('plan', (e.target as HTMLSelectElement).value)} class={{ changed: changed.includes('plan') }}>
+      <option value="hobby">Hobby</option>
+      <option value="pro">Pro</option>
+      <option value="team">Team</option>
+    </select>
+  </label>
+  <div class="field">
+    <span>Interests</span>
+    <div class="tags">
+      {TAGS.map((t) => (
+        <button key={t} type="button" class={{ on: draft.tags.includes(t) }} onClick={() => toggleTag(t)}>{t}</button>
+      ))}
+    </div>
+  </div>
+  <label class="check">
+    <input type="checkbox" checked={draft.emails} onChange={() => edit('emails', !draft.emails)} /> Product emails
+  </label>
+
+  <div class={['bar', dirty && 'show']}>
+    <span>{dirty ? `Unsaved: ${changed.join(', ')}` : saving ? 'Saving…' : 'All changes saved'}</span>
+    <button type="button" disabled={!dirty || saving} onClick={() => draft.set(structuredClone(saved))}>Discard</button>
+    <button type="submit" class="save" disabled={!dirty || saving}>{saving ? 'Saving…' : 'Save'}</button>
+  </div>
+</form>
+
+<style>
+  form {
+    display: grid;
+    gap: 0.75rem;
+  }
+  label,
+  .field {
+    display: grid;
+    gap: 0.3rem;
+    color: var(--muted);
+    font-size: 0.8rem;
+    font-weight: 500;
+  }
+  input,
+  select {
+    color: var(--fg);
+  }
+  .changed {
+    border-color: var(--warning) !important;
+  }
+  .check {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--fg);
+    font-weight: 400;
+    cursor: pointer;
+  }
+  .tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .tags button {
+    min-height: 1.75rem;
+    border-radius: 999px;
+    color: var(--muted);
+    font-size: 0.8rem;
+  }
+  .tags button.on {
+    border-color: var(--fg);
+    color: var(--fg);
+  }
+  .bar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.5rem 0.5rem 0.875rem;
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    color: var(--muted);
+    font-size: 0.8rem;
+    transition:
+      border-color 0.2s,
+      background 0.2s;
+  }
+  .bar span {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .bar.show {
+    border-color: color-mix(in srgb, var(--warning) 50%, transparent);
+    background: color-mix(in srgb, var(--warning) 8%, transparent);
+    color: var(--fg);
+  }
+  .save {
+    border-color: var(--fg);
+    background: var(--fg);
+    color: var(--bg);
+  }
+  .save:hover:not(:disabled) {
+    border-color: var(--fg);
+    background: color-mix(in srgb, var(--fg) 85%, var(--bg));
+  }
+</style>

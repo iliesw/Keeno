@@ -1,0 +1,71 @@
+<script lang="ts">
+  type Range = '7d' | '30d' | '90d'
+  const RANGES: Range[] = ['7d', '30d', '90d']
+  const DAYS: Record<Range, number> = { '7d': 7, '30d': 30, '90d': 90 }
+
+  // Deterministic fake data, so every visit shows the same numbers.
+  const series = (days: number, seed: number) =>
+    Array.from({ length: days }, (_, i) => Math.round(400 + 220 * Math.sin((i + seed) / 4) + ((i * seed * 37) % 160)))
+
+  const range = state<Range>('30d')
+  const visits = derived(() => series(DAYS[range.get()], 3))
+  const previous = derived(() => series(DAYS[range.get()], 7))
+
+  const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0)
+  const total = derived(() => sum(visits))
+  const change = derived(() => ((total - sum(previous)) / sum(previous)) * 100)
+  const peak = derived(() => Math.max(...visits))
+  const hovered = state<number | null>(null)
+
+  const stats = derived(() => [
+    { label: 'Visitors', value: total.toLocaleString(), delta: change },
+    { label: 'Daily average', value: Math.round(total / visits.length).toLocaleString(), delta: change / 2 },
+    { label: 'Best day', value: peak.toLocaleString(), delta: -change / 3 },
+  ])
+</script>
+
+<div class="flex flex-col gap-4">
+  <div class="flex items-center justify-between">
+    <h3 class="m-0! text-base font-semibold">Traffic</h3>
+    <div class="flex gap-0.5 rounded-lg bg-neutral-100 p-0.5 dark:bg-neutral-900">
+      {RANGES.map((r) => (
+        <button
+          key={r}
+          onClick={() => range.set(r)}
+          class={[
+            'h-7 min-h-0! rounded-md! border-0! px-2.5! text-xs shadow-none!',
+            range === r ? 'bg-white! text-neutral-900 shadow-sm! dark:bg-neutral-700! dark:text-white' : 'bg-transparent! text-neutral-500',
+          ]}
+        >{r}</button>
+      ))}
+    </div>
+  </div>
+
+  <div class="grid grid-cols-3 gap-2">
+    {stats.map((s) => (
+      <div key={s.label} class="rounded-xl border border-neutral-200 p-3 dark:border-neutral-800">
+        <p class="m-0! text-xs text-neutral-500">{s.label}</p>
+        <p class="m-0! text-xl font-semibold tracking-tight tabular-nums">{s.value}</p>
+        <p class={['m-0! text-xs font-medium', s.delta >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400']}>
+          {s.delta >= 0 ? '▲' : '▼'} {Math.abs(s.delta).toFixed(1)}%
+        </p>
+      </div>
+    ))}
+  </div>
+
+  <div class="relative flex h-28 items-end gap-px" onPointerleave={() => hovered.set(null)}>
+    {visits.map((v, i) => (
+      <div
+        key={i}
+        onPointerenter={() => hovered.set(i)}
+        class={['flex-1 rounded-t-sm transition-[height,background-color] duration-300', hovered === i ? 'bg-blue-500' : 'bg-blue-500/30 dark:bg-blue-400/30']}
+        style={`height:${(v / peak) * 100}%`}
+      ></div>
+    ))}
+    {hovered !== null && (
+      <span class="pointer-events-none absolute -top-2 right-0 rounded-md bg-neutral-900 px-2 py-0.5 text-xs text-white tabular-nums dark:bg-white dark:text-black">
+        Day {hovered + 1}: {visits[hovered]}
+      </span>
+    )}
+  </div>
+</div>

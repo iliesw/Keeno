@@ -54,6 +54,43 @@ export const examples: Example[] = [
     category: 'Basics',
   },
   {
+    slug: 'accordion',
+    title: 'Accordion',
+    description: 'An FAQ that opens one panel at a time, or several, animated with CSS grid rows.',
+    concepts: [
+      { label: 'class objects', href: '/docs/templates' },
+      { label: 'bind:checked', href: '/docs/templates' },
+    ],
+    category: 'Basics',
+  },
+  {
+    slug: 'tip-calculator',
+    title: 'Tip calculator',
+    description: 'Number and range inputs bound to states, with totals derived from them.',
+    concepts: [
+      { label: 'bind:value', href: '/docs/templates' },
+      { label: 'validate', href: '/docs/state-options#validate' },
+    ],
+    category: 'Basics',
+  },
+  {
+    slug: 'composer',
+    title: 'Post composer',
+    description: 'A character limit ring, hashtags and a feed, all derived from one textarea.',
+    concepts: [
+      { label: 'derived()', href: '/docs/reactivity' },
+      { label: 'SVG attributes', href: '/docs/templates' },
+    ],
+    category: 'Basics',
+  },
+  {
+    slug: 'sortable',
+    title: 'Sortable list',
+    description: 'Reorder rows by dragging or with the keyboard; keyed rows move and keep their DOM.',
+    concepts: [{ label: 'keyed lists', href: '/docs/templates' }],
+    category: 'Basics',
+  },
+  {
     slug: 'temperature',
     title: 'Temperature converter',
     description: 'One source of truth, with a validated state and values derived from it.',
@@ -94,6 +131,56 @@ export const examples: Example[] = [
     category: 'State',
   },
   {
+    slug: 'cart',
+    title: 'Shopping cart',
+    description: 'Quantities, a promo code and free-shipping threshold, persisted across reloads.',
+    concepts: [
+      { label: 'persist', href: '/docs/state-options#persist' },
+      { label: 'derived()', href: '/docs/reactivity' },
+    ],
+    category: 'State',
+  },
+  {
+    slug: 'unsaved-changes',
+    title: 'Unsaved changes',
+    description: 'A settings form that knows which fields differ from what was saved, compared by value.',
+    concepts: [
+      { label: 'deepEqual', href: '/docs/state-options#equals' },
+      { label: 'equals', href: '/docs/state-options#equals' },
+    ],
+    category: 'State',
+  },
+  {
+    slug: 'throttle',
+    title: 'Throttle vs debounce',
+    description: 'The same pointer position written to three states, to see how each option paces writes.',
+    concepts: [
+      { label: 'throttle', href: '/docs/state-options#debounce-and-throttle' },
+      { label: 'onUpdate()', href: '/docs/api' },
+    ],
+    category: 'State',
+  },
+  {
+    slug: 'wizard',
+    title: 'Signup wizard',
+    description: 'A multi-step form with per-step validation, a progress bar and a summary.',
+    concepts: [
+      { label: 'conditionals', href: '/docs/templates' },
+      { label: 'validate', href: '/docs/state-options#validate' },
+    ],
+    category: 'State',
+  },
+  {
+    slug: 'tic-tac-toe',
+    title: 'Tic-tac-toe',
+    description: 'The board is one state; the winner, the turn and time travel all come from it.',
+    concepts: [
+      { label: 'history', href: '/docs/state-options#history' },
+      { label: 'derived()', href: '/docs/reactivity' },
+    ],
+    category: 'State',
+  },
+  {
     slug: 'stopwatch',
     title: 'Stopwatch',
     description: 'requestAnimationFrame-driven timing with laps, cleaned up on destroy.',
@@ -120,6 +207,56 @@ export const examples: Example[] = [
     concepts: [
       { label: 'provide()', href: '/docs/context' },
       { label: 'inject()', href: '/docs/context' },
+    ],
+    category: 'Components',
+  },
+  {
+    slug: 'rating',
+    title: 'Star rating',
+    description: 'A reusable component with default props, a callback and half-star display.',
+    concepts: [
+      { label: 'props()', href: '/docs/components' },
+      { label: 'prop defaults', href: '/docs/components' },
+    ],
+    category: 'Components',
+  },
+  {
+    slug: 'autocomplete',
+    title: 'Autocomplete',
+    description: 'A multi-select combobox with keyboard navigation and an element ref for focus.',
+    concepts: [
+      { label: 'ref()', href: '/docs/templates' },
+      { label: 'update()', href: '/docs/reactivity' },
+    ],
+    category: 'Components',
+  },
+  {
+    slug: 'infinite-scroll',
+    title: 'Infinite scroll',
+    description: 'Load the next page when a sentinel scrolls into view, with an IntersectionObserver.',
+    concepts: [
+      { label: 'ref()', href: '/docs/templates' },
+      { label: 'init() cleanup', href: '/docs/components' },
+    ],
+    category: 'Components',
+  },
+  {
+    slug: 'life',
+    title: 'Game of Life',
+    description: 'Conway’s cellular automaton, with a timer that restarts when the speed changes.',
+    concepts: [
+      { label: 'update(fn, deps)', href: '/docs/components' },
+      { label: 'peek()', href: '/docs/reactivity' },
+    ],
+    category: 'Components',
+  },
+  {
+    slug: 'memory',
+    title: 'Memory game',
+    description: 'Flip cards to find pairs, with a move counter, a timer and a persisted best score.',
+    concepts: [
+      { label: 'init()', href: '/docs/components' },
+      { label: 'persist', href: '/docs/state-options#persist' },
     ],
     category: 'Components',
   },
@@ -180,9 +317,47 @@ export const examples: Example[] = [
     category: 'Built-ins',
   },
   {
+    slug: 'lazy',
+    title: 'Lazy loading',
+    description: 'A component fetched on first render, preloaded on hover, with retry after a failed load.',
+    concepts: [
+      { label: 'lazy()', href: '/docs/built-ins#lazy' },
+      { label: '<ErrorBoundary>', href: '/docs/built-ins#errorboundary' },
+    ],
+    category: 'Built-ins',
+  },
+  {
+    slug: 'pip',
+    title: 'Picture in picture',
+    description: 'A player that moves between layouts and keeps playing, created once with reparentable().',
+    concepts: [{ label: 'reparentable()', href: '/docs/built-ins#reparentable' }],
+    category: 'Built-ins',
+  },
+  {
     slug: 'tailwind',
     title: 'Tailwind pricing',
     description: 'Utility classes in markup, with class arrays for conditional styles.',
+    concepts: [
+      { label: 'Tailwind CSS', href: '/docs/styles#tailwind-css' },
+      { label: 'class arrays', href: '/docs/templates' },
+    ],
+    category: 'Styling',
+    tailwind: true,
+  },
+  {
+    slug: 'theme-builder',
+    title: 'Theme builder',
+    description: 'States written into CSS custom properties, with every color derived in scoped CSS.',
+    concepts: [
+      { label: 'scoped CSS', href: '/docs/styles' },
+      { label: 'style bindings', href: '/docs/templates' },
+    ],
+    category: 'Styling',
+  },
+  {
+    slug: 'dashboard',
+    title: 'Tailwind dashboard',
+    description: 'Stat cards and a bar chart with hover details, styled with Tailwind utilities.',
     concepts: [
       { label: 'Tailwind CSS', href: '/docs/styles#tailwind-css' },
       { label: 'class arrays', href: '/docs/templates' },

@@ -1,0 +1,126 @@
+<script lang="ts">
+  import { fetchPage, type Post } from './feed'
+
+  const posts = state<Post[]>([])
+  const page = state(0)
+  const loading = state(false)
+  const done = state(false)
+
+  const scroller = ref<HTMLDivElement>()
+  const sentinel = ref<HTMLDivElement>()
+
+  async function more() {
+    if (loading.peek() || done.peek()) return
+    loading.set(true)
+    const next = await fetchPage(page.peek())
+    posts.set([...posts.peek(), ...next])
+    page.set(page.peek() + 1)
+    done.set(next.length === 0)
+    loading.set(false)
+  }
+
+  // Load the next page when the sentinel at the bottom of the list scrolls into view.
+  // The refs are set by the time init() runs.
+  init(() => {
+    const observer = new IntersectionObserver((entries) => entries[0].isIntersecting && more(), {
+      root: scroller.current,
+      rootMargin: '80px',
+    })
+    observer.observe(sentinel.current!)
+    return () => observer.disconnect()
+  })
+</script>
+
+<div class="feed" ref={scroller}>
+  <ul>
+    {posts.map((p) => (
+      <li key={p.id}>
+        <span class="avatar" style={`background:${p.color}`}>{p.author[0]}</span>
+        <div>
+          <strong>{p.author}</strong> <small>#{p.id}</small>
+          <p>{p.text}</p>
+        </div>
+      </li>
+    ))}
+  </ul>
+  <div ref={sentinel} class="sentinel">
+    {loading && <span class="spinner" aria-label="Loading"></span>}
+    {done && <span>You’re all caught up.</span>}
+  </div>
+</div>
+<p class="meta">{posts.length} posts · {page} pages loaded</p>
+
+<style>
+  .feed {
+    height: 220px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    overscroll-behavior: contain;
+  }
+  ul {
+    margin: 0;
+    padding: 0;
+  }
+  li {
+    display: flex;
+    gap: 0.625rem;
+    padding: 0.625rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    animation: in 0.3s ease-out;
+  }
+  .avatar {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  strong {
+    font-weight: 500;
+  }
+  small {
+    color: var(--faint);
+    font-family: var(--font-mono);
+  }
+  li p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+  .sentinel {
+    display: grid;
+    place-items: center;
+    min-height: 3rem;
+    color: var(--faint);
+    font-size: 0.8rem;
+  }
+  .spinner {
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--border);
+    border-top-color: var(--fg);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  .meta {
+    margin: 0.5rem 0 0;
+    color: var(--faint);
+    font-size: 0.75rem;
+  }
+  @keyframes spin {
+    to {
+      transform: rotate(1turn);
+    }
+  }
+  @keyframes in {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+  }
+</style>

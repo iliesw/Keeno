@@ -1,0 +1,199 @@
+<script lang="ts">
+  const STEPS = ['Account', 'Workspace', 'Plan', 'Done']
+  const PLANS = [
+    { id: 'hobby', name: 'Hobby', price: '$0' },
+    { id: 'pro', name: 'Pro', price: '$12/mo' },
+    { id: 'team', name: 'Team', price: '$39/mo' },
+  ]
+
+  const step = state(0, { validate: (v) => Math.min(STEPS.length - 1, Math.max(0, v)) })
+  const email = state('')
+  const workspace = state('')
+  const plan = state('')
+
+  // Each step's error, or '' when it can be left. The Next button reads only the current one.
+  const errors = derived(() => [
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? '' : 'Enter a valid email',
+    workspace.trim().length >= 3 ? '' : 'At least 3 characters',
+    plan ? '' : 'Pick a plan',
+    '',
+  ])
+  const slug = derived(() => workspace.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''))
+  const attempted = state(false)
+
+  function next() {
+    attempted.set(true)
+    if (errors[step]) return
+    attempted.set(false)
+    step.set(step + 1)
+  }
+  function restart() {
+    email.set('')
+    workspace.set('')
+    plan.set('')
+    step.set(0)
+  }
+</script>
+
+<ol class="steps">
+  {STEPS.map((s, i) => (
+    <li key={s} class={{ done: i < step, current: i === step }}>
+      <span>{i < step ? '✓' : i + 1}</span>{s}
+    </li>
+  ))}
+</ol>
+<div class="bar"><div style={`width:${(step / (STEPS.length - 1)) * 100}%`}></div></div>
+
+<form class="body" onSubmit={(e: SubmitEvent) => { e.preventDefault(); next() }}>
+  {step === 0 && (
+    <label>
+      Work email
+      <input type="email" bind:value={email} placeholder="ada@example.com" />
+    </label>
+  )}
+  {step === 1 && (
+    <label>
+      Workspace name
+      <input bind:value={workspace} placeholder="Analytical Engines" />
+      <small class="slug">keeno.app/<b>{slug || 'your-workspace'}</b></small>
+    </label>
+  )}
+  {step === 2 && (
+    <div class="plans" role="radiogroup" aria-label="Plan">
+      {PLANS.map((p) => (
+        <button key={p.id} type="button" role="radio" aria-checked={plan === p.id} class={{ on: plan === p.id }} onClick={() => plan.set(p.id)}>
+          <strong>{p.name}</strong>
+          <small>{p.price}</small>
+        </button>
+      ))}
+    </div>
+  )}
+  {step === 3 && (
+    <div class="done-msg">
+      <p>🎉 <strong>{workspace}</strong> is ready on the {plan} plan.</p>
+      <p class="muted">We sent a link to {email}.</p>
+    </div>
+  )}
+
+  {attempted && errors[step] && <p class="error">{errors[step]}</p>}
+
+  <div class="nav">
+    {step < 3 ? (
+      <button type="button" disabled={step === 0} onClick={() => step.set(step - 1)}>Back</button>
+    ) : (
+      <button type="button" onClick={restart}>Start over</button>
+    )}
+    {step < 3 && <button type="submit" class="primary">{step === 2 ? 'Create workspace' : 'Next'}</button>}
+  </div>
+</form>
+
+<style>
+  .steps {
+    display: flex;
+    justify-content: space-between;
+    margin: 0;
+    padding: 0;
+    font-size: 0.75rem;
+    color: var(--faint);
+  }
+  .steps li {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+  .steps span {
+    display: grid;
+    place-items: center;
+    width: 1.25rem;
+    height: 1.25rem;
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    font-size: 0.65rem;
+    transition: all 0.2s;
+  }
+  .steps .current {
+    color: var(--fg);
+    font-weight: 500;
+  }
+  .steps .current span {
+    border-color: var(--fg);
+  }
+  .steps .done span {
+    border-color: var(--fg);
+    background: var(--fg);
+    color: var(--bg);
+  }
+  .bar {
+    height: 3px;
+    margin: 0.75rem 0 1rem;
+    border-radius: 999px;
+    background: var(--border);
+  }
+  .bar div {
+    height: 100%;
+    border-radius: inherit;
+    background: var(--fg);
+    transition: width 0.4s var(--ease-spring);
+  }
+  .body {
+    display: grid;
+    gap: 0.75rem;
+  }
+  label {
+    display: grid;
+    gap: 0.35rem;
+    color: var(--muted);
+    font-size: 0.8rem;
+    font-weight: 500;
+  }
+  input {
+    color: var(--fg);
+  }
+  .slug {
+    font-family: var(--font-mono);
+    font-weight: 400;
+  }
+  .slug b {
+    color: var(--fg);
+    font-weight: 500;
+  }
+  .plans {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+  }
+  .plans button {
+    flex-direction: column;
+    gap: 0;
+    min-height: 4rem;
+  }
+  .plans button.on {
+    border-color: var(--fg);
+    box-shadow: 0 0 0 1px var(--fg);
+  }
+  .plans small,
+  .muted {
+    color: var(--muted);
+  }
+  .done-msg p {
+    margin: 0 0 0.25rem;
+  }
+  .error {
+    margin: 0;
+    color: var(--danger);
+    font-size: 0.8rem;
+  }
+  .nav {
+    display: flex;
+    justify-content: space-between;
+  }
+  .primary {
+    border-color: var(--fg);
+    background: var(--fg);
+    color: var(--bg);
+  }
+  .primary:hover:not(:disabled) {
+    border-color: var(--fg);
+    background: color-mix(in srgb, var(--fg) 85%, var(--bg));
+  }
+</style>
