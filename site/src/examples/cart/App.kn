@@ -1,0 +1,182 @@
+<script lang="ts">
+  import { PRODUCTS, CODES, type Product } from './products'
+
+  type Line = { id: string; qty: number }
+
+  // The cart survives a reload: it is saved to localStorage under "keeno-example-cart".
+  const cart = state<Line[]>([{ id: 'mug', qty: 2 }], { persist: 'keeno-example-cart' })
+  const code = state('')
+
+  const lines = derived(() => cart.map((l) => ({ ...l, product: PRODUCTS.find((p) => p.id === l.id)! })))
+  const count = derived(() => cart.reduce((n, l) => n + l.qty, 0))
+  const subtotal = derived(() => lines.reduce((sum, l) => sum + l.product.price * l.qty, 0))
+  const discount = derived(() => CODES[code.trim().toUpperCase()] ?? 0)
+  const shipping = derived(() => (subtotal === 0 || subtotal >= 50 ? 0 : 4.9))
+  const total = derived(() => subtotal * (1 - discount) + shipping)
+
+  function setQty(id: string, qty: number) {
+    if (qty <= 0) cart.set(cart.filter((l) => l.id !== id))
+    else if (cart.some((l) => l.id === id)) cart.set(cart.map((l) => (l.id === id ? { ...l, qty } : l)))
+    else cart.set([...cart, { id, qty }])
+  }
+  const qtyOf = (p: Product) => cart.find((l) => l.id === p.id)?.qty ?? 0
+
+  const money = (n: number) => `$${n.toFixed(2)}`
+</script>
+
+<div class="shop">
+  <ul class="products">
+    {PRODUCTS.map((p) => (
+      <li key={p.id}>
+        <span class="emoji">{p.emoji}</span>
+        <div>
+          <strong>{p.name}</strong>
+          <small>{money(p.price)}</small>
+        </div>
+        <button class={{ added: qtyOf(p) > 0 }} onClick={() => setQty(p.id, qtyOf(p) + 1)}>
+          {qtyOf(p) > 0 ? `In cart · ${qtyOf(p)}` : 'Add'}
+        </button>
+      </li>
+    ))}
+  </ul>
+
+  <aside>
+    <h3>Cart <span>{count}</span></h3>
+    {lines.length === 0 && <p class="empty">Your cart is empty.</p>}
+    <ul class="lines">
+      {lines.map((l) => (
+        <li key={l.id}>
+          <span>{l.product.emoji} {l.product.name}</span>
+          <div class="qty">
+            <button aria-label="Remove one" onClick={() => setQty(l.id, l.qty - 1)}>−</button>
+            <span>{l.qty}</span>
+            <button aria-label="Add one" onClick={() => setQty(l.id, l.qty + 1)}>+</button>
+          </div>
+        </li>
+      ))}
+    </ul>
+    <input bind:value={code} placeholder="Promo code (try KEENO)" class={{ ok: discount > 0 }} />
+    <dl>
+      <dt>Subtotal</dt><dd>{money(subtotal)}</dd>
+      {discount > 0 && <dt class="save">Discount</dt>}
+      {discount > 0 && <dd class="save">−{money(subtotal * discount)}</dd>}
+      <dt>Shipping</dt><dd>{shipping === 0 ? 'Free' : money(shipping)}</dd>
+      <dt class="total">Total</dt><dd class="total">{money(total)}</dd>
+    </dl>
+    {subtotal > 0 && subtotal < 50 && <p class="hint">{money(50 - subtotal)} more for free shipping</p>}
+  </aside>
+</div>
+
+<style>
+  .shop {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+    align-items: start;
+  }
+  ul {
+    display: grid;
+    gap: 0.375rem;
+    margin: 0;
+    padding: 0;
+  }
+  .products li {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0.5rem 0.5rem 0.625rem;
+    border: 1px solid var(--border);
+    border-radius: 0.625rem;
+  }
+  .emoji {
+    font-size: 1.4rem;
+  }
+  .products strong,
+  .products small {
+    display: block;
+    line-height: 1.3;
+  }
+  .products strong {
+    font-weight: 500;
+  }
+  small {
+    color: var(--muted);
+  }
+  .products button {
+    font-size: 0.8rem;
+  }
+  .products button.added {
+    border-color: color-mix(in srgb, var(--success) 40%, transparent);
+    color: var(--success);
+  }
+  aside {
+    display: grid;
+    gap: 0.625rem;
+    padding: 1rem;
+    border-radius: 0.75rem;
+    background: var(--surface);
+  }
+  h3 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0 !important;
+  }
+  h3 span {
+    padding: 0 0.45rem;
+    border-radius: 999px;
+    background: var(--fg);
+    color: var(--bg);
+    font-size: 0.7rem;
+  }
+  .empty,
+  .hint {
+    margin: 0 !important;
+    color: var(--muted);
+    font-size: 0.8rem;
+  }
+  .lines li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.85rem;
+  }
+  .qty {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .qty button {
+    width: 1.5rem;
+    min-height: 1.5rem;
+    padding: 0;
+  }
+  input.ok {
+    border-color: var(--success);
+  }
+  dl {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0.2rem;
+    margin: 0;
+    font-size: 0.85rem;
+  }
+  dt {
+    color: var(--muted);
+  }
+  dd {
+    margin: 0;
+    font-variant-numeric: tabular-nums;
+  }
+  .save {
+    color: var(--success);
+  }
+  .total {
+    padding-top: 0.4rem;
+    border-top: 1px solid var(--border);
+    color: var(--fg);
+    font-weight: 600;
+  }
+</style>

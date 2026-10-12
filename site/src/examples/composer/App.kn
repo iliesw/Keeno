@@ -1,0 +1,153 @@
+<script lang="ts">
+  const LIMIT = 140
+  const R = 9
+  const CIRCUMFERENCE = 2 * Math.PI * R
+
+  const text = state('Just shipped my first app with Keeno. No virtual DOM, no re-renders, ')
+  const posts = state<{ id: number; text: string; at: string }[]>([])
+
+  // Everything below is derived from `text`: nothing has to be kept in sync by hand.
+  const length = derived(() => [...text].length)
+  const left = derived(() => LIMIT - length)
+  const progress = derived(() => Math.min(1, length / LIMIT))
+  const tone = derived(() => (left < 0 ? 'var(--danger)' : left <= 20 ? 'var(--warning)' : 'var(--info)'))
+  const tags = derived(() => [...new Set(text.match(/#\w+/g) ?? [])])
+
+  function post() {
+    if (left < 0 || !text.trim()) return
+    const at = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    posts.set([{ id: Date.now(), text: text.trim(), at }, ...posts])
+    text.set('')
+  }
+</script>
+
+<div class="box">
+  <textarea
+    bind:value={text}
+    rows="3"
+    placeholder="What’s happening?"
+    onKeydown={(e: KeyboardEvent) => (e.metaKey || e.ctrlKey) && e.key === 'Enter' && post()}
+  ></textarea>
+  <div class="bar">
+    <div class="tags">
+      {tags.map((t) => <span key={t}>{t}</span>)}
+    </div>
+    <svg viewBox="0 0 24 24" class="ring" aria-hidden="true">
+      <circle r={R} cx="12" cy="12" class="track" />
+      <circle
+        r={R}
+        cx="12"
+        cy="12"
+        style={`stroke:${tone}`}
+        stroke-dasharray={CIRCUMFERENCE}
+        stroke-dashoffset={CIRCUMFERENCE * (1 - progress)}
+      />
+    </svg>
+    <span class={['left', left < 0 && 'over']}>{left <= 20 ? left : ''}</span>
+    <button class="post" disabled={left < 0 || !text.trim()} onClick={post}>Post</button>
+  </div>
+</div>
+
+<ul>
+  {posts.map((p) => (
+    <li key={p.id}>
+      <p>{p.text}</p>
+      <small>{p.at}</small>
+    </li>
+  ))}
+</ul>
+
+<style>
+  .box {
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    overflow: hidden;
+  }
+  textarea {
+    display: block;
+    width: 100%;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    resize: none;
+    font-size: 0.95rem;
+  }
+  .bar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.5rem 0.5rem 0.75rem;
+    border-top: 1px solid var(--border);
+  }
+  .tags {
+    display: flex;
+    flex: 1;
+    flex-wrap: wrap;
+    gap: 4px;
+    min-width: 0;
+  }
+  .tags span {
+    padding: 0 0.4rem;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--info) 12%, transparent);
+    color: var(--info);
+    font-size: 0.75rem;
+  }
+  .ring {
+    width: 22px;
+    height: 22px;
+    transform: rotate(-90deg);
+  }
+  circle {
+    fill: none;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.15s;
+  }
+  .track {
+    stroke: var(--border);
+  }
+  .left {
+    min-width: 2ch;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    text-align: right;
+  }
+  .over {
+    color: var(--danger);
+  }
+  .post {
+    border-color: var(--fg);
+    border-radius: 999px;
+    background: var(--fg);
+    color: var(--bg);
+  }
+  .post:hover:not(:disabled) {
+    border-color: var(--fg);
+    background: color-mix(in srgb, var(--fg) 85%, var(--bg));
+  }
+  ul {
+    display: grid;
+    gap: 0.5rem;
+    margin: 0.75rem 0 0;
+    padding: 0;
+  }
+  li {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.625rem 0.75rem;
+    border-radius: 0.625rem;
+    background: var(--surface);
+  }
+  li p {
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+  li small {
+    flex: none;
+    color: var(--faint);
+    font-size: 0.75rem;
+  }
+</style>

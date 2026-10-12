@@ -1,0 +1,92 @@
+<script lang="ts">
+  type Mark = 'X' | 'O' | null
+  const LINES = [
+    [0, 1, 2], [3, 4, 5], [6, 7, 8],
+    [0, 3, 6], [1, 4, 7], [2, 5, 8],
+    [0, 4, 8], [2, 4, 6],
+  ]
+
+  // Every move is a write, so `history` turns the game into something you can step back through.
+  const board = state<Mark[]>(Array(9).fill(null), { history: 50 })
+
+  const turn = derived<'X' | 'O'>(() => (board.filter(Boolean).length % 2 ? 'O' : 'X'))
+  const line = derived(() => LINES.find(([a, b, c]) => board[a] && board[a] === board[b] && board[a] === board[c]))
+  const winner = derived(() => (line ? board[line[0]] : null))
+  const draw = derived(() => !winner && board.every(Boolean))
+  const moves = derived(() => board.filter(Boolean).length)
+
+  function play(i: number) {
+    if (board[i] || winner) return
+    board.set(board.map((m, j) => (j === i ? turn : m)))
+  }
+</script>
+
+<p class="status">
+  {winner ? <span><b>{winner}</b> wins!</span> : draw ? <span>It’s a draw.</span> : <span><b>{turn}</b> to play</span>}
+</p>
+
+<div class="board">
+  {board.map((m, i) => (
+    <button key={i} class={['cell', m, line?.includes(i) && 'win']} aria-label={m ?? `Square ${i + 1}`} onClick={() => play(i)}>{m}</button>
+  ))}
+</div>
+
+<div class="actions">
+  <button disabled={!board.canUndo} onClick={() => board.undo()}>↶ Undo</button>
+  <button disabled={!board.canRedo} onClick={() => board.redo()}>↷ Redo</button>
+  <button onClick={() => board.set(Array(9).fill(null))}>New game</button>
+</div>
+<p class="score">move {moves} of 9 · undo as far back as you like</p>
+
+<style>
+  .status {
+    margin: 0 0 0.75rem;
+    text-align: center;
+    color: var(--muted);
+  }
+  .status b {
+    color: var(--fg);
+  }
+  .board {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    width: min(100%, 220px);
+    margin: 0 auto;
+  }
+  .cell {
+    aspect-ratio: 1;
+    min-height: 0;
+    padding: 0;
+    border-radius: 0.625rem;
+    background: var(--surface);
+    font-size: 2rem;
+    font-weight: 600;
+  }
+  .X {
+    color: var(--info);
+  }
+  .O {
+    color: var(--danger);
+  }
+  .cell.win {
+    border-color: currentColor;
+    background: color-mix(in srgb, currentColor 12%, var(--bg));
+  }
+  .actions {
+    display: flex;
+    justify-content: center;
+    gap: 0.375rem;
+    margin-top: 0.875rem;
+  }
+  .actions button {
+    font-size: 0.8rem;
+  }
+  .score {
+    margin: 0.5rem 0 0;
+    text-align: center;
+    color: var(--faint);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+  }
+</style>

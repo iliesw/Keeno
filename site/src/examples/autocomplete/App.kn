@@ -1,0 +1,151 @@
+<script lang="ts">
+  import { COUNTRIES } from './countries'
+
+  const query = state('')
+  const open = state(false)
+  const active = state(0)
+  const picked = state<string[]>(['Japan'])
+  const input = ref<HTMLInputElement>()
+
+  const matches = derived(() => {
+    const q = query.trim().toLowerCase()
+    return COUNTRIES.filter((c) => !picked.includes(c) && c.toLowerCase().includes(q)).slice(0, 6)
+  })
+
+  // Start at the top of the list whenever the results change.
+  update(() => active.set(0), [matches])
+
+  function pick(country: string) {
+    picked.set([...picked, country])
+    query.set('')
+    input.current?.focus()
+  }
+  const unpick = (country: string) => picked.set(picked.filter((c) => c !== country))
+
+  function keys(e: KeyboardEvent) {
+    if (e.key === 'Escape') return open.set(false)
+    open.set(true)
+    const n = matches.length
+    if (e.key === 'ArrowDown') active.set((active + 1) % Math.max(1, n))
+    else if (e.key === 'ArrowUp') active.set((active - 1 + n) % Math.max(1, n))
+    else if (e.key === 'Enter' && matches[active]) pick(matches[active])
+    else if (e.key === 'Backspace' && !query && picked.length) unpick(picked[picked.length - 1])
+    else return
+    e.preventDefault()
+  }
+</script>
+
+<div class="combo">
+  <!-- Clicking anywhere in the box focuses the input, through the ref. -->
+  <div class="field" onClick={() => input.current?.focus()}>
+    {picked.map((c) => (
+      <span key={c} class="chip">
+        {c}
+        <button aria-label={`Remove ${c}`} onClick={(e: MouseEvent) => { e.stopPropagation(); unpick(c) }}>✕</button>
+      </span>
+    ))}
+    <input
+      ref={input}
+      bind:value={query}
+      placeholder={picked.length ? '' : 'Pick countries…'}
+      role="combobox"
+      aria-expanded={open && matches.length > 0}
+      aria-controls="countries"
+      onFocus={() => open.set(true)}
+      onBlur={() => open.set(false)}
+      onKeydown={keys}
+    />
+  </div>
+
+  {open && matches.length > 0 && (
+    <ul id="countries" role="listbox">
+      {matches.map((c, i) => (
+        <li
+          key={c}
+          role="option"
+          aria-selected={i === active}
+          class={{ active: i === active }}
+          onPointerenter={() => active.set(i)}
+          onPointerdown={(e: PointerEvent) => { e.preventDefault(); pick(c) }}
+        >{c}</li>
+      ))}
+    </ul>
+  )}
+</div>
+<p class="hint">↑ ↓ to move · Enter to pick · Backspace removes the last one</p>
+
+<style>
+  .combo {
+    position: relative;
+  }
+  .field {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    min-height: 2.5rem;
+    padding: 4px;
+    border: 1px solid var(--border);
+    border-radius: 0.625rem;
+    cursor: text;
+  }
+  .field:focus-within {
+    border-color: var(--faint);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--fg) 10%, transparent);
+  }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding-left: 0.5rem;
+    border-radius: 0.375rem;
+    background: var(--surface);
+    font-size: 0.8rem;
+  }
+  .chip button {
+    min-height: 1.5rem;
+    padding: 0 0.35rem;
+    border: none;
+    background: none;
+    box-shadow: none;
+    color: var(--faint);
+    font-size: 0.65rem;
+  }
+  .chip button:hover:not(:disabled) {
+    background: none;
+    color: var(--danger);
+  }
+  input {
+    flex: 1;
+    min-width: 6rem;
+    min-height: 1.75rem !important;
+    padding: 0 0.25rem !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+  ul {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    left: 0;
+    z-index: 5;
+    margin: 0;
+    padding: 4px;
+    border: 1px solid var(--border);
+    border-radius: 0.625rem;
+    background: var(--bg);
+    box-shadow: 0 12px 32px -12px rgb(0 0 0 / 0.25);
+  }
+  li {
+    padding: 0.375rem 0.625rem;
+    border-radius: 0.375rem;
+    cursor: pointer;
+  }
+  li.active {
+    background: var(--hover);
+  }
+  .hint {
+    margin: 0.5rem 0 0;
+    color: var(--faint);
+    font-size: 0.75rem;
+  }
+</style>

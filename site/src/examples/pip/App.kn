@@ -1,0 +1,92 @@
+<script lang="ts">
+  import { reparentable } from '@inflector/keeno'
+  import Player from './Player.kn'
+
+  type Slot = 'main' | 'mini' | 'sidebar'
+  const slot = state<Slot>('main')
+
+  // Created once. Wherever {player} appears, the same Player instance (and its progress) shows up.
+  const player = reparentable(() => <Player title="Signals, explained" />)
+</script>
+
+<div class="layout">
+  <div class="main">
+    {slot === 'main' ? <div class="fill">{player}</div> : <p class="placeholder">Playing in the {slot === 'mini' ? 'corner' : 'sidebar'}</p>}
+  </div>
+  <aside>
+    {slot === 'sidebar' ? <div class="fill">{player}</div> : <p class="placeholder small">Sidebar</p>}
+  </aside>
+  {slot === 'mini' && <div class="mini">{player}</div>}
+</div>
+
+<div class="buttons" role="radiogroup" aria-label="Player position">
+  {(['main', 'sidebar', 'mini'] as const).map((s) => (
+    <button key={s} role="radio" aria-checked={slot === s} class={{ on: slot === s }} onClick={() => slot.set(s)}>
+      {s === 'mini' ? 'Picture in picture' : s}
+    </button>
+  ))}
+</div>
+<p class="hint">Press play, then move the player: it keeps playing from where it was.</p>
+
+<style>
+  .layout {
+    position: relative;
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 0.5rem;
+    min-height: 150px;
+  }
+  .main,
+  aside {
+    display: grid;
+    border-radius: 0.75rem;
+    background: var(--surface);
+  }
+  .fill {
+    display: grid;
+  }
+  .placeholder {
+    display: grid;
+    place-items: center;
+    margin: 0;
+    color: var(--faint);
+    font-size: 0.8rem;
+  }
+  .small {
+    font-size: 0.7rem;
+  }
+  .mini {
+    position: absolute;
+    right: 0.5rem;
+    bottom: 0.5rem;
+    width: 45%;
+    border-radius: 0.625rem;
+    box-shadow: 0 12px 32px -8px rgb(0 0 0 / 0.4);
+    animation: pop 0.3s var(--ease-spring);
+  }
+  .buttons {
+    display: flex;
+    gap: 0.375rem;
+    margin-top: 0.75rem;
+  }
+  .buttons button {
+    font-size: 0.8rem;
+    text-transform: capitalize;
+  }
+  .buttons button.on {
+    border-color: var(--fg);
+    background: var(--fg);
+    color: var(--bg);
+  }
+  .hint {
+    margin: 0.5rem 0 0;
+    color: var(--faint);
+    font-size: 0.75rem;
+  }
+  @keyframes pop {
+    from {
+      opacity: 0;
+      transform: scale(0.9);
+    }
+  }
+</style>

@@ -1,0 +1,121 @@
+<script lang="ts">
+  const { title } = props<{ title: string }>()
+
+  const LENGTH = 90
+  const time = state(0)
+  const playing = state(false)
+
+  // A fake video: a timer that advances while playing. Its state lives as long as the
+  // reparentable() that created it, not as long as the place showing it.
+  init(() => {
+    const timer = setInterval(() => {
+      if (!playing.peek()) return
+      const t = time.peek() + 0.25
+      if (t >= LENGTH) playing.set(false)
+      time.set(Math.min(t, LENGTH))
+    }, 250)
+    return () => clearInterval(timer)
+  })
+
+  const clock = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
+  const hue = derived(() => Math.round((time / LENGTH) * 300))
+
+  function seek(e: PointerEvent) {
+    const box = (e.currentTarget as HTMLElement).getBoundingClientRect()
+    time.set(Math.max(0, Math.min(LENGTH, ((e.clientX - box.left) / box.width) * LENGTH)))
+  }
+</script>
+
+<div class="player">
+  <div class="screen" style={`--h:${hue}`}>
+    <span class={['pulse', playing && 'on']}></span>
+    <strong>{title}</strong>
+  </div>
+  <div class="controls">
+    <button aria-label={playing ? 'Pause' : 'Play'} onClick={() => playing.set(!playing)}>{playing ? '❚❚' : '▶'}</button>
+    <div class="track" onPointerdown={seek}>
+      <div style={`width:${(time / LENGTH) * 100}%`}></div>
+    </div>
+    <small>{clock(time)}</small>
+  </div>
+</div>
+
+<style>
+  .player {
+    display: grid;
+    grid-template-rows: 1fr auto;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    border-radius: 0.625rem;
+    background: #0a0a0a;
+    color: white;
+  }
+  .screen {
+    position: relative;
+    display: grid;
+    place-items: center;
+    min-height: 70px;
+    padding: 0.5rem;
+    background:
+      radial-gradient(circle at 30% 30%, hsl(var(--h) 80% 55% / 0.7), transparent 60%),
+      radial-gradient(circle at 70% 70%, hsl(calc(var(--h) + 120) 80% 55% / 0.6), transparent 60%);
+    transition: background 0.5s;
+  }
+  strong {
+    font-size: 0.8rem;
+    font-weight: 500;
+    text-align: center;
+  }
+  .pulse {
+    position: absolute;
+    top: 0.5rem;
+    left: 0.5rem;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgb(255 255 255 / 0.3);
+  }
+  .pulse.on {
+    background: #ef4444;
+    animation: blink 1s steps(2) infinite;
+  }
+  .controls {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.375rem 0.5rem;
+  }
+  button {
+    width: 1.5rem;
+    min-height: 1.5rem !important;
+    padding: 0 !important;
+    border: none !important;
+    background: none !important;
+    box-shadow: none !important;
+    color: white !important;
+    font-size: 0.7rem;
+  }
+  .track {
+    flex: 1;
+    height: 4px;
+    border-radius: 999px;
+    background: rgb(255 255 255 / 0.2);
+    cursor: pointer;
+  }
+  .track div {
+    height: 100%;
+    border-radius: inherit;
+    background: white;
+  }
+  small {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    opacity: 0.7;
+  }
+  @keyframes blink {
+    50% {
+      opacity: 0.2;
+    }
+  }
+</style>

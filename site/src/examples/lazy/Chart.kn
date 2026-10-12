@@ -1,0 +1,46 @@
+<script lang="ts">
+  const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+  const values = state(DAYS.map(() => 20 + Math.round(Math.random() * 80)))
+  const max = derived(() => Math.max(...values))
+</script>
+
+<div class="chart">
+  {values.map((v, i) => (
+    <div key={i} class="col">
+      <div class="bar" style={`height:${(v / max) * 100}%`} title={`${v}`}></div>
+      <small>{DAYS[i]}</small>
+    </div>
+  ))}
+</div>
+<button class="shuffle" onClick={() => values.set(values.map(() => 20 + Math.round(Math.random() * 80)))}>Shuffle</button>
+
+<style>
+  .chart {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+    height: 90px;
+  }
+  .col {
+    display: grid;
+    grid-template-rows: 1fr auto;
+    align-items: end;
+    gap: 4px;
+  }
+  .bar {
+    border-radius: 4px 4px 0 0;
+    background: linear-gradient(var(--info), color-mix(in srgb, var(--info) 50%, transparent));
+    transition: height 0.4s var(--ease-spring);
+  }
+  small {
+    color: var(--faint);
+    font-size: 0.65rem;
+    text-align: center;
+  }
+  .shuffle {
+    justify-self: end;
+    min-height: 1.5rem;
+    margin-top: 0.5rem;
+    font-size: 0.75rem;
+  }
+</style>

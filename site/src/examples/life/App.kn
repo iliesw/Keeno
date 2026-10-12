@@ -1,0 +1,128 @@
+<script lang="ts">
+  const W = 24
+  const H = 16
+
+  const random = () => Array.from({ length: W * H }, () => Math.random() < 0.28)
+  const GLIDER = [1, W + 2, 2 * W, 2 * W + 1, 2 * W + 2]
+
+  const cells = state<boolean[]>(random())
+  const running = state(true)
+  const speed = state(8)
+  const generation = state(0)
+  const alive = derived(() => cells.filter(Boolean).length)
+
+  function step() {
+    const c = cells.peek()
+    const next = c.map((on, i) => {
+      const x = i % W
+      const y = (i - x) / W
+      let n = 0
+      for (let dy = -1; dy <= 1; dy++)
+        for (let dx = -1; dx <= 1; dx++)
+          if ((dx || dy) && c[((y + dy + H) % H) * W + ((x + dx + W) % W)]) n++
+      return n === 3 || (on && n === 2)
+    })
+    cells.set(next)
+    generation.set(generation.peek() + 1)
+  }
+
+  // init() starts the timer; update() restarts it when `running` or `speed` change.
+  let timer: ReturnType<typeof setInterval> | undefined
+  function schedule() {
+    clearInterval(timer)
+    if (running.peek()) timer = setInterval(step, 1000 / speed.peek())
+  }
+  init(() => {
+    schedule()
+    return () => clearInterval(timer)
+  })
+  update(schedule, [running, speed])
+
+  const toggle = (i: number) => cells.set(cells.map((on, j) => (j === i ? !on : on)))
+  function reset(next: boolean[]) {
+    cells.set(next)
+    generation.set(0)
+  }
+</script>
+
+<div class="board" style={`grid-template-columns:repeat(${W},1fr)`}>
+  {cells.map((on, i) => (
+    <button key={i} class={{ on }} aria-label={`Cell ${i}`} aria-pressed={on} onClick={() => toggle(i)}></button>
+  ))}
+</div>
+
+<div class="controls">
+  <button class="primary" onClick={() => running.set(!running)}>{running ? '❚❚ Pause' : '▶ Play'}</button>
+  <button disabled={running} onClick={step}>Step</button>
+  <button onClick={() => reset(random())}>Random</button>
+  <button onClick={() => reset(Array.from({ length: W * H }, (_, i) => GLIDER.includes(i)))}>Glider</button>
+  <label>
+    <input type="range" min="1" max="30" bind:value={speed} aria-label="Speed" />
+    {speed}/s
+  </label>
+</div>
+<p class="meta">generation {generation} · {alive} alive · click cells to toggle them</p>
+
+<style>
+  .board {
+    display: grid;
+    gap: 1px;
+    padding: 1px;
+    border-radius: 0.5rem;
+    background: var(--border);
+    overflow: hidden;
+  }
+  .board button {
+    aspect-ratio: 1;
+    min-height: 0;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    background: var(--bg);
+    box-shadow: none;
+    transition: background 0.2s;
+  }
+  .board button.on {
+    background: var(--fg);
+  }
+  .board button:active:not(:disabled) {
+    transform: none;
+  }
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.375rem;
+    margin-top: 0.75rem;
+  }
+  .controls button {
+    font-size: 0.8rem;
+  }
+  .primary {
+    min-width: 5.5rem;
+    border-color: var(--fg);
+    background: var(--fg);
+    color: var(--bg);
+  }
+  .primary:hover:not(:disabled) {
+    border-color: var(--fg);
+    background: color-mix(in srgb, var(--fg) 85%, var(--bg));
+  }
+  label {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-left: auto;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+  }
+  label input {
+    width: 5rem;
+  }
+  .meta {
+    margin: 0.5rem 0 0;
+    color: var(--faint);
+    font-size: 0.75rem;
+  }
+</style>
