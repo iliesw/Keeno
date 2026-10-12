@@ -519,3 +519,21 @@ function planExample() {
 </style>
 `
 }
+
+describe('compile errors', () => {
+  const loc = (source: string) => {
+    try {
+      compile(source, { filename: 'src/Test.kn' })
+    } catch (e: any) {
+      return e.loc
+    }
+    throw new Error('expected a compile error')
+  }
+
+  test('carry the .kn location (column 0-based) of the offending node', () => {
+    expect(loc('<script>\n  let a = state(1)\n  a = 2\n</script>\n<p>{a}</p>')).toEqual({ line: 3, column: 2 })
+    expect(loc("<script>\nconst xs = [['a']]\n</script>\n<ul>{xs.map(([x]) => <li>{x}</li>)}</ul>")).toEqual({ line: 4, column: 13 })
+    expect(loc("<ul>{xs.map(([x]) => <li>{x}</li>)}</ul>")).toEqual({ line: 1, column: 13 })
+    expect(loc('<script>let a = state(1); a = 2</script>')).toEqual({ line: 1, column: 26 })
+  })
+})

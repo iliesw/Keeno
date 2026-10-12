@@ -2,7 +2,7 @@
 import * as t from '@babel/types'
 import { CompileContext, RUNTIME, generate } from './context'
 import { analyze, buildComponentAst, findAutoImports, inferUpdateDeps, rewrite } from './script'
-import { split } from './split'
+import { split, type SplitResult } from './split'
 import { scopeStyle } from './style'
 import { compileTemplates } from './template'
 
@@ -74,9 +74,22 @@ function inlineReturn(fn: t.FunctionDeclaration) {
 }
 
 export function compile(source: string, options: CompileOptions): CompileResult {
+  const parts = split(source)
+  try {
+    return compileParts(source, parts, options)
+  } catch (err: any) {
+    // The markup is parsed as `<>…</>`, so its positions on line 1 are 2 columns off. Script
+    // positions are exact: they fall inside the script block's range.
+    if (err?.loc?.line === 1 && typeof err.pos === 'number' && !parts.ranges.some(([a, b]) => a <= err.pos && err.pos < b)) {
+      err.loc = { ...err.loc, column: Math.max(0, err.loc.column - 2) }
+    }
+    throw err
+  }
+}
+
+function compileParts(source: string, parts: SplitResult, options: CompileOptions): CompileResult {
   const { filename } = options
   const runtime = options.runtime ?? RUNTIME
-  const parts = split(source)
   const scope = scopeClass(filename)
   const css = parts.style ? scopeStyle(parts.style.content, scope, filename) : ''
   const ctx = new CompileContext(filename, parts.style ? scope : null)

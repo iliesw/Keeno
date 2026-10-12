@@ -28,6 +28,16 @@ describe('keeno-check', () => {
     expect(code).toBe(1)
   }, 60_000)
 
+  test('errors the compiler would throw fail the check, like `vite build` would', () => {
+    const { code, out } = run('packages/keeno-check/test/fixtures/compile-error/tsconfig.json')
+    const dir = 'packages/keeno-check/test/fixtures/compile-error'
+    expect(out.split('\n').filter((l) => l.includes(' - error '))).toEqual([
+      `${dir}/Features.kn:6:18 - error keeno: Unsupported .map() row parameter: use an identifier or simple destructuring`,
+    ])
+    expect(out).toMatch(/1 error in 1 file\n$/)
+    expect(code).toBe(1)
+  }, 60_000)
+
   test('the e2e fixture app (router, built-ins, State values) is clean', () => {
     const { code, out } = run('e2e/app')
     expect(out).toMatch(/^0 errors in \d+ files\n$/)

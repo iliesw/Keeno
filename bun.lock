@@ -90,6 +90,7 @@
         "keeno-check": "./dist/cli.js",
       },
       "dependencies": {
+        "@inflector/keeno-compiler": "workspace:*",
         "@inflector/keeno-language-server": "workspace:*",
         "@volar/kit": "~2.4.28",
         "volar-service-typescript": "~0.0.71",
