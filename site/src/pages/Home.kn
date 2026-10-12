@@ -3,19 +3,17 @@
   import { runtimeKb } from 'virtual:keeno-stats'
   import Footer from '../components/Footer.kn'
   import Icon from '../components/Icon.kn'
-  import LiveDemo from '../components/LiveDemo.kn'
   import Navbar from '../components/Navbar.kn'
-  import BindingDemo from '../components/demos/BindingDemo.kn'
-  import CounterDemo from '../components/demos/CounterDemo.kn'
-  import TodoDemo from '../components/demos/TodoDemo.kn'
+  import ExampleExplorer from '../components/ExampleExplorer.kn'
+  import HeroCanvas from '../components/HeroCanvas.kn'
+  import HeroShowcase from '../components/HeroShowcase.kn'
+  import StatsStrip from '../components/StatsStrip.kn'
+  import type { Stat } from '../components/stats'
   import { onContentClick } from '../content'
-  import { exampleComponent, examples, findExample } from '../examples'
-  import { GITHUB, logo, type IconName } from '../icons'
-  import binding from '../snippets/binding.md'
+  import { examples } from '../examples'
+  import { logo, type IconName } from '../icons'
   import compiled from '../snippets/Counter.kn?compiled'
   import source from '../snippets/Counter.kn?highlight'
-  import counter from '../snippets/counter.md'
-  import todo from '../snippets/todo.md'
   import { VERSION } from '../version'
 
   init(() => {
@@ -30,22 +28,26 @@
     setTimeout(() => copied.set(false), 1200)
   }
 
-  const tabs = [
-    { id: 'counter', name: 'Counter', html: counter.html, blurb: 'state() and derived(): read a state like a value, write it with .set().', example: 'counter' },
-    { id: 'todo', name: 'Todo', html: todo.html, blurb: 'Keyed lists compile to fine-grained reconciliation: only the rows that change are touched.', example: 'todos' },
-    { id: 'binding', name: 'Binding', html: binding.html, blurb: 'bind:value and bind:checked give two-way binding straight to a state.', example: 'form' },
-  ]
-  const tab = state('counter')
-  const current = derived(() => tabs.find((t) => t.id === tab)!)
 
-  const stats = [
-    { value: `${runtimeKb} KB`, label: 'whole runtime, min + gzip' },
-    { value: '0', label: 'virtual DOM nodes' },
-    { value: '1×', label: 'each component runs once' },
-    { value: `${examples.length}`, label: 'live examples' },
+
+  const stats: Stat[] = [
+    { value: Number(runtimeKb), decimals: 1, suffix: 'KB', kicker: 'Runtime', label: 'The whole runtime, min + gzip', text: 'Reactivity, components, lists and built-ins. The rest of your bundle is your code.', href: '/docs/api', art: 'size', wide: true },
+    { value: 0, kicker: 'Rendering', label: 'Virtual DOM nodes', text: 'A change goes straight to the text node or attribute that shows it.', href: '/docs/reactivity', art: 'direct' },
+    { value: 1, suffix: '×', kicker: 'Lifecycle', label: 'Each component runs once', text: 'Setup code never re-runs, so there are no hooks rules or dependency arrays.', href: '/docs/components#lifecycle', art: 'once' },
+    { value: examples.length, kicker: 'Examples', label: 'Live examples to play with', text: 'Every one runs on this site. Open any of them in the playground and change it.', href: '/examples', art: 'grid', wide: true },
   ]
 
-  const tools = ['vite', 'bun', 'typescript', 'tailwindcss', 'vscode', 'nodejs', 'deno', 'vitest', 'playwright']
+  // Logos from svgl.app, in public/logos. `dark` is a variant for the dark theme.
+  const tools: { name: string; role: string; logo: string; dark?: string; href: string }[] = [
+    { name: 'Vite', role: 'Dev server, HMR and builds', logo: 'vite', href: '/docs/getting-started' },
+    { name: 'Bun', role: 'Packages, scripts and tests', logo: 'bun', href: '/docs/getting-started' },
+    { name: 'TypeScript', role: 'Typed props in .kn files', logo: 'typescript', href: '/docs/components#props' },
+    { name: 'Tailwind CSS', role: 'Utilities and @apply in components', logo: 'tailwindcss', href: '/docs/styles#tailwind-css' },
+    { name: 'VS Code', role: 'IntelliSense for .kn files', logo: 'vscode', href: '/docs/tooling' },
+    { name: 'Node.js', role: 'Server rendering', logo: 'nodejs', href: '/docs/ssr' },
+    { name: 'Deno', role: 'Server rendering', logo: 'deno', dark: 'deno_dark', href: '/docs/ssr' },
+    { name: 'Playwright', role: 'Dev tools stay out of e2e runs', logo: 'playwright', href: '/docs/tooling#dev-tools-panel' },
+  ]
 
   const features: { icon: IconName; title: string; text: string; points: string[]; wide?: boolean; href: string }[] = [
     {
@@ -71,220 +73,158 @@
     { icon: 'route', title: 'Router', text: 'A tiny History API router with params, lazy routes, active links and server rendering.', points: [], href: '/docs/routing' },
   ]
 
-  const showcase = ['pixel-art', 'kanban', 'clock'].map((slug) => findExample(slug)!)
 </script>
 
-<Navbar />
+<Navbar narrow />
 <div class="relative w-full overflow-x-hidden" onClick={onContentClick}>
   <!-- Hero -->
-  <section class="relative">
-    <div class="hero-grid pointer-events-none absolute inset-0 -z-10"></div>
+  <section class="relative isolate">
+    <div class="hero-fade pointer-events-none absolute inset-x-0 top-0 -z-10 h-[52rem]"><HeroCanvas /></div>
     <div class="hero-glow pointer-events-none absolute inset-0 -z-10"></div>
-    <div class="animate-fade-up mx-auto flex max-w-400 flex-col items-center px-6 pt-36 text-center md:pt-44">
-      <Link href="/playground" class="group flex items-center gap-2 rounded-full border bg-white/70 py-1 pr-3 pl-1 text-sm backdrop-blur transition hover:border-orange-400 dark:bg-neutral-900/70">
-        <span class="rounded-full bg-orange-400 px-2 py-0.5 font-code text-[11px] font-bold text-black">v{VERSION}</span>
-        <span>Try Keeno in the new playground</span>
-        <span class="transition-transform group-hover:translate-x-0.5"><Icon name="arrowRight" /></span>
+    <div class="mx-auto flex max-w-400 flex-col items-center px-6 pt-36 text-center md:pt-44">
+      <Link href="/playground" class="animate-fade-up group flex items-center gap-2 rounded-full border bg-white/70 py-1 pr-3 pl-1 text-sm shadow-xs backdrop-blur transition hover:border-neutral-300 dark:bg-neutral-950/70 dark:hover:border-neutral-700">
+        <span class="rounded-full bg-neutral-900 px-2 py-0.5 font-mono text-[11px] font-medium text-white dark:bg-white dark:text-black">v{VERSION}</span>
+        <span class="text-neutral-600 dark:text-neutral-400">Try Keeno in the playground</span>
+        <span class="text-neutral-400 transition-transform group-hover:translate-x-0.5"><Icon name="arrowRight" /></span>
       </Link>
-      <h1 class="mt-7 font-s2 text-5xl leading-[0.95] tracking-tight sm:text-7xl lg:text-8xl">
-        Build UIs that <span class="font-s3 text-gradient">shine.</span>
+      <h1 class="animate-fade-up mt-8 max-w-4xl text-5xl leading-[1.02] font-semibold tracking-[-0.045em] [animation-delay:60ms] sm:text-7xl lg:text-[5.5rem]">
+        Write HTML.<br /><span class="text-gradient">Ship fast UIs.</span>
       </h1>
-      <p class="mt-6 max-w-2xl font-s2 text-lg text-neutral-600 md:text-xl dark:text-neutral-400">
-        Keeno is a compiled, signal-based frontend framework. Write HTML-first <code class="font-code text-neutral-900 dark:text-white">.kn</code> components, get fine-grained DOM updates. No virtual DOM, no re-renders.
+      <p class="animate-fade-up mt-6 max-w-xl text-lg leading-relaxed text-balance text-neutral-600 [animation-delay:120ms] md:text-xl dark:text-neutral-400">
+        Keeno compiles your components into precise DOM updates. No virtual DOM, no diffing: when a value changes, only the nodes that read it update.
       </p>
-      <div class="mt-8 flex flex-wrap justify-center gap-2.5">
-        <Link href="/docs/getting-started" class="flex items-center gap-2 rounded-xl bg-neutral-900 px-5 py-2.5 font-s2 font-bold text-white shadow-lg shadow-black/10 transition hover:-translate-y-px hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200">
+      <div class="animate-fade-up mt-9 flex flex-wrap justify-center gap-3 [animation-delay:180ms]">
+        <Link href="/docs/getting-started" class="flex h-11 items-center gap-2 rounded-full bg-neutral-900 px-6 font-medium text-white transition hover:bg-neutral-700 dark:bg-white dark:text-black dark:hover:bg-neutral-200">
           Get started <Icon name="arrowRight" />
         </Link>
-        <Link href="/playground" class="flex items-center gap-2 rounded-xl border bg-white px-5 py-2.5 font-s2 font-bold transition hover:-translate-y-px hover:border-orange-400 dark:bg-neutral-900">
-          <span class="text-orange-500"><Icon name="play" /></span> Playground
+        <Link href="/playground" class="flex h-11 items-center gap-2 rounded-full border bg-white px-6 font-medium transition hover:bg-neutral-50 dark:bg-neutral-950 dark:hover:bg-neutral-900">
+          <Icon name="play" /> Playground
         </Link>
       </div>
-      <button type="button" onClick={copyInstall} class="group mt-5 flex cursor-pointer items-center gap-3 rounded-xl border border-dashed px-4 py-2 font-code text-sm text-neutral-600 transition hover:border-solid hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white" title="Copy">
-        <span class="text-orange-500">$</span> {INSTALL}
+      <button type="button" onClick={copyInstall} class="animate-fade-up group mt-5 flex cursor-pointer items-center gap-3 rounded-lg px-3 py-1.5 font-mono text-sm text-neutral-500 transition [animation-delay:240ms] hover:bg-neutral-100 hover:text-neutral-900 dark:hover:bg-neutral-900 dark:hover:text-white" title="Copy">
+        <span class="text-neutral-400 dark:text-neutral-600">$</span> {INSTALL}
         <span class="opacity-50 group-hover:opacity-100"><Icon name={copied ? 'check' : 'copy'} /></span>
       </button>
     </div>
 
     <!-- Live editor-like showcase -->
-    <div class="mx-auto mt-20 w-full max-w-6xl px-4 md:mt-24 md:px-6">
-      <div class="flex flex-col justify-between gap-3 pb-4 md:flex-row md:items-end">
-        <div>
-          <p class="font-s2 text-xl">Components that read like HTML</p>
-          <p class="font-s2 text-sm text-neutral-500">{current.blurb}</p>
-        </div>
-        <div class="flex w-fit gap-0.5 rounded-xl bg-neutral-200/70 p-1 font-s2 text-sm font-black dark:bg-neutral-900" role="tablist">
-          {tabs.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              role="tab"
-              aria-selected={tab === t.id}
-              onClick={() => tab.set(t.id)}
-              class={['cursor-pointer rounded-lg px-4 py-1.5 transition', tab === t.id ? 'bg-white shadow-sm dark:bg-neutral-800' : 'opacity-60 hover:opacity-100']}
-            >
-              {t.name}
-            </button>
-          ))}
-        </div>
-      </div>
-      <div class="relative grid grid-cols-1 overflow-hidden rounded-3xl border bg-gradient-to-br from-orange-300 via-orange-400 to-amber-500 p-3 shadow-2xl shadow-orange-500/20 md:p-8 lg:grid-cols-[3fr_2fr] lg:gap-6 lg:p-12">
-        <div class="pointer-events-none absolute -top-24 -right-24 size-72 rounded-full bg-white/20 blur-3xl"></div>
-        <div class="relative min-w-0 text-left [&_.code-block]:shadow-xl" innerHTML={current.html}></div>
-        <div class="relative mt-3 flex min-h-64 flex-col overflow-hidden rounded-xl border bg-white text-black shadow-xl lg:mt-2 dark:bg-ink dark:text-white">
-          <div class="flex items-center gap-1.5 border-b px-3 py-2">
-            <span class="size-2.5 rounded-full bg-red-400"></span>
-            <span class="size-2.5 rounded-full bg-yellow-400"></span>
-            <span class="size-2.5 rounded-full bg-green-400"></span>
-            <span class="ml-2 font-code text-xs opacity-50">live — running on Keeno</span>
-            <Link href={`/playground?example=${current.example}`} class="ml-auto flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs opacity-60 transition hover:bg-neutral-100 hover:opacity-100 dark:hover:bg-neutral-800">
-              Edit <Icon name="arrowUpRight" />
-            </Link>
-          </div>
-          <div class="flex flex-1 items-center justify-center p-6">
-            {tab === 'counter' && <CounterDemo />}
-            {tab === 'todo' && <TodoDemo />}
-            {tab === 'binding' && <BindingDemo />}
-          </div>
-        </div>
-      </div>
+    <div class="animate-fade-up mx-auto mt-20 w-full max-w-6xl px-4 [animation-delay:300ms] md:mt-24 md:px-6">
+      <HeroShowcase />
     </div>
   </section>
 
   <!-- Stats -->
-  <section class="mx-auto mt-20 grid max-w-6xl grid-cols-2 gap-px overflow-hidden rounded-2xl border bg-neutral-200 px-0 md:grid-cols-4 dark:bg-neutral-800">
-    {stats.map((s) => (
-      <div key={s.label} class="flex flex-col gap-1 bg-white px-6 py-6 dark:bg-ink">
-        <span class="font-s2 text-3xl font-black md:text-4xl">{s.value}</span>
-        <span class="text-sm text-neutral-500">{s.label}</span>
+  <section class="mx-auto mt-32 max-w-6xl px-4 md:px-6">
+    <div class="mb-10 flex flex-col justify-between gap-4 md:flex-row md:items-end">
+      <div>
+        <p class="section-label">By the numbers</p>
+        <h2 class="section-title">Small, direct, predictable.</h2>
       </div>
-    ))}
+      <p class="max-w-md text-sm leading-relaxed text-neutral-500">
+        The compiler does the work ahead of time, so what runs in the browser is a tiny runtime and code that writes to the page directly.
+      </p>
+    </div>
+    <StatsStrip items={stats} />
   </section>
 
   <!-- Compiler output -->
   <section class="mx-auto mt-32 max-w-6xl px-4 md:px-6">
     <div class="mx-auto flex max-w-2xl flex-col items-center gap-3 text-center">
-      <p class="font-code text-xs tracking-widest text-orange-500 uppercase">Under the hood</p>
-      <h2 class="font-s2 text-4xl md:text-5xl">Compiled to plain DOM code</h2>
+      <p class="section-label">Under the hood</p>
+      <h2 class="section-title">Compiled to plain DOM code</h2>
       <p class="text-neutral-600 dark:text-neutral-400">
-        The compiler reads your markup once and writes the code a careful human would: clone a template, wire one event, and bind each <code class="font-code">{'{expression}'}</code> to exactly the text node it fills.
+        The compiler reads your markup once and writes the code a careful human would: clone a template, wire one event, and bind each <code class="font-mono text-[0.9em]">{'{expression}'}</code> to exactly the text node it fills.
       </p>
     </div>
     <div class="home-compare mt-10 grid items-stretch gap-4 lg:grid-cols-[minmax(0,5fr)_auto_minmax(0,7fr)]">
       <div class="min-w-0" innerHTML={source.html}></div>
       <div class="hidden items-center justify-center lg:flex">
-        <span class="grid size-10 place-items-center rounded-full border bg-white text-orange-500 dark:bg-neutral-900"><Icon name="arrowRight" /></span>
+        <span class="grid size-9 place-items-center rounded-full border bg-white text-neutral-500 dark:bg-neutral-950"><Icon name="arrowRight" /></span>
       </div>
       <div class="min-w-0" innerHTML={compiled.html}></div>
     </div>
-    <div class="mt-6 grid gap-3 text-sm sm:grid-cols-3">
-      <p class="flex gap-2 rounded-xl border p-4"><span class="text-orange-500"><Icon name="checkSm" /></span> <span><b>Reads become <code class="font-code">.get()</code></b>: the compiler tracks which names are states.</span></p>
-      <p class="flex gap-2 rounded-xl border p-4"><span class="text-orange-500"><Icon name="checkSm" /></span> <span><b>One template clone</b> builds the static markup in a single call.</span></p>
-      <p class="flex gap-2 rounded-xl border p-4"><span class="text-orange-500"><Icon name="checkSm" /></span> <span><b>Two text nodes</b> update when <code class="font-code">count</code> changes. Nothing else runs.</span></p>
+    <div class="mt-4 grid gap-px overflow-hidden rounded-2xl border bg-neutral-200 text-sm sm:grid-cols-3 dark:bg-neutral-800">
+      <p class="flex gap-2.5 bg-white p-5 dark:bg-ink"><span class="mt-0.5 text-neutral-400"><Icon name="checkSm" /></span> <span class="text-neutral-600 dark:text-neutral-400"><b class="font-medium text-neutral-900 dark:text-white">Reads become <code class="font-mono">.get()</code></b>: the compiler tracks which names are states.</span></p>
+      <p class="flex gap-2.5 bg-white p-5 dark:bg-ink"><span class="mt-0.5 text-neutral-400"><Icon name="checkSm" /></span> <span class="text-neutral-600 dark:text-neutral-400"><b class="font-medium text-neutral-900 dark:text-white">One template clone</b> builds the static markup in a single call.</span></p>
+      <p class="flex gap-2.5 bg-white p-5 dark:bg-ink"><span class="mt-0.5 text-neutral-400"><Icon name="checkSm" /></span> <span class="text-neutral-600 dark:text-neutral-400"><b class="font-medium text-neutral-900 dark:text-white">Two text nodes</b> update when <code class="font-mono">count</code> changes. Nothing else runs.</span></p>
     </div>
   </section>
 
   <!-- Features -->
-  <section class="mx-auto mt-32 max-w-400 px-6 md:px-10">
+  <section class="mx-auto mt-32 max-w-6xl px-4 md:px-6">
     <div class="mb-10 flex flex-col justify-between gap-4 md:flex-row md:items-end">
-      <h2 class="font-s2 text-4xl md:text-6xl">Everything you need,<br /><span class="text-neutral-400 dark:text-neutral-600">nothing you don't.</span></h2>
-      <p class="max-w-md font-s2 text-sm text-neutral-500">
+      <div>
+        <p class="section-label">Features</p>
+        <h2 class="section-title">Everything you need,<br /><span class="text-neutral-400 dark:text-neutral-600">nothing you don't.</span></h2>
+      </div>
+      <p class="max-w-md text-sm leading-relaxed text-neutral-500">
         A script, some markup and a scoped style: that's a component. Built-ins cover the hard parts: error boundaries, async data, portals, transitions and state-preserving reparenting.
       </p>
     </div>
-    <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+    <div class="grid grid-cols-1 gap-px overflow-hidden rounded-2xl border bg-neutral-200 md:grid-cols-3 dark:bg-neutral-800">
       {features.map((f) => (
-        <Link key={f.title} href={f.href} class={['group block h-auto md:h-72', f.wide && 'md:col-span-2']}>
-          <div class="h-full w-full overflow-hidden rounded-2xl border bg-neutral-100 p-1 transition group-hover:border-orange-400/60 dark:bg-neutral-900">
-            <div class="relative flex h-full w-full flex-col gap-4 overflow-hidden rounded-xl border border-black/5 bg-white p-6 md:p-8 dark:border-white/5 dark:bg-ink">
-              <div class="flex items-center gap-2.5">
-                <span class="grid size-9 place-items-center rounded-lg bg-orange-400/10 text-orange-500"><Icon name={f.icon} /></span>
-                <h3 class="font-open text-xl font-bold">{f.title}</h3>
-                <span class="ml-auto -translate-x-1 opacity-0 transition group-hover:translate-x-0 group-hover:opacity-60"><Icon name="arrowUpRight" /></span>
-              </div>
-              <p class={['font-s2 text-sm leading-relaxed text-neutral-600 dark:text-neutral-400', f.wide && 'md:w-1/2']}>{f.text}</p>
-              {f.points.length > 0 && (
-                <div class="mt-auto flex flex-col gap-2 font-code text-xs">
-                  {f.points.map((p) => (
-                    <p key={p} class="flex items-center gap-2"><span class="text-orange-500"><Icon name="checkSm" /></span> {p}</p>
-                  ))}
-                </div>
-              )}
-              <span class={['pointer-events-none absolute -right-10 -bottom-10 opacity-[0.07] transition duration-500 group-hover:scale-110 group-hover:rotate-12 group-hover:opacity-20', !f.wide && 'hidden']} innerHTML={logo('size-56')}></span>
-            </div>
+        <Link key={f.title} href={f.href} class={['group relative flex min-h-60 flex-col gap-4 overflow-hidden bg-white p-7 transition-colors hover:bg-neutral-50 dark:bg-ink dark:hover:bg-neutral-950', f.wide && 'md:col-span-2']}>
+          <div class="flex items-center gap-3">
+            <span class="grid size-9 place-items-center rounded-lg border bg-white text-neutral-700 shadow-xs dark:bg-neutral-950 dark:text-neutral-300"><Icon name={f.icon} /></span>
+            <h3 class="text-lg font-medium tracking-tight">{f.title}</h3>
+            <span class="ml-auto -translate-x-1 text-neutral-400 opacity-0 transition group-hover:translate-x-0 group-hover:opacity-100"><Icon name="arrowUpRight" /></span>
           </div>
+          <p class={['text-sm leading-relaxed text-neutral-600 dark:text-neutral-400', f.wide && 'md:w-3/5']}>{f.text}</p>
+          {f.points.length > 0 && (
+            <div class="mt-auto flex flex-wrap gap-2">
+              {f.points.map((p) => (
+                <span key={p} class="rounded-full border px-2.5 py-0.5 font-mono text-xs text-neutral-600 dark:text-neutral-400">{p}</span>
+              ))}
+            </div>
+          )}
+          <span class={['pointer-events-none absolute -right-10 -bottom-10 text-neutral-900 opacity-[0.03] transition duration-700 group-hover:scale-110 group-hover:-rotate-6 group-hover:opacity-[0.06] dark:text-white', !f.wide && 'hidden']} innerHTML={logo('size-56')}></span>
         </Link>
       ))}
     </div>
   </section>
 
   <!-- Examples -->
-  <section class="mx-auto mt-32 max-w-400 px-6 md:px-10">
-    <div class="mb-8 flex flex-col justify-between gap-4 md:flex-row md:items-end">
+  <section class="mx-auto mt-32 max-w-6xl px-4 md:px-6">
+    <div class="mb-10 flex flex-col justify-between gap-4 md:flex-row md:items-end">
       <div>
-        <p class="font-code text-xs tracking-widest text-orange-500 uppercase">Examples</p>
-        <h2 class="mt-2 font-s2 text-4xl md:text-5xl">See it, then change it.</h2>
+        <p class="section-label">Examples</p>
+        <h2 class="section-title">See it, then change it.</h2>
       </div>
-      <Link href="/examples" class="flex w-fit items-center gap-2 rounded-xl border px-4 py-2 text-sm font-bold transition hover:border-orange-400">
+      <Link href="/examples" class="flex w-fit items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition hover:bg-neutral-50 dark:hover:bg-neutral-900">
         All {examples.length} examples <Icon name="arrowRight" />
       </Link>
     </div>
-    <div class="grid gap-5 lg:grid-cols-3">
-      {showcase.map((e) => (
-        <article key={e.slug} class="flex flex-col overflow-hidden rounded-2xl border bg-neutral-50 p-1.5 dark:bg-neutral-900/60">
-          <div class="ex-preview relative h-80 overflow-hidden rounded-xl border border-black/5 bg-white p-5 dark:border-white/5 dark:bg-ink">
-            <LiveDemo component={exampleComponent(e.slug)!} class="ex-zoom" />
-          </div>
-          <div class="flex items-center justify-between gap-2 px-3.5 py-3">
-            <div>
-              <Link href={`/examples/${e.slug}`} class="font-bold hover:underline">{e.title}</Link>
-              <p class="text-xs text-neutral-500">{e.concepts.map((c) => c.label).join(' · ')}</p>
-            </div>
-            <Link href={`/playground?example=${e.slug}`} class="ex-action" aria-label={`Open ${e.title} in the playground`}><Icon name="play" /></Link>
-          </div>
-        </article>
-      ))}
-    </div>
+    <ExampleExplorer />
   </section>
 
   <!-- Tools -->
-  <section class="mx-auto mt-32 flex max-w-400 flex-col items-center justify-between gap-12 px-6 md:flex-row md:px-10">
-    <div class="flex w-full flex-col justify-center md:w-130">
-      <h2 class="mb-4 font-s2 text-4xl font-black md:text-5xl">
-        Seamless with <br /> your favorite tools
-      </h2>
-      <p class="font-s2 text-neutral-600 dark:text-neutral-400">
-        Keeno runs on Vite for dev and builds, Bun for packages and tests, and renders on Node, Bun or Deno. Bring TypeScript and Tailwind: they just work.
-      </p>
-      <div class="mt-8 flex flex-wrap gap-2 text-sm">
-        <Link href="/docs/tooling" class="flex items-center gap-1.5 rounded-lg border px-3 py-1.5 transition hover:border-orange-400"><img src="/icons/vscode.svg" width="16" height="16" alt="" /> VS Code extension</Link>
-        <Link href="/docs/styles#tailwind-css" class="flex items-center gap-1.5 rounded-lg border px-3 py-1.5 transition hover:border-orange-400"><img src="/icons/tailwindcss.svg" width="16" height="16" alt="" /> Tailwind CSS</Link>
-        <Link href="/docs/ssr" class="flex items-center gap-1.5 rounded-lg border px-3 py-1.5 transition hover:border-orange-400"><img src="/icons/nodejs.svg" width="16" height="16" alt="" /> SSR</Link>
+  <section class="mx-auto mt-32 max-w-6xl px-4 md:px-6">
+    <div class="mb-10 flex flex-col justify-between gap-4 md:flex-row md:items-end">
+      <div>
+        <p class="section-label">Tooling</p>
+        <h2 class="section-title">Works with your tools.</h2>
       </div>
+      <p class="max-w-md text-sm leading-relaxed text-neutral-500">
+        Vite for dev and builds, Bun for packages and tests, Node, Bun or Deno to render on the server. Bring TypeScript and Tailwind: they just work.
+      </p>
     </div>
-    <div class="grid w-full max-w-80 grid-cols-3 gap-2">
+    <div class="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border bg-neutral-200 md:grid-cols-4 dark:bg-neutral-800">
       {tools.map((t) => (
-        <div key={t} class="flex aspect-square items-center justify-center rounded-2xl border border-transparent p-5 transition hover:border-neutral-200 hover:bg-neutral-50 dark:hover:border-neutral-800 dark:hover:bg-neutral-900">
-          <img src={`/icons/${t}.svg`} alt={t} width="52" height="52" class="transition duration-300 hover:scale-110" />
-        </div>
+        <Link key={t.name} href={t.href} class="tool-card group relative flex flex-col gap-6 bg-white p-6 transition-colors hover:bg-neutral-50 dark:bg-ink dark:hover:bg-neutral-950">
+          <div class="flex items-start justify-between">
+            <span class="tool-logo grid size-12 place-items-center rounded-xl border bg-white shadow-xs dark:bg-neutral-950">
+              <img src={`/logos/${t.logo}.svg`} alt="" width="26" height="26" class={['size-6.5', t.dark && 'dark:hidden']} />
+              {t.dark && <img src={`/logos/${t.dark}.svg`} alt="" width="26" height="26" class="hidden size-6.5 dark:block" />}
+            </span>
+            <span class="-translate-x-1 text-neutral-400 opacity-0 transition group-hover:translate-x-0 group-hover:opacity-100"><Icon name="arrowUpRight" /></span>
+          </div>
+          <div>
+            <p class="font-medium tracking-tight">{t.name}</p>
+            <p class="mt-0.5 text-sm text-neutral-500">{t.role}</p>
+          </div>
+        </Link>
       ))}
     </div>
   </section>
-
-  <!-- Call to action -->
-  <section class="mx-auto mt-32 max-w-6xl px-4 md:px-6">
-    <div class="relative overflow-hidden rounded-3xl border bg-neutral-950 px-6 py-16 text-center text-white md:py-24">
-      <div class="hero-glow pointer-events-none absolute inset-0"></div>
-      <span class="animate-float pointer-events-none absolute top-10 left-[12%] opacity-70" innerHTML={logo('size-10')}></span>
-      <span class="animate-float pointer-events-none absolute right-[14%] bottom-12 opacity-50 [animation-delay:-3s]" innerHTML={logo('size-14')}></span>
-      <h2 class="relative font-s2 text-4xl md:text-6xl">Start building in a minute.</h2>
-      <p class="relative mx-auto mt-4 max-w-xl text-neutral-400">Add Keeno to a Vite project, or skip setup entirely and write your first component in the browser.</p>
-      <div class="relative mt-8 flex flex-wrap justify-center gap-2.5">
-        <Link href="/docs/getting-started" class="flex items-center gap-2 rounded-xl bg-white px-5 py-2.5 font-bold text-black transition hover:bg-neutral-200">Read the guide <Icon name="arrowRight" /></Link>
-        <Link href="/playground" class="flex items-center gap-2 rounded-xl border border-white/20 px-5 py-2.5 font-bold transition hover:border-orange-400"><span class="text-orange-400"><Icon name="play" /></span> Open the playground</Link>
-        <a href={GITHUB} target="_blank" rel="noreferrer" class="flex items-center gap-2 rounded-xl border border-white/20 px-5 py-2.5 font-bold transition hover:border-white/50"><Icon name="github" /> GitHub</a>
-      </div>
-    </div>
-  </section>
 </div>
-<Footer />
+<Footer narrow />

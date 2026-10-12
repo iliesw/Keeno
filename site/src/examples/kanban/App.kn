@@ -3,10 +3,10 @@
   import Card from './Card.kn'
 
   type Column = 'todo' | 'doing' | 'done'
-  const COLUMNS: { id: Column; title: string }[] = [
-    { id: 'todo', title: 'To do' },
-    { id: 'doing', title: 'Doing' },
-    { id: 'done', title: 'Done' },
+  const COLUMNS: { id: Column; title: string; color: string }[] = [
+    { id: 'todo', title: 'To do', color: 'var(--faint)' },
+    { id: 'doing', title: 'Doing', color: 'var(--warning)' },
+    { id: 'done', title: 'Done', color: 'var(--success)' },
   ]
 
   const cards = state([
@@ -31,15 +31,15 @@
 
 <div class="board">
   {COLUMNS.map((col) => (
-    <section key={col.id} onDragover={(e: DragEvent) => e.preventDefault()} onDrop={(e: DragEvent) => drop(e, col.id)}>
-      <h3>{col.title} <small>{cards.filter((c) => c.column === col.id).length}</small></h3>
+    <section key={col.id} style={`--c:${col.color}`} onDragover={(e: DragEvent) => e.preventDefault()} onDrop={(e: DragEvent) => drop(e, col.id)}>
+      <h3><span class="dot"></span>{col.title} <small>{cards.filter((c) => c.column === col.id).length}</small></h3>
       <ul>
         {cards.filter((c) => c.column === col.id).map((c) => (
           <li key={c.id} draggable="true" onDragstart={() => (dragged = c.id)}>
             {view(c.id)}
             <div class="moves">
-              <button disabled={!shift(c.column, -1)} onClick={() => move(c.id, shift(c.column, -1)!)}>←</button>
-              <button disabled={!shift(c.column, 1)} onClick={() => move(c.id, shift(c.column, 1)!)}>→</button>
+              <button disabled={!shift(c.column, -1)} aria-label="Move left" onClick={() => move(c.id, shift(c.column, -1)!)}>←</button>
+              <button disabled={!shift(c.column, 1)} aria-label="Move right" onClick={() => move(c.id, shift(c.column, 1)!)}>→</button>
             </div>
           </li>
         ))}
@@ -47,54 +47,89 @@
     </section>
   ))}
 </div>
-<p class="hint">Type a note or let a timer run, then move the card: its state comes along.</p>
+<p class="hint">Start a timer or add a note, then move the card: its state comes along.</p>
 
 <style>
   .board {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 0.75rem;
+    gap: 0.5rem;
   }
   section {
-    min-height: 220px;
-    padding: 0.6rem;
-    border-radius: 12px;
+    min-height: 160px;
+    padding: 0.375rem;
+    border-radius: 0.75rem;
     background: var(--surface);
   }
   h3 {
     display: flex;
-    justify-content: space-between;
-    margin: 0 0 0.6rem;
-    font-size: 0.85rem;
+    align-items: center;
+    gap: 0.4rem;
+    margin: 0.25rem 0.375rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0;
+    color: var(--muted);
+  }
+  .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--c);
   }
   small {
-    color: var(--muted);
+    margin-left: auto;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--faint);
   }
   ul {
     display: grid;
-    gap: 0.5rem;
+    gap: 0.375rem;
     margin: 0;
     padding: 0;
     list-style: none;
   }
   li {
-    padding: 0.6rem;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    padding: 0.5rem 0.375rem 0.375rem 0.625rem;
     border: 1px solid var(--border);
-    border-radius: 10px;
+    border-radius: 0.5rem;
     background: var(--bg);
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
     cursor: grab;
+    transition: border-color 0.15s;
+  }
+  li:hover {
+    border-color: var(--border-strong);
   }
   .moves {
     display: flex;
-    justify-content: space-between;
-    margin-top: 0.4rem;
+    justify-content: flex-end;
+    gap: 2px;
   }
   .moves button {
-    padding: 0 8px;
-    font-size: 0.8rem;
+    min-height: 1.25rem;
+    padding: 0 0.375rem;
+    border: none;
+    background: none;
+    box-shadow: none;
+    color: var(--faint);
+    font-size: 0.75rem;
+  }
+  .moves button:hover:not(:disabled) {
+    background: var(--hover);
+    color: var(--fg);
+  }
+  .moves button:disabled {
+    opacity: 0.25;
   }
   .hint {
-    color: var(--muted);
-    font-size: 0.8rem;
+    margin: 0.75rem 0 0;
+    color: var(--faint);
+    font-size: 0.75rem;
+    text-align: center;
   }
 </style>

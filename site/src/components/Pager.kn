@@ -12,22 +12,22 @@
 
 <nav class="not-prose mt-14 grid gap-3 border-t pt-8 sm:grid-cols-2" aria-label="Pages">
   {prev ? (
-    <Link href={`/docs/${prev.slug}`} class="group flex flex-col gap-1 rounded-xl border p-4 no-underline transition hover:border-orange-400">
+    <Link href={`/docs/${prev.slug}`} class="group flex flex-col gap-1 rounded-xl border p-4 no-underline transition hover:bg-neutral-50 dark:hover:bg-neutral-900/60 hover:border-neutral-300 dark:hover:border-neutral-700">
       <span class="flex items-center gap-1 text-xs text-neutral-500"><Icon name="arrowLeft" /> Previous · {group(prev.slug)}</span>
-      <span class="font-bold text-neutral-900 group-hover:text-orange-500 dark:text-white">{prev.title}</span>
+      <span class="font-medium text-neutral-900 dark:text-white">{prev.title}</span>
     </Link>
   ) : (
     <div></div>
   )}
   {next ? (
-    <Link href={`/docs/${next.slug}`} class="group flex flex-col items-end gap-1 rounded-xl border p-4 text-right no-underline transition hover:border-orange-400">
+    <Link href={`/docs/${next.slug}`} class="group flex flex-col items-end gap-1 rounded-xl border p-4 text-right no-underline transition hover:border-neutral-300 dark:hover:border-neutral-700">
       <span class="flex items-center gap-1 text-xs text-neutral-500">{group(next.slug)} · Next <Icon name="arrowRight" /></span>
-      <span class="font-bold text-neutral-900 group-hover:text-orange-500 dark:text-white">{next.title}</span>
+      <span class="font-medium text-neutral-900 dark:text-white">{next.title}</span>
     </Link>
   ) : (
-    <Link href="/examples" class="group flex flex-col items-end gap-1 rounded-xl border p-4 text-right no-underline transition hover:border-orange-400">
+    <Link href="/examples" class="group flex flex-col items-end gap-1 rounded-xl border p-4 text-right no-underline transition hover:border-neutral-300 dark:hover:border-neutral-700">
       <span class="flex items-center gap-1 text-xs text-neutral-500">Keep going <Icon name="arrowRight" /></span>
-      <span class="font-bold text-neutral-900 group-hover:text-orange-500 dark:text-white">Browse the examples</span>
+      <span class="font-medium text-neutral-900 dark:text-white">Browse the examples</span>
     </Link>
   )}
 </nav>

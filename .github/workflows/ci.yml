@@ -37,10 +37,8 @@ jobs:
       - name: Build packages
         run: bun run build
 
-      - name: Build examples
-        run: |
-          bun run --cwd examples/todo build
-          bun run --cwd examples/counter build
+      - name: Build the example
+        run: bun run --cwd examples/todo build
 
       - name: Type-check the todo example with keeno-check
         run: bun run --cwd examples/todo check

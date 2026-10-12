@@ -102,12 +102,12 @@
 <style>
   .inspector { flex: 1; overflow: auto; padding: 8px 10px 24px; min-height: 0; }
   .insp-head { display: flex; align-items: center; gap: 6px; min-height: 28px; }
-  .insp-name { font-weight: 700; }
+  .insp-name { font-weight: 500; }
   .meta { margin: 2px 0 10px; word-break: break-all; }
   .file { color: var(--muted); }
   .file:hover { color: var(--tag); }
   .hint { padding: 28px 8px; color: var(--muted); display: grid; gap: 8px; text-align: center; }
-  .hint-title { color: var(--text); font-weight: 700; font-size: 13px; }
+  .hint-title { color: var(--text); font-weight: 600; font-size: 14px; }
   .keys { margin-top: 6px; }
   .err-row { padding-left: 0; }
 </style>

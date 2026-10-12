@@ -2,111 +2,181 @@
   import { Transition } from '@inflector/keeno'
 
   type Kind = 'success' | 'info' | 'error'
-  type Toast = { id: number; kind: Kind; text: string }
+  type Toast = { id: number; kind: Kind; title: string; text: string }
 
-  const MESSAGES: Record<Kind, string[]> = {
-    success: ['Saved!', 'Deployed to production', 'Invite sent'],
-    info: ['3 new comments', 'Update available', 'Syncing in the background'],
-    error: ['Network error', 'Permission denied', 'Payment failed'],
+  const MESSAGES: Record<Kind, [string, string][]> = {
+    success: [
+      ['Saved', 'Your changes are live.'],
+      ['Deployed', 'Production is on the latest build.'],
+      ['Invite sent', 'ada@example.com will get an email.'],
+    ],
+    info: [
+      ['3 new comments', 'On “Ship the docs”.'],
+      ['Update available', 'Version 0.3 is out.'],
+      ['Syncing', 'Running in the background.'],
+    ],
+    error: [
+      ['Network error', 'Check your connection and retry.'],
+      ['Permission denied', 'Ask an owner for access.'],
+      ['Payment failed', 'The card was declined.'],
+    ],
   }
   const ICONS: Record<Kind, string> = { success: '✓', info: 'i', error: '!' }
+  const KINDS: Kind[] = ['success', 'info', 'error']
 
   const toasts = state<Toast[]>([])
   let id = 0
 
   function push(kind: Kind) {
     const list = MESSAGES[kind]
-    const toast = { id: ++id, kind, text: list[Math.floor(Math.random() * list.length)] }
-    toasts.set([...toasts, toast])
-    setTimeout(() => dismiss(toast.id), 3500)
+    const [title, text] = list[Math.floor(Math.random() * list.length)]
+    // Newest on top, three at most.
+    toasts.set([{ id: ++id, kind, title, text }, ...toasts].slice(0, 3))
+    const toast = id
+    setTimeout(() => dismiss(toast), 4000)
   }
   const dismiss = (id: number) => toasts.set(toasts.filter((t) => t.id !== id))
 </script>
 
 <div class="buttons">
-  <button onClick={() => push('success')}>Success</button>
-  <button onClick={() => push('info')}>Info</button>
-  <button onClick={() => push('error')}>Error</button>
+  {KINDS.map((k) => (
+    <button key={k} class={k} onClick={() => push(k)}><span class="dot"></span>{k}</button>
+  ))}
 </div>
 
 <!-- Removed toasts stay until their leave transition ends; the rest slide into place. -->
-<ul class="stack">
-  <Transition name="toast">
-    {toasts.map((t) => (
-      <li key={t.id} class="toast-wrap">
-        <div class={`toast ${t.kind}`}>
-          <span class="icon">{ICONS[t.kind]}</span>
-          <span class="text">{t.text}</span>
-          <button class="close" aria-label="Dismiss" onClick={() => dismiss(t.id)}>✕</button>
-        </div>
-      </li>
-    ))}
-  </Transition>
-</ul>
+<div class="area">
+  {toasts.length === 0 && <p class="empty">Notifications show up here</p>}
+  <ul class="stack">
+    <Transition name="toast">
+      {toasts.map((t) => (
+        <li key={t.id} class="toast-wrap">
+          <div class={`toast ${t.kind}`}>
+            <span class="icon">{ICONS[t.kind]}</span>
+            <div class="text">
+              <strong>{t.title}</strong>
+              <span>{t.text}</span>
+            </div>
+            <button class="close" aria-label="Dismiss" onClick={() => dismiss(t.id)}>✕</button>
+          </div>
+        </li>
+      ))}
+    </Transition>
+  </ul>
+</div>
 
 <style>
   .buttons {
     display: flex;
     gap: 0.5rem;
   }
+  .buttons button {
+    text-transform: capitalize;
+  }
+  .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--c);
+  }
+  .success {
+    --c: var(--success);
+  }
+  .info {
+    --c: var(--info);
+  }
+  .error {
+    --c: var(--danger);
+  }
+  .area {
+    position: relative;
+    min-height: 13rem;
+    margin-top: 0.875rem;
+    padding: 0.75rem;
+    border: 1px dashed var(--border);
+    border-radius: 0.75rem;
+  }
+  .empty {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--faint);
+  }
   .stack {
     display: grid;
     gap: 0.5rem;
-    margin: 1.25rem 0 0;
+    margin: 0;
     padding: 0;
     list-style: none;
-    min-height: 160px;
   }
   .toast {
     display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.7rem 0.8rem;
+    align-items: flex-start;
+    gap: 0.625rem;
+    padding: 0.625rem 0.5rem 0.625rem 0.75rem;
     border: 1px solid var(--border);
-    border-radius: 12px;
+    border-radius: 0.625rem;
     background: var(--bg);
-    box-shadow: 0 8px 24px -12px rgb(0 0 0 / 0.35);
+    box-shadow: 0 8px 24px -12px rgb(0 0 0 / 0.3);
   }
   .icon {
     display: grid;
     place-items: center;
-    width: 22px;
-    height: 22px;
+    flex: none;
+    width: 18px;
+    height: 18px;
+    margin-top: 1px;
     border-radius: 50%;
-    color: white;
-    font-size: 12px;
+    background: color-mix(in srgb, var(--c) 15%, transparent);
+    color: var(--c);
+    font-size: 10px;
     font-weight: 700;
   }
-  .success .icon {
-    background: #16a34a;
-  }
-  .info .icon {
-    background: #3b82f6;
-  }
-  .error .icon {
-    background: #dc2626;
-  }
   .text {
+    display: grid;
     flex: 1;
+    min-width: 0;
+    line-height: 1.35;
+  }
+  .text strong {
+    font-size: 0.85rem;
+    font-weight: 500;
+  }
+  .text span {
+    overflow: hidden;
+    font-size: 0.8rem;
+    color: var(--muted);
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .close {
+    min-height: 1.375rem;
+    padding: 0 0.375rem;
     border: none;
     background: none;
-    padding: 0 4px;
-    opacity: 0.5;
+    box-shadow: none;
+    color: var(--faint);
+    font-size: 0.7rem;
+  }
+  .close:hover:not(:disabled) {
+    background: var(--hover);
+    color: var(--fg);
   }
   .toast-enter-active,
   .toast-leave-active {
     transition:
       opacity 0.25s ease,
-      transform 0.25s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+      transform 0.3s var(--ease-spring);
   }
   .toast-enter-from {
     opacity: 0;
-    transform: translateY(12px) scale(0.96);
+    transform: translateY(-8px) scale(0.97);
   }
   .toast-leave-to {
     opacity: 0;
-    transform: translateX(40px);
+    transform: translateX(24px);
   }
 </style>

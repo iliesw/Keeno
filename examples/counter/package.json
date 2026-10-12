@@ -1,8 +1,0 @@
-{
-  "name": "example-counter",
-  "private": true,
-  "type": "module",
-  "scripts": { "dev": "bunx --bun vite", "build": "bunx --bun vite build" },
-  "dependencies": { "@inflector/keeno": "workspace:*" },
-  "devDependencies": { "vite": "^5.4.11", "@inflector/vite-plugin-keeno": "workspace:*" }
-}

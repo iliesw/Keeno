@@ -53,6 +53,7 @@ export const nav: { title: string; items: NavItem[] }[] = [
   {
     title: 'Reference',
     items: [
+      { slug: 'cheatsheet', title: 'Cheatsheet' },
       { slug: 'api', title: 'API Reference' },
       { slug: 'stability', title: 'Versioning' },
     ],
@@ -63,8 +64,11 @@ export const pages: NavItem[] = nav.flatMap((g) => g.items)
 
 export const findPage = (slug: string) => pages.find((p) => p.slug === slug)
 
+/** Pages that live in site/content rather than the repo's docs/ folder. */
+const SITE_PAGES = new Set(['introduction', 'cheatsheet'])
+
 /** The markdown file of a page, relative to the repo root (for "edit on GitHub"). */
-export const sourcePath = (slug: string) => (slug === 'introduction' ? `site/content/${slug}.md` : `docs/${slug}.md`)
+export const sourcePath = (slug: string) => (SITE_PAGES.has(slug) ? `site/content/${slug}.md` : `docs/${slug}.md`)
 
 const files = {
   ...import.meta.glob<DocModule>('../../docs/*.md', { import: 'default' }),

@@ -7,6 +7,6 @@
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
-  "ignore": ["example-counter", "example-tailwind", "example-todo", "keeno-e2e-app"],
+  "ignore": ["example-todo", "keeno-e2e-app"],
   "privatePackages": { "version": true, "tag": false }
 }

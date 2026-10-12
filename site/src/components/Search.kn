@@ -70,9 +70,9 @@
 </script>
 
 {searchOpen.get() && (
-  <div class="fixed inset-0 z-[100] flex items-start justify-center bg-black/40 px-4 pt-[12vh] backdrop-blur-sm" onClick={close}>
+  <div class="fixed inset-0 z-[100] flex items-start justify-center bg-black/50 px-4 pt-[12vh] backdrop-blur-[2px]" onClick={close}>
     <div
-      class="animate-pop flex max-h-[70vh] w-full max-w-xl flex-col overflow-hidden rounded-2xl border bg-white shadow-2xl dark:bg-neutral-900"
+      class="animate-pop flex max-h-[70vh] w-full max-w-xl flex-col overflow-hidden rounded-xl border bg-white shadow-2xl dark:bg-neutral-950"
       role="dialog"
       aria-modal="true"
       aria-label="Search"
@@ -98,10 +98,10 @@
       <div id="search-results" class="overflow-y-auto p-2" role="listbox">
         {!query.trim() ? (
           <div class="p-2">
-            <p class="px-2 pb-2 text-xs font-bold tracking-wider text-neutral-500 uppercase">Jump to</p>
+            <p class="px-2 pb-2 text-xs font-medium text-neutral-500">Jump to</p>
             <div class="grid grid-cols-2 gap-1">
               {suggestions.map((s) => (
-                <button key={s.url} type="button" onClick={() => go(s.url)} class="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800">
+                <button key={s.url} type="button" onClick={() => go(s.url)} class="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm hover:bg-neutral-100 dark:hover:bg-neutral-900">
                   <span class="opacity-40"><Icon name="corner" /></span>
                   {s.label}
                 </button>
@@ -119,9 +119,9 @@
               aria-selected={selected === i}
               onMouseMove={() => selected.set(i)}
               onClick={() => go(r.url)}
-              class={['search-hit flex w-full cursor-pointer items-start gap-3 rounded-xl px-3 py-2.5 text-left', selected === i && 'bg-neutral-100 dark:bg-neutral-800']}
+              class={['search-hit flex w-full cursor-pointer items-start gap-3 rounded-xl px-3 py-2.5 text-left', selected === i && 'bg-neutral-100 dark:bg-neutral-900']}
             >
-              <span class={['mt-0.5 grid size-7 flex-none place-items-center rounded-lg border', selected === i ? 'border-orange-400 text-orange-500' : 'opacity-60']}>
+              <span class={['mt-0.5 grid size-7 flex-none place-items-center rounded-lg border', selected === i ? 'border-neutral-300 bg-white text-neutral-900 shadow-sm dark:border-neutral-700 dark:bg-neutral-950 dark:text-white' : 'opacity-60']}>
                 <Icon name={kindIcon(r.kind, r.heading)} />
               </span>
               <span class="min-w-0 flex-1">
@@ -131,7 +131,7 @@
                   ) : (
                     <span class="truncate">{r.page}</span>
                   )}
-                  {r.kind === 'example' && <span class="rounded bg-orange-400/15 px-1.5 text-[10px] font-bold text-orange-500 uppercase">Example</span>}
+                  {r.kind === 'example' && <span class="rounded-full border px-1.5 text-[10px] font-medium text-neutral-500">Example</span>}
                 </span>
                 <span class="mt-0.5 line-clamp-2 block text-xs leading-relaxed text-neutral-500">
                   {r.snippet.map((p, j) => <span key={j} class={p.hit ? 'hit' : ''}>{p.text}</span>)}

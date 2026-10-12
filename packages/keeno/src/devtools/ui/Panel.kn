@@ -50,6 +50,10 @@
   const timelineQuery = state('')
   /** The panel width while it is being resized (saved on release). */
   const liveWidth = state<number | null>(null)
+  /** True while the panel plays its close animation; it is removed afterwards. */
+  const closing = state(false)
+  /** True while the panel animates out before moving to the other side. */
+  const moving = state(false)
 
   const tree = derived(() => {
     tick
@@ -135,10 +139,44 @@
     prefs.set({ ...prefs, [key]: value })
   }
 
+  /** Matches the `panel-out` animation. */
+  const CLOSE_MS = 200
+  /** Space between the panel and the edge of the window (`--gap` in the styles). */
+  const GAP = 4
+  const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches
+  let closeTimer: ReturnType<typeof setTimeout> | undefined
   function setOpen(open: boolean) {
-    setPref('open', open)
-    pulses.set({})
-    if (!open) highlight.set(null)
+    clearTimeout(closeTimer)
+    if (open) {
+      closing.set(false)
+      if (!prefs.peek().open) setPref('open', true)
+      pulses.set({})
+      return
+    }
+    if (!prefs.peek().open || closing.peek()) return
+    // Keep the panel mounted while it animates out.
+    closing.set(true)
+    highlight.set(null)
+    closeTimer = setTimeout(
+      () => {
+        closing.set(false)
+        setPref('open', false)
+        pulses.set({})
+      },
+      reducedMotion() ? 0 : CLOSE_MS,
+    )
+  }
+
+  /** Move the panel to the other side: it slides out toward its edge, then in from the other one. */
+  function dock() {
+    if (moving.peek() || closing.peek()) return
+    const flip = () => setPref('side', prefs.peek().side === 'right' ? 'left' : 'right')
+    if (reducedMotion()) return flip()
+    moving.set(true)
+    setTimeout(() => {
+      flip()
+      moving.set(false)
+    }, CLOSE_MS)
   }
 
   function setTab(tab: Tab) {
@@ -256,8 +294,8 @@
     handle.setPointerCapture(e.pointerId)
     handle.classList.add('dragging')
     const onMove = (ev: PointerEvent) => {
-      const w = prefs.peek().side === 'right' ? innerWidth - ev.clientX : ev.clientX
-      liveWidth.set(Math.max(300, Math.min(innerWidth, Math.round(w))))
+      const w = prefs.peek().side === 'right' ? innerWidth - GAP - ev.clientX : ev.clientX - GAP
+      liveWidth.set(Math.max(300, Math.min(innerWidth - 2 * GAP, Math.round(w))))
     }
     const onUp = () => {
       handle.removeEventListener('pointermove', onMove)
@@ -313,7 +351,7 @@
       if (!e.altKey || !e.shiftKey || e.ctrlKey || e.metaKey) return
       if (e.code === 'KeyD') {
         e.preventDefault()
-        setOpen(!prefs.peek().open)
+        setOpen(!prefs.peek().open || closing.peek())
       } else if (e.code === 'KeyC') {
         e.preventDefault()
         if (picking.peek()) stopPicker()
@@ -325,8 +363,8 @@
     window.addEventListener('resize', unhighlight)
     window.addEventListener('scroll', unhighlight, true)
     console.info(
-      '%c◆ Keeno%c dev tools ready: Alt+Shift+D to open, Alt+Shift+C to pick a component.',
-      'color:#f5b942;font-weight:bold',
+      '%cKeeno%c dev tools ready: Alt+Shift+D to open, Alt+Shift+C to pick a component.',
+      'font-weight:bold',
       'color:inherit',
     )
     return () => {
@@ -341,17 +379,16 @@
 
 <Overlay highlight={highlight} flashes={flashes} />
 {!prefs.open && (
-  <button class="fab" title="Keeno dev tools (Alt+Shift+D)" onClick={() => setOpen(true)}>
+  <button class={['fab', prefs.side]} title="Keeno dev tools (Alt+Shift+D)" onClick={() => setOpen(true)}>
     <span class="logo-mark" />
     <span class="fab-name">Keeno</span>
-    <span class="fab-count">{count}</span>
     {errorCount > 0 && <span class="fab-err">{errorCount}</span>}
   </button>
 )}
 {prefs.open && (
   <div
-    class={['panel', prefs.side === 'left' && 'left']}
-    style={`width:min(${width}px, 100vw)`}
+    class={['panel', prefs.side === 'left' && 'left', (closing || moving) && 'closing']}
+    style={`width:min(${width}px, calc(100vw - ${2 * GAP}px))`}
     role="dialog"
     aria-label="Keeno dev tools"
   >
@@ -385,7 +422,7 @@
       <IconButton
         icon="dock"
         title="Dock to the other side"
-        onClick={() => setPref('side', prefs.side === 'right' ? 'left' : 'right')}
+        onClick={dock}
       />
       <IconButton icon="close" title="Close (Alt+Shift+D)" onClick={() => setOpen(false)} />
     </header>
@@ -418,73 +455,229 @@
 )}
 
 <style>
+  /* Base styles, shared by every dev tools component: theme tokens, resets and small utility
+     classes (value colors, key/value rows, badges...). The panel renders in a shadow root, so
+     :global() here still only reaches the dev tools. */
+  :global(:host) {
+    all: initial;
+    /* Neutral dark palette after Vercel's Geist design system. */
+    --bg: #0a0a0a; --surface: #111111; --raised: #1a1a1a; --hover: #1f1f1f;
+    --border: #242424; --border-strong: #333333;
+    --text: #ededed; --muted: #a1a1a1; --faint: #707070;
+    --accent: #ededed; --accent-dim: rgba(255, 255, 255, 0.08);
+    --tag: #52a8ff; --str: #62c073; --num: #f2a20d; --bool: #bf7af0; --null: #707070; --err: #ff6166; --key: #d4d4d4;
+    --sans: Geist, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "Geist Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    /* A soft overshoot-free spring, as in Vaul and Geist drawers. */
+    --spring: cubic-bezier(0.32, 0.72, 0, 1);
+  }
+  :global(*) { box-sizing: border-box; corner-shape: squircle; }
+  :global(button) { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+  :global(input), :global(textarea) { font: inherit; color: inherit; }
+  /* The top-level elements (the host itself is reset with `all: initial`). */
+  :global(.panel), :global(.fab), :global(.overlay) {
+    font: 13px/1.5 var(--sans);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  /* Code-like content (component names, values, events) is set in the mono face. */
+  :global(.tree), :global(.kv), :global(.event), :global(.tag), :global(.meta), :global(.bar-row), :global(kbd) {
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+  :global(::-webkit-scrollbar) { width: 10px; height: 10px; }
+  :global(::-webkit-scrollbar-track) { background: transparent; }
+  :global(::-webkit-scrollbar-thumb) { background: var(--border-strong); border-radius: 10px; border: 3px solid var(--bg); }
+  :global(kbd) { display: inline-block; min-width: 20px; text-align: center; background: var(--raised); border: 1px solid var(--border); border-radius: 4px; padding: 0 5px; font-size: 11px; color: var(--muted); }
+
+  /* Layout */
+  :global(.spacer) { flex: 1; }
+  :global(.view) { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  :global(.toolbar) { display: flex; align-items: center; gap: 6px; padding: 8px 10px; border-bottom: 1px solid var(--border); flex: none; }
+  :global(.search) {
+    flex: 1;
+    min-width: 0;
+    height: 30px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0 10px;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  :global(.search::placeholder) { color: var(--faint); }
+  :global(.search:hover) { border-color: var(--border-strong); }
+  :global(.search:focus) { border-color: #555555; box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.08); }
+  :global(.empty) { color: var(--muted); padding: 24px 16px; text-align: center; }
+
+  /* Text */
+  :global(.muted) { color: var(--muted); }
+  :global(.small) { font-size: 11px; }
+  :global(.pad) { padding: 2px 0; }
+  :global(.link) { color: var(--tag); text-decoration: none; }
+  :global(.link:hover) { text-decoration: underline; }
+  :global(.btn) { height: 28px; padding: 0 12px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); font-weight: 500; transition: background 0.15s, border-color 0.15s; }
+  :global(.btn:hover) { background: var(--hover); border-color: var(--border-strong); }
+  :global(.btn.primary) { background: var(--text); border-color: var(--text); color: var(--bg); }
+  :global(.btn.primary:hover) { background: #cccccc; border-color: #cccccc; }
+  :global(.logo-mark) {
+    /* The Keeno logo (site/public/favicon.svg), used as a mask so it takes the text color. */
+    width: 15px; height: 13px; display: inline-block; flex: none; background: var(--text);
+    -webkit-mask: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 73 61'><path d='M45.4581 0H15.9044C14.4992 0 13.2824 0.97526 12.9764 2.34665L0.815211 56.8466C0.396995 58.7209 1.82288 60.5 3.7432 60.5H23.5C24.7111 60.5 25.8034 59.7718 26.2692 58.6538L28.953 52.2128C29.5884 50.6878 31.6942 50.5472 32.5267 51.9743L36.6318 59.0116C37.1694 59.9333 38.1561 60.5 39.2231 60.5H58.1901C60.4095 60.5 61.8605 58.1736 60.8843 56.1804L51.7052 37.4399C51.3798 36.7755 51.8635 36 52.6033 36H60.5941C61.7573 36 62.8156 35.3277 63.3098 34.2747L71.9935 15.7747C72.9273 13.7852 71.4755 11.5 69.2778 11.5H52.901C51.7404 11.5 50.6839 12.1695 50.1883 13.219L42.77 28.9281C42.592 29.3052 42.3372 29.6411 42.0221 29.9142L38.2055 33.2219C37.4079 33.9132 36.2222 33.0574 36.6271 32.0826L48.2286 4.15074C49.0492 2.17509 47.5974 0 45.4581 0Z'/></svg>") center / contain no-repeat;
+    mask: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 73 61'><path d='M45.4581 0H15.9044C14.4992 0 13.2824 0.97526 12.9764 2.34665L0.815211 56.8466C0.396995 58.7209 1.82288 60.5 3.7432 60.5H23.5C24.7111 60.5 25.8034 59.7718 26.2692 58.6538L28.953 52.2128C29.5884 50.6878 31.6942 50.5472 32.5267 51.9743L36.6318 59.0116C37.1694 59.9333 38.1561 60.5 39.2231 60.5H58.1901C60.4095 60.5 61.8605 58.1736 60.8843 56.1804L51.7052 37.4399C51.3798 36.7755 51.8635 36 52.6033 36H60.5941C61.7573 36 62.8156 35.3277 63.3098 34.2747L71.9935 15.7747C72.9273 13.7852 71.4755 11.5 69.2778 11.5H52.901C51.7404 11.5 50.6839 12.1695 50.1883 13.219L42.77 28.9281C42.592 29.3052 42.3372 29.6411 42.0221 29.9142L38.2055 33.2219C37.4079 33.9132 36.2222 33.0574 36.6271 32.0826L48.2286 4.15074C49.0492 2.17509 47.5974 0 45.4581 0Z'/></svg>") center / contain no-repeat;
+  }
+  :global(.store-mark) { color: var(--muted); font-size: 10px; }
+  :global(.caret) { display: inline-block; width: 12px; text-align: center; color: var(--faint); flex: none; font-size: 10px; }
+  :global(.count) { margin-left: 6px; color: var(--muted); font-size: 11px; font-weight: 500; background: var(--raised); border: 1px solid var(--border); border-radius: 999px; padding: 0 6px; line-height: 16px; }
+  :global(.tag) { color: var(--faint); }
+  :global(.tag) :global(.name) { color: var(--tag); }
+  :global(.tag.builtin) :global(.name) { color: var(--muted); font-style: italic; }
+  :global(.tag.big) { font-size: 14px; }
+  :global(.badge) { font-size: 10px; font-weight: 500; padding: 0 6px; border-radius: 999px; background: var(--raised); color: var(--muted); border: 1px solid var(--border); line-height: 16px; }
+  :global(.badge.derived) { color: var(--tag); }
+  :global(.badge.pending) { color: var(--text); border-color: var(--border-strong); }
+  :global(.badge.src-url) { color: var(--bool); }
+  :global(.badge.src-remote) { color: var(--str); }
+  :global(.badge.src-history) { color: var(--num); }
+
+  /* Key/value rows and values */
+  :global(.kv) { display: flex; align-items: baseline; gap: 0 4px; padding: 2px 0; min-height: 20px; }
+  :global(.kv) > :global(.key), :global(.kv) > :global(.badge), :global(.kv) > :global(.colon) { flex: none; }
+  :global(.key) { color: var(--key); }
+  :global(.colon) { color: var(--muted); margin-right: 2px; }
+  :global(.val) { flex: 1 1 auto; min-width: 0; }
+  :global(.val) > :global(.v-str), :global(.val) > :global(.v-obj) { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  :global(.v-str) { color: var(--str); word-break: break-word; }
+  :global(.v-num) { color: var(--num); }
+  :global(.v-bool) { color: var(--bool); }
+  :global(.v-null) { color: var(--null); }
+  :global(.v-fn) { color: var(--muted); font-style: italic; }
+  :global(.v-err) { color: var(--err); }
+  :global(.v-obj) { color: var(--text); }
+
   /* Floating button */
   .fab {
+    --dx: -12px;
     position: fixed;
+    corner-shape: squircle;
     left: 12px;
     bottom: 12px;
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 6px 10px 6px 8px;
-    background: rgba(13, 15, 20, 0.92);
+    gap: 8px;
+    height: auto;
+    padding: 3px 6px 3px 6px;
+    background: rgba(10, 10, 10, 0.9);
     border: 1px solid var(--border);
     border-radius: 999px;
-    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
-    backdrop-filter: blur(8px);
-    transition: transform 0.15s, border-color 0.15s;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6), 0 8px 24px rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(12px);
+    transition: transform 0.25s var(--spring), border-color 0.15s, background 0.15s;
+    animation: fab-in 0.45s var(--spring) backwards;
   }
-  .fab:hover { transform: translateY(-1px); border-color: var(--accent); }
-  .fab-name { font-weight: 700; letter-spacing: 0.02em; }
-  .fab-count { color: var(--muted); }
-  .fab-count:empty { display: none; }
-  .fab-err { background: var(--err); color: #fff; border-radius: 999px; padding: 0 6px; font-size: 11px; font-weight: 700; }
+  /* The button sits on the side the panel opens on. */
+  .fab.right { --dx: 12px; left: auto; right: 12px; }
+  .fab:active { transform: scale(0.96); transition-duration: 0.1s; }
+  .fab-name { font-weight: 600; letter-spacing: -0.01em; }
+  .fab-err { background: var(--err); color: #fff; border-radius: 999px; padding: 0 6px; font-size: 11px; font-weight: 600; line-height: 18px; }
+  @keyframes fab-in {
+    from { opacity: 0; transform: translateX(var(--dx)) scale(0.9); filter: blur(4px); }
+  }
 
-  /* Docked panel */
+  /* Floating panel, a few pixels from the edge of the window */
   .panel {
+    --gap: 4px;
+    --dx: 24px;
     position: fixed;
-    top: 0;
-    right: 0;
-    bottom: 0;
+    top: var(--gap);
+    right: var(--gap);
+    bottom: var(--gap);
+    corner-shape: squircle;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
     background: var(--bg);
-    border-left: 1px solid var(--border);
-    box-shadow: -12px 0 40px rgba(0, 0, 0, 0.35);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6), 0 24px 64px rgba(0, 0, 0, 0.45), 0 4px 12px rgba(0, 0, 0, 0.25);
     min-width: 300px;
+    transform-origin: right center;
+    animation: panel-in 0.5s var(--spring) backwards;
   }
-  .panel.left {
-    right: auto;
-    left: 0;
-    border-left: 0;
-    border-right: 1px solid var(--border);
-    box-shadow: 12px 0 40px rgba(0, 0, 0, 0.35);
+  .panel.left { --dx: -24px; right: auto; left: var(--gap); transform-origin: left center; }
+  /* Played before the panel is removed or moves to the other side (see setOpen and dock). */
+  .panel.closing { animation: panel-out 0.2s cubic-bezier(0.4, 0, 1, 1) forwards; pointer-events: none; }
+  @keyframes panel-in {
+    from { opacity: 0; transform: translateX(var(--dx)) scale(0.96); filter: blur(6px); }
+    60% { filter: blur(0); }
   }
-  .resize { position: absolute; top: 0; bottom: 0; left: -3px; width: 7px; cursor: ew-resize; z-index: 2; }
-  .panel.left .resize { left: auto; right: -3px; }
+  @keyframes panel-out {
+    to { opacity: 0; transform: translateX(var(--dx)) scale(0.96); filter: blur(4px); }
+  }
+  /* The header and content follow the panel in, slightly later. */
+  header { animation: rise 0.45s var(--spring) 0.06s backwards; }
+  .body { animation: rise 0.45s var(--spring) 0.12s backwards; }
+  /* Each tab's content fades in when it is switched to. */
+  .body > :global(*) { animation: fade 0.25s var(--ease-out) backwards; }
+  @keyframes rise { from { opacity: 0; transform: translateY(6px); } }
+  @keyframes fade { from { opacity: 0; transform: translateY(3px); } }
+  .resize { position: absolute; top: 0; bottom: 0; left: 0; width: 6px; cursor: ew-resize; z-index: 2; }
+  .panel.left .resize { left: auto; right: 0; }
   .resize:hover,
-  .resize.dragging {
-    background: linear-gradient(90deg, transparent 3px, var(--accent) 3px, var(--accent) 4px, transparent 4px);
-  }
+  .resize.dragging { background: linear-gradient(90deg, var(--border-strong) 2px, transparent 2px); }
+  .panel.left .resize:hover,
+  .panel.left .resize.dragging { background: linear-gradient(270deg, var(--border-strong) 2px, transparent 2px); }
   header {
     display: flex;
     align-items: center;
     gap: 4px;
-    height: 38px;
-    padding: 0 6px 0 10px;
+    height: 48px;
+    padding: 0 8px 0 14px;
     border-bottom: 1px solid var(--border);
-    background: var(--surface);
+    background: var(--bg);
     flex: none;
   }
-  .logo { display: flex; align-items: center; gap: 7px; font-weight: 700; margin-right: 8px; }
-  .tabs { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; }
-  .tab { padding: 5px 9px; border-radius: 6px; color: var(--muted); white-space: nowrap; }
-  .tab:hover { color: var(--text); background: var(--hover); }
-  .tab.active { color: var(--text); background: var(--raised); box-shadow: inset 0 -2px 0 var(--accent); }
+  .logo { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 14px; letter-spacing: -0.01em; margin-right: 12px; }
+  .tabs { display: flex; gap: 4px; align-self: stretch; overflow-x: auto; scrollbar-width: none; }
+  .tab {
+    position: relative;
+    display: flex;
+    align-items: center;
+    padding: 0 8px;
+    color: var(--muted);
+    white-space: nowrap;
+    transition: color 0.15s;
+  }
+  .tab:hover,
+  .tab.active { color: var(--text); }
+  .tab::after {
+    content: '';
+    position: absolute;
+    left: 8px;
+    right: 8px;
+    bottom: -1px;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--text);
+    transform: scaleX(0);
+    transition: transform 0.3s var(--spring);
+  }
+  .tab.active::after { transform: scaleX(1); }
   .body { flex: 1; min-height: 0; display: flex; }
 
   @media (max-width: 520px) {
-    .panel { min-width: 0; left: 0; width: 100vw !important; }
+    .panel { min-width: 0; left: var(--gap); width: auto !important; }
     .logo span:last-child { display: none; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .fab,
+    .panel,
+    .panel.closing,
+    header,
+    .body,
+    .body > :global(*) { animation-duration: 0.01s; animation-delay: 0s; }
   }
 </style>

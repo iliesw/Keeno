@@ -51,7 +51,7 @@ describe('@inflector/vite-plugin-keeno', () => {
 })
 
 describe('Tailwind', () => {
-  const twRoot = path.resolve(import.meta.dir, '../../../examples/tailwind')
+  const twRoot = path.resolve(import.meta.dir, '../../../examples/todo')
   const posix = (p: string) => p.replaceAll(path.sep, '/')
   const app = posix(path.join(twRoot, 'src/App.kn'))
   const entry = posix(path.join(twRoot, 'src/app.css'))
@@ -91,9 +91,9 @@ describe('Tailwind', () => {
     const assets = (Array.isArray(out) ? out[0] : out).output
     const built = assets.find((a: any) => a.fileName.endsWith('.css')).source as string
     expect(built).not.toMatch(/@apply|@variant|@reference|--spacing\(/)
-    // The custom theme color from src/app.css reaches the component's scoped `.btn`.
-    expect(built).toMatch(/\.btn\.keeno-[0-9a-f]{8}\{[^}]*background-color:var\(--color-brand/)
+    // The custom theme color from src/app.css reaches the component's scoped `h1`.
+    expect(built).toMatch(/h1\.keeno-[0-9a-f]{8}\{[^}]*color:var\(--color-brand/)
     // Utilities written in .kn markup are generated.
-    expect(built).toContain('.text-amber-600')
+    expect(built).toContain('.text-sm')
   }, 60_000)
 })

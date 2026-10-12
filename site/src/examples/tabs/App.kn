@@ -31,25 +31,36 @@
     display: flex;
     gap: 2px;
     padding: 3px;
-    border-radius: 10px;
+    border: 1px solid var(--border);
+    border-radius: 0.625rem;
     background: var(--surface);
     width: fit-content;
   }
   nav button {
-    border: none;
+    min-height: 1.75rem;
+    border: 1px solid transparent;
+    border-radius: 0.4rem;
     background: none;
-    padding: 4px 14px;
-    border-radius: 8px;
+    box-shadow: none;
+    color: var(--muted);
   }
-  nav button.on {
+  nav button:hover:not(:disabled) {
+    border-color: transparent;
+    background: none;
+    color: var(--fg);
+  }
+  nav button.on,
+  nav button.on:hover:not(:disabled) {
+    border-color: var(--border);
     background: var(--bg);
-    box-shadow: 0 1px 3px rgb(0 0 0 / 0.15);
+    color: var(--fg);
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.08);
   }
   .panel {
     margin-top: 1rem;
     padding: 1rem;
     border: 1px solid var(--border);
-    border-radius: 12px;
+    border-radius: 0.75rem;
     min-height: 120px;
   }
 </style>

@@ -30,7 +30,6 @@ export default defineConfig({
   ],
   webServer: [
     server('examples/todo', PORTS.todo),
-    server('examples/counter', PORTS.counter),
     server('e2e/app', PORTS.fixtures),
   ],
 })

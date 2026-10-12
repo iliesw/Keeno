@@ -4,6 +4,11 @@
   "scopeName": "source.keeno",
   "fileTypes": ["kn"],
   "patterns": [{ "include": "#comment" }, { "include": "#script" }, { "include": "#style" }, { "include": "#markup" }],
+  "injections": {
+    "L:source.keeno meta.jsx.children.tsx - meta.embedded - comment - string": {
+      "patterns": [{ "include": "#comment" }]
+    }
+  },
   "repository": {
     "comment": {
       "name": "comment.block.html",

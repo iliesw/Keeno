@@ -64,7 +64,14 @@
     border-radius: 8px;
   }
   li:hover {
-    background: var(--surface);
+    background: var(--hover);
+  }
+  strong {
+    font-weight: 500;
+  }
+  small {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
   }
   span,
   small,
@@ -72,7 +79,7 @@
     color: var(--muted);
   }
   mark {
-    background: color-mix(in srgb, var(--accent) 35%, transparent);
+    background: color-mix(in srgb, var(--warning) 35%, transparent);
     color: inherit;
     border-radius: 3px;
   }

@@ -43,16 +43,16 @@
   transform: scale(0.97);
 }
 .pg-btn-strong {
-  font-weight: 700;
-}
-.pg-btn-brand {
-  border-color: var(--brand);
-  background: var(--brand);
-  color: #000;
   font-weight: 600;
 }
+.pg-btn-brand {
+  border-color: var(--fg);
+  background: var(--fg);
+  color: var(--bg);
+  font-weight: 500;
+}
 .pg-btn-brand:hover {
-  background: #ffae4a;
+  background: color-mix(in srgb, var(--fg) 80%, var(--bg));
 }
 .pg-menu {
   position: absolute;
@@ -71,7 +71,7 @@
 .pg-menu-group > p {
   padding: 0.5rem 0.6rem 0.25rem;
   font-size: 0.7rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--muted);
@@ -91,7 +91,8 @@
   background: var(--surface);
 }
 .pg-menu-item.is-active {
-  box-shadow: inset 2px 0 0 var(--brand);
+  color: var(--fg);
+  font-weight: 500;
 }
 .pg-segment {
   display: flex;
@@ -169,7 +170,7 @@
   align-items: center;
   flex: none;
   border-radius: 0.5rem;
-  font-family: var(--font-code);
+  font-family: var(--font-mono);
   font-size: 0.8rem;
   color: var(--muted);
 }
@@ -243,7 +244,7 @@
   border: 1px solid var(--brand);
   border-radius: 0.45rem;
   background: var(--bg);
-  font-family: var(--font-code);
+  font-family: var(--font-mono);
   font-size: 0.8rem;
   outline: none;
 }
@@ -317,7 +318,7 @@
   border-radius: 999px;
   background: var(--border);
   font-size: 0.65rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--fg);
 }
 .pg-badge.is-error {
@@ -386,13 +387,13 @@
 .pg-error-title {
   margin-bottom: 0.4rem;
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: #ef4444;
 }
 .pg-error pre {
-  font-family: var(--font-code);
+  font-family: var(--font-mono);
   font-size: 0.78rem;
   white-space: pre-wrap;
   word-break: break-word;
@@ -401,13 +402,13 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  font-family: var(--font-code);
+  font-family: var(--font-mono);
   font-size: 0.8rem;
 }
 .pg-console-empty {
   padding: 1.5rem;
   color: var(--muted);
-  font-family: var(--font-rubik);
+  font-family: var(--font-sans);
 }
 .pg-log {
   display: flex;

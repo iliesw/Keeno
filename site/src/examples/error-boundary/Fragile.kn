@@ -4,12 +4,17 @@
   // A derived that throws passes the error to whatever renders it.
   const label = derived(() => {
     if (count >= 3) throw new Error(`count reached ${count}`)
-    return `${count} / 3`
+    return count
   })
 </script>
 
 <div class="box">
-  <span class="value">{label}</span>
+  <div class="value">
+    <strong>{label}</strong>
+    <div class="steps" aria-hidden="true">
+      {[1, 2, 3].map((n) => <span key={n} class={{ on: count >= n, last: n === 3 }}></span>)}
+    </div>
+  </div>
   <button onClick={() => count.set(count + 1)}>Increment</button>
 </div>
 
@@ -18,13 +23,39 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 1rem;
+    min-height: 4.5rem;
+    padding: 0.875rem 1rem;
     border: 1px solid var(--border);
-    border-radius: 12px;
+    border-radius: 0.75rem;
+    background: var(--bg);
   }
   .value {
-    font-size: 1.5rem;
-    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+  }
+  strong {
+    min-width: 1ch;
+    font-size: 1.75rem;
+    font-weight: 600;
+    letter-spacing: -0.03em;
     font-variant-numeric: tabular-nums;
+  }
+  .steps {
+    display: flex;
+    gap: 4px;
+  }
+  .steps span {
+    width: 1.25rem;
+    height: 4px;
+    border-radius: 999px;
+    background: var(--border);
+    transition: background 0.2s;
+  }
+  .steps span.on {
+    background: var(--fg);
+  }
+  .steps span.last {
+    background: color-mix(in srgb, var(--danger) 35%, transparent);
   }
 </style>

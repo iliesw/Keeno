@@ -14,7 +14,7 @@
 
   function logNode() {
     ;(globalThis as any).$keenoNode = value
-    console.log('%c$keenoNode', 'color:#f5b942', value)
+    console.log('%c$keenoNode', 'font-weight:bold', value)
   }
 </script>
 

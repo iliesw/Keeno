@@ -38,14 +38,14 @@
   .ib {
     display: inline-grid;
     place-items: center;
-    width: 26px;
-    height: 26px;
+    width: 28px;
+    height: 28px;
     border-radius: 6px;
     color: var(--muted);
     flex: none;
   }
   .ib:hover:not(:disabled) { color: var(--text); background: var(--hover); }
-  .ib.on { color: var(--accent); background: var(--accent-dim); }
+  .ib.on { color: var(--text); background: var(--accent-dim); box-shadow: inset 0 0 0 1px var(--border-strong); }
   .ib.sm { width: 20px; height: 20px; }
   .ib:disabled { opacity: 0.3; cursor: default; }
   .ib.rec { color: var(--err); }

@@ -1,0 +1,171 @@
+<script lang="ts">
+  // Home page numbers, each with a small animated illustration of what it means. The numbers count
+  // up when the strip scrolls into view, and each cell has a spotlight that follows the pointer.
+  import { Link } from '@inflector/keeno-router'
+  import Icon from './Icon.kn'
+  import type { Figure } from '../hairline/parcel'
+  import type { Stat } from './stats'
+
+  const { items } = props<{ items: Stat[] }>()
+
+  const root = ref<HTMLDivElement>()
+  /** 0..1, how far the count-up has run. The server renders the final numbers (1). */
+  const progress = state(1)
+  const format = (v: number, decimals = 0) => (v * progress).toFixed(decimals)
+
+  init(() => {
+    const el = root.current
+    if (!el) return
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return void el.classList.add('is-live')
+    progress.set(0)
+    let frame = 0
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) return
+        observer.disconnect()
+        el.classList.add('is-live')
+        const start = performance.now()
+        const tick = (now: number) => {
+          const t = Math.min(1, (now - start) / 1400)
+          progress.set(1 - Math.pow(2, -10 * t)) // ease-out expo
+          if (t < 1) frame = requestAnimationFrame(tick)
+          else progress.set(1)
+        }
+        frame = requestAnimationFrame(tick)
+      },
+      { threshold: 0.4 },
+    )
+    observer.observe(el)
+    return () => {
+      observer.disconnect()
+      cancelAnimationFrame(frame)
+    }
+  })
+
+  // The figures are Hairline figures (src/hairline), each the object behind its number: FIG.01 an
+  // open carton whose runtime parts lift out, FIG.02 a cabinet that opens only the drawer you point
+  // at, FIG.03 a music box pinned once that only plucks its comb, FIG.04 a sampler whose sixteen pads
+  // are the examples. The kernel and the figures load in the browser only, after the page is up.
+  type Loader = () => Promise<(HL: any) => Figure>
+  const sizeHost = ref<HTMLDivElement>()
+  const directHost = ref<HTMLDivElement>()
+  const onceHost = ref<HTMLDivElement>()
+  const gridHost = ref<HTMLDivElement>()
+  const readSize = state('')
+  const readDirect = state('')
+  const readOnce = state('')
+  const readGrid = state('')
+
+  function figure(host: { current?: HTMLDivElement | null }, load: Loader, onRead: (v: string) => void) {
+    init(() => {
+      const stage = host.current
+      if (!stage) return
+      let handle: { destroy(): void } | undefined
+      let gone = false
+      Promise.all([import('../hairline/kernel.js'), load()]).then(([{ default: HL }, make]) => {
+        if (gone) return
+        HL.inject(document)
+        const fig = make(HL)
+        stage.setAttribute('data-hairline', fig.name)
+        stage.setAttribute('role', 'img')
+        stage.setAttribute('aria-label', fig.means)
+        const svg = HL.mk('svg', { viewBox: '0 0 400 320', 'aria-hidden': 'true' }, stage)
+        let text = ''
+        const read = {
+          get textContent() {
+            return text
+          },
+          set textContent(v: string | null) {
+            onRead((text = v == null ? '' : String(v)))
+          },
+        }
+        handle = fig.mount({ stage, svg, read }, fig.range[1])
+      })
+      return () => {
+        gone = true
+        handle?.destroy()
+      }
+    })
+  }
+  figure(sizeHost, () => import('../hairline/parcel.js').then((m) => m.parcel), (v) => readSize.set(v))
+  figure(directHost, () => import('../hairline/catalog.js').then((m) => m.catalog), (v) => readDirect.set(v))
+  figure(onceHost, () => import('../hairline/musicbox.js').then((m) => m.musicbox), (v) => readOnce.set(v))
+  figure(gridHost, () => import('../hairline/pads.js').then((m) => m.pads), (v) => readGrid.set(v))
+  /** One frame for every figure: the full card width in a narrow card, the larger half of a wide one.
+   *  The drawings keep a margin inside their 400×320 stage, so the stage is scaled past its box to
+   *  fill the card; the kernel reads the pointer through the scaled box and strokes do not scale. */
+  const figureClass = (wide?: boolean) => [
+    'hairline relative z-[2] aspect-[5/4] flex-none self-center scale-[1.4] origin-center',
+    wide ? 'w-full max-w-md lg:-my-10 lg:-mr-4 lg:w-[58%] lg:max-w-none lg:scale-[1.65]' : 'w-full max-w-md',
+  ]
+  /** What the pointer is over in a card's figure, for its heading; nothing at rest. */
+  const shown = (v: string) => (v !== '' && v !== 'rest' ? v : '')
+
+  function spotlight(e: PointerEvent) {
+    const cell = e.currentTarget as HTMLElement
+    const r = cell.getBoundingClientRect()
+    cell.style.setProperty('--x', `${e.clientX - r.left}px`)
+    cell.style.setProperty('--y', `${e.clientY - r.top}px`)
+  }
+</script>
+
+<div class="relative">
+  <!-- Crosshairs on the corners, as in Geist -->
+  {['-top-[5px] -left-[5px]', '-top-[5px] -right-[5px]', '-bottom-[5px] -left-[5px]', '-bottom-[5px] -right-[5px]'].map((pos) => (
+    <svg key={pos} class={['pointer-events-none absolute z-10 size-[11px] text-neutral-400 dark:text-neutral-600', pos]} viewBox="0 0 11 11" aria-hidden="true">
+      <path d="M5.5 0V11M0 5.5H11" stroke="currentColor" stroke-width="1" />
+    </svg>
+  ))}
+<div ref={root} class="stats grid grid-cols-1 gap-px overflow-hidden rounded-2xl border bg-neutral-200 md:grid-cols-2 lg:grid-cols-3 dark:bg-neutral-800">
+  {items.map((s) => (
+    <div key={s.label} class={['stat group relative flex min-h-80 flex-col gap-6 overflow-hidden bg-white p-6 pt-16 md:p-7 md:pt-16 dark:bg-ink', s.wide && 'lg:col-span-2 lg:flex-row-reverse lg:items-center lg:gap-10']} onPointerMove={spotlight}>
+      <Link href={s.href} class="absolute inset-0 z-[1]" aria-label={`${s.kicker}: learn more`}></Link>
+      <div class="absolute inset-x-6 top-6 flex items-center justify-between gap-3 md:inset-x-7">
+        <span class="font-mono text-[11px] tracking-[0.08em] text-neutral-500 uppercase">
+          {s.kicker}
+          {s.art === 'size' && shown(readSize) && <span class="text-neutral-900 dark:text-white"> · {readSize}</span>}
+          {s.art === 'direct' && shown(readDirect) && <span class="text-neutral-900 dark:text-white"> · {readDirect}</span>}
+          {s.art === 'once' && shown(readOnce) && <span class="text-neutral-900 dark:text-white"> · {readOnce}</span>}
+          {s.art === 'grid' && shown(readGrid) && <span class="text-neutral-900 dark:text-white"> · {readGrid}</span>}
+        </span>
+        <span class="flex -translate-x-1 items-center gap-1 text-xs font-medium text-neutral-500 opacity-0 transition group-hover:translate-x-0 group-hover:opacity-100">Learn more <Icon name="arrowRight" /></span>
+      </div>
+
+      <!-- Illustration: a Hairline figure per card. -->
+      {s.art === 'size' && (
+        <div ref={sizeHost} class={figureClass(s.wide)}></div>
+      )}
+      {s.art === 'direct' && <div ref={directHost} class={figureClass(s.wide)}></div>}
+      {s.art === 'once' && <div ref={onceHost} class={figureClass(s.wide)}></div>}
+      {s.art === 'grid' && (
+        <div ref={gridHost} class={figureClass(s.wide)}></div>
+      )}
+
+      <div class="relative flex flex-1 mt-auto flex-col justify-end">
+        <p class="flex items-baseline gap-1 text-5xl font-semibold tracking-[-0.045em] tabular-nums md:text-6xl">
+          {format(s.value, s.decimals)}
+          {s.suffix && <span class="text-2xl font-medium tracking-tight text-neutral-400 md:text-3xl">{s.suffix}</span>}
+        </p>
+        <p class="mt-2 font-medium tracking-tight">{s.label}</p>
+        <p class="mt-1 max-w-sm text-sm leading-relaxed text-neutral-500">{s.text}</p>
+      </div>
+    </div>
+  ))}
+</div>
+</div>
+
+<style>
+  /* The Hairline figure fills its plates with the card's colour. */
+  .hairline {
+    --hairline-plate: var(--bg);
+  }
+  .stat-dots {
+    background-image: radial-gradient(color-mix(in srgb, var(--fg) 9%, transparent) 1px, transparent 1px);
+    background-size: 14px 14px;
+    mask-image: radial-gradient(ellipse 60% 55% at 70% 30%, black, transparent 75%);
+    opacity: 0.6;
+  }
+  .stat-glow {
+    background: radial-gradient(240px circle at var(--x, 50%) var(--y, 50%), color-mix(in srgb, var(--fg) 7%, transparent), transparent 70%);
+  }
+</style>

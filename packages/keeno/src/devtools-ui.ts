@@ -8,17 +8,29 @@
 import { mountDevtools } from './component'
 import Panel from './devtools/gen/Panel'
 import { COMPONENT_CSS } from './devtools/gen/styles'
-import { BASE_CSS } from './devtools/styles'
 
 const g = globalThis as any
 
+/** Geist and Geist Mono. @font-face rules don't apply from inside a shadow root, so the stylesheet goes in the document. */
+const FONTS = 'https://fonts.googleapis.com/css2?family=Geist:wght@400..600&family=Geist+Mono:wght@400..600&display=swap'
+
+function loadFonts() {
+  if (document.querySelector('link[data-keeno-devtools]')) return
+  const link = document.createElement('link')
+  link.rel = 'stylesheet'
+  link.href = FONTS
+  link.dataset.keenoDevtools = ''
+  document.head.append(link)
+}
+
 function boot() {
+  loadFonts()
   // On <html>, so apps that replace the content of <body> don't remove it.
   const host = document.createElement('keeno-devtools')
   host.setAttribute('style', 'all: initial; position: fixed; z-index: 2147483646; top: 0; left: 0; width: 0; height: 0;')
   const root = host.attachShadow({ mode: 'open' })
   const style = document.createElement('style')
-  style.textContent = BASE_CSS + COMPONENT_CSS
+  style.textContent = COMPONENT_CSS
   root.append(style)
   document.documentElement.append(host)
   mountDevtools(Panel, root, { host })

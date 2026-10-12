@@ -49,7 +49,7 @@ const highlight = HighlightStyle.define([
 
 const theme = EditorView.theme({
   '&': { height: '100%', fontSize: '13.5px', backgroundColor: 'transparent', color: 'var(--code-fg)' },
-  '.cm-scroller': { fontFamily: 'var(--font-code)', lineHeight: '1.65' },
+  '.cm-scroller': { fontFamily: 'var(--font-mono)', lineHeight: '1.65' },
   '.cm-content': { padding: '14px 0', caretColor: 'var(--brand)' },
   '.cm-gutters': { backgroundColor: 'transparent', border: 'none', color: 'var(--gutter)' },
   '.cm-lineNumbers .cm-gutterElement': { padding: '0 12px 0 16px' },
@@ -62,7 +62,7 @@ const theme = EditorView.theme({
   '&.cm-focused': { outline: 'none' },
   '.cm-foldGutter .cm-gutterElement': { color: 'var(--gutter)', cursor: 'pointer' },
   '.cm-tooltip': { backgroundColor: 'var(--panel)', border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden' },
-  '.cm-tooltip-autocomplete > ul > li[aria-selected]': { backgroundColor: 'var(--brand)', color: '#000' },
+  '.cm-tooltip-autocomplete > ul > li[aria-selected]': { backgroundColor: 'var(--brand)', color: 'var(--bg)' },
   '.cm-panels': { backgroundColor: 'var(--panel)', color: 'var(--fg)' },
 })
 

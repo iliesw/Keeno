@@ -68,9 +68,9 @@
   }
   .time {
     margin: 0;
-    font: 600 3.2rem/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+    font: 500 3.2rem/1 var(--font-mono);
     font-variant-numeric: tabular-nums;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.04em;
   }
   .row {
     display: flex;
@@ -80,19 +80,21 @@
     width: 76px;
     height: 76px;
     border-radius: 50%;
-    font-weight: 600;
   }
   .primary {
-    background: #16a34a;
-    border-color: #16a34a;
-    color: white;
+    border-color: var(--fg);
+    background: var(--fg);
+    color: var(--bg);
   }
   .primary:hover:not(:disabled) {
-    background: #15803d;
+    border-color: var(--fg);
+    background: color-mix(in srgb, var(--fg) 85%, var(--bg));
   }
-  .primary.stop {
-    background: #dc2626;
-    border-color: #dc2626;
+  .primary.stop,
+  .primary.stop:hover:not(:disabled) {
+    border-color: color-mix(in srgb, var(--danger) 40%, transparent);
+    background: color-mix(in srgb, var(--danger) 12%, var(--bg));
+    color: var(--danger);
   }
   ol {
     width: 100%;
@@ -107,9 +109,15 @@
     justify-content: space-between;
     padding: 0.4rem 0.25rem;
     border-bottom: 1px solid var(--border);
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
     font-variant-numeric: tabular-nums;
   }
-  li.best {
-    color: #16a34a;
+  li span:first-child {
+    color: var(--muted);
+  }
+  li.best,
+  li.best span:first-child {
+    color: var(--success);
   }
 </style>

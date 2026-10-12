@@ -81,14 +81,14 @@
       ))}
     </ul>
   )}
-  <p class="count">{remaining} of {todos.length} left</p>
+  <p class="count text-sm">{remaining} of {todos.length} left</p>
 </main>
 
 <style>
   :global(body) {
     margin: 0;
     font-family: system-ui, sans-serif;
-    background: #f6f7f9;
+    @apply bg-neutral-500;
   }
   main {
     max-width: 28rem;
@@ -100,7 +100,7 @@
   }
   h1 {
     margin-top: 0;
-    color: teal;
+    @apply text-brand;
   }
   form,
   .toolbar {

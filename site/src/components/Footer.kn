@@ -1,7 +1,10 @@
 <script lang="ts">
   import { Link } from '@inflector/keeno-router'
-  import Logo from './Logo.kn'
   import { GITHUB } from '../icons'
+
+  // `narrow` matches pages whose content is 72rem wide (the home page).
+  const { narrow = false } = props<{ narrow?: boolean }>()
+  const container = derived(() => (narrow ? 'max-w-6xl px-4 md:px-6' : 'max-w-400 px-6 md:px-10'))
 
   const columns = [
     {
@@ -25,9 +28,9 @@
     {
       title: 'Reference',
       links: [
+        { label: 'Cheatsheet', href: '/docs/cheatsheet' },
         { label: 'API reference', href: '/docs/api' },
         { label: 'Tooling', href: '/docs/tooling' },
-        { label: 'Versioning', href: '/docs/stability' },
         { label: 'llms.txt', href: `${GITHUB}/blob/main/llms.txt` },
       ],
     },
@@ -37,35 +40,99 @@
         { label: 'GitHub', href: GITHUB },
         { label: 'Issues', href: `${GITHUB}/issues` },
         { label: 'Contributing', href: `${GITHUB}/blob/main/CONTRIBUTING.md` },
-        { label: 'Security', href: '/docs/security' },
       ],
     },
   ]
+
+  const legal = [
+    { label: 'MIT License', href: `${GITHUB}/blob/main/LICENSE` },
+    { label: 'Security', href: '/docs/security' },
+    { label: 'Versioning', href: '/docs/stability' },
+  ]
+  const external = (href: string) => href.startsWith('http')
 </script>
 
-<footer class="mt-32 border-t">
-  <div class="mx-auto grid w-full max-w-400 gap-10 px-6 py-14 md:grid-cols-[1.4fr_repeat(4,1fr)] md:px-10">
-    <div class="flex flex-col gap-3">
-      <Link href="/" class="w-fit"><Logo /></Link>
-      <p class="max-w-64 text-sm leading-relaxed text-neutral-500">The compiled, signal-based UI framework. HTML-first components, fine-grained updates, no virtual DOM.</p>
-    </div>
+<footer class="mt-32 overflow-hidden border-t">
+  <div class={['mx-auto grid w-full grid-cols-2 gap-x-6 gap-y-12 pt-16 pb-10 md:grid-cols-5', container]}>
     {columns.map((c) => (
-      <div key={c.title} class="flex flex-col gap-2.5 text-sm">
-        <p class="font-bold">{c.title}</p>
-        {c.links.map((l) => (
-          <span key={l.label} class="contents">
-            {l.href.startsWith('http') ? (
-              <a href={l.href} target="_blank" rel="noreferrer" class="w-fit text-neutral-500 transition-colors hover:text-neutral-900 dark:hover:text-white">{l.label}</a>
-            ) : (
-              <Link href={l.href} class="w-fit text-neutral-500 transition-colors hover:text-neutral-900 dark:hover:text-white">{l.label}</Link>
-            )}
-          </span>
-        ))}
+      <div key={c.title} class="flex flex-col gap-4">
+        <p class="font-mono text-[11px] tracking-widest text-neutral-500 uppercase">{c.title}</p>
+        <div class="flex flex-col gap-1.5 border-l pl-3.5">
+          {c.links.map((l) => (
+            <span key={l.label} class="contents">
+              {external(l.href) ? (
+                <a href={l.href} target="_blank" rel="noreferrer" class="foot-link">{l.label}</a>
+              ) : (
+                <Link href={l.href} class="foot-link">{l.label}</Link>
+              )}
+            </span>
+          ))}
+        </div>
       </div>
     ))}
-  </div>
-  <div class="mx-auto flex w-full max-w-400 flex-col justify-between gap-2 border-t px-6 py-6 text-xs text-neutral-500 sm:flex-row md:px-10">
-    <p>Released under the MIT License.</p>
-    <p>This site is built with Keeno: server-rendered, then hydrated.</p>
+
+    <!-- The last column runs the full height, beside the wordmark -->
+    <div class="col-span-2 flex flex-col gap-4 md:col-span-1 md:row-span-2">
+      <p class="font-mono text-[11px] tracking-widest text-neutral-500 uppercase">Start</p>
+      <div class="flex flex-1 flex-col items-start gap-3 border-l pl-3.5">
+        <Link href="/docs/getting-started" class="flex h-9 items-center rounded-full bg-neutral-900 px-4 font-mono text-[11px] tracking-wider text-white uppercase transition hover:bg-neutral-700 dark:bg-white dark:text-black dark:hover:bg-neutral-200">Get started</Link>
+        <Link href="/playground" class="flex h-9 items-center rounded-full border border-neutral-300 px-4 font-mono text-[11px] tracking-wider uppercase transition hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-900">Open the playground</Link>
+        <div class="mt-6 flex flex-col gap-2.5">
+          {legal.map((l) => (
+            <span key={l.label} class="contents">
+              {external(l.href) ? (
+                <a href={l.href} target="_blank" rel="noreferrer" class="foot-small">{l.label}</a>
+              ) : (
+                <Link href={l.href} class="foot-small">{l.label}</Link>
+              )}
+            </span>
+          ))}
+        </div>
+        <div class="mt-auto flex flex-col gap-1.5 pt-8">
+          <a href="https://inflector.io" target="_blank" rel="noreferrer" class="group flex w-fit items-baseline gap-1.5 text-neutral-500 transition hover:text-neutral-900 dark:hover:text-white">
+            <span class="font-mono text-[11px] tracking-wider uppercase">Made by</span>
+            <span class="font-[Inflector] text-base tracking-wide text-neutral-900 dark:text-white">INFLECTOR</span>
+          </a>
+          <p class="font-mono text-[11px] tracking-wider text-neutral-500 uppercase">© {new Date().getFullYear()} Keeno</p>
+        </div>
+      </div>
+    </div>
+
+    <Link href="/" aria-label="Keeno home" class="foot-mark col-span-2 flex items-end self-end leading-none md:col-span-4">
+      <span>Keeno</span>
+    </Link>
   </div>
 </footer>
+
+<style>
+  .foot-link {
+    width: fit-content;
+    font-size: 1.2rem;
+    letter-spacing: -0.02em;
+    color: color-mix(in srgb, var(--fg) 82%, transparent);
+    transition: color 0.15s;
+  }
+  .foot-link:hover {
+    color: var(--muted);
+  }
+  .foot-small {
+    width: fit-content;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    transition: color 0.15s;
+  }
+  .foot-small:hover {
+    color: var(--fg);
+  }
+  /* The wordmark fills the four link columns. */
+  .foot-mark {
+    font-family: 'Inflector', var(--font-sans);
+    font-size: clamp(3.5rem, 19vw, 13.75rem);
+    letter-spacing: -0.03em;
+    margin-bottom: -0.12em;
+    color: var(--fg);
+  }
+</style>

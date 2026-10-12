@@ -96,15 +96,17 @@
     gap: 1px;
     padding: 1px;
     background: var(--border);
-    border-radius: 10px;
+    border-radius: 0.75rem;
     overflow: hidden;
     touch-action: none;
   }
   .px {
+    min-height: 0;
     padding: 0;
     border: 0;
     border-radius: 0;
     background: var(--bg);
+    box-shadow: none;
     transition: none;
   }
   .px:hover {
@@ -122,9 +124,10 @@
   .swatch {
     width: 32px;
     height: 32px;
+    min-height: 0;
     padding: 0;
-    border-radius: 8px;
-    border: 2px solid var(--border);
+    border-radius: 0.5rem;
+    border: 1px solid color-mix(in srgb, var(--fg) 12%, transparent);
   }
   .swatch.active {
     outline: 2px solid var(--fg);
@@ -132,11 +135,15 @@
   }
   .eraser {
     background: var(--surface);
+    color: var(--muted);
     font-size: 14px;
   }
   .actions {
     display: flex;
     gap: 0.4rem;
+  }
+  .actions button {
+    font-size: 0.8rem;
   }
   .hint {
     margin: 0;

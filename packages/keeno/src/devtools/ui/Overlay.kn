@@ -32,11 +32,12 @@
     inset: 0;
     pointer-events: none;
     corner-shape: squircle;
+
   }
   .hl {
     position: fixed;
-    background: rgba(108, 182, 255, 0.18);
-    outline: 1.5px solid #6cb6ff;
+    background: rgba(82, 168, 255, 0.14);
+    outline: 1.5px solid #52a8ff;
     border-radius: 2px;
     transition: all 0.06s ease-out;
   }
@@ -44,19 +45,19 @@
     position: fixed;
     background: var(--bg);
     border: 1px solid var(--border);
-    border-radius: 5px;
-    padding: 1px 7px;
+    border-radius: 6px;
+    padding: 2px 8px;
     white-space: nowrap;
-    font-size: 11px;
+    font: 12px/1.5 var(--mono);
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
   }
-  .hl-label .name { color: var(--tag); font-weight: 700; }
+  .hl-label .name { color: var(--tag); font-weight: 500; }
   .hl-label .dim { color: var(--muted); }
   .flash {
     position: fixed;
     border-radius: 3px;
-    outline: 2px solid var(--accent);
-    background: rgba(245, 185, 66, 0.12);
+    outline: 2px solid #52a8ff;
+    background: rgba(82, 168, 255, 0.1);
     animation: flash 0.7s ease-out forwards;
   }
   @keyframes flash { from { opacity: 1; } to { opacity: 0; } }

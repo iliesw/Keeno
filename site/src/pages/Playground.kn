@@ -340,7 +340,7 @@
     </div>
     <div class="ml-auto flex items-center gap-1.5">
       <label class="pg-btn hidden cursor-pointer sm:flex" title="Load Tailwind CSS in the preview">
-        <input type="checkbox" bind:checked={tailwind} class="accent-orange-500" />
+        <input type="checkbox" bind:checked={tailwind} class="accent-neutral-900 dark:accent-white" />
         <img src="/icons/tailwindcss.svg" width="14" height="14" alt="" /> Tailwind
       </label>
       <button type="button" class="pg-btn" onClick={reset} title="Reset to the example's original code">

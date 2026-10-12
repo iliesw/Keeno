@@ -1,7 +1,7 @@
 // Generated from ../ui/Panel.kn by scripts/build-devtools.ts. Edit the .kn file, then run `bun run devtools`.
 // @ts-nocheck
 import { state, derived, init, update } from "../../index";
-import { insert as _$insert, on as _$on, and as _$and, attr as _$attr, createComponent as _$createComponent, mapKeyed as _$mapKeyed, template as _$template } from "../../internal";
+import { insert as _$insert, attr as _$attr, on as _$on, and as _$and, createComponent as _$createComponent, mapKeyed as _$mapKeyed, template as _$template } from "../../internal";
 // The dev tools panel: owns the UI state and talks to the runtime through `__KEENO_DEVTOOLS__`.
 // It is mounted with `mountDevtools`, so the dev tools never inspect or react to it.
 import { provide } from "../../index";
@@ -12,7 +12,7 @@ import Perf from "./Perf";
 import Timeline from "./Timeline";
 import { ActionsContext, DEFAULT_PREFS, STORES, getApi, rectOf, type Actions, type Box, type DevComponent, type DevEvent, type Prefs, type Tab, type TreeRow } from '../shared';
 const _tmpl$1 = _$template("<span class=\"fab-err keeno-a46bb142\"></span>");
-const _tmpl$2 = _$template("<button class=\"fab keeno-a46bb142\" title=\"Keeno dev tools (Alt+Shift+D)\"><span class=\"logo-mark keeno-a46bb142\"></span><span class=\"fab-name keeno-a46bb142\">Keeno</span><span class=\"fab-count keeno-a46bb142\"></span></button>");
+const _tmpl$2 = _$template("<button class=\"keeno-a46bb142\" title=\"Keeno dev tools (Alt+Shift+D)\"><span class=\"logo-mark keeno-a46bb142\"></span><span class=\"fab-name keeno-a46bb142\">Keeno</span></button>");
 const _tmpl$3 = _$template("<button class=\"keeno-a46bb142\" role=\"tab\"></button>");
 const _tmpl$4 = _$template("<div class=\"keeno-a46bb142\" role=\"dialog\" aria-label=\"Keeno dev tools\"><div class=\"resize keeno-a46bb142\"></div><header class=\"keeno-a46bb142\"><div class=\"logo keeno-a46bb142\"><span class=\"logo-mark keeno-a46bb142\"></span><span class=\"keeno-a46bb142\">Keeno</span></div><div class=\"tabs keeno-a46bb142\" role=\"tablist\"></div><div class=\"spacer keeno-a46bb142\"></div><!----><!----><!----></header><div class=\"body keeno-a46bb142\"><!----><!----></div></div>");
 export default function Panel($$props) {
@@ -59,6 +59,10 @@ export default function Panel($$props) {
   const timelineQuery = state('');
   /** The panel width while it is being resized (saved on release). */
   const liveWidth = state<number | null>(null);
+  /** True while the panel plays its close animation; it is removed afterwards. */
+  const closing = state(false);
+  /** True while the panel animates out before moving to the other side. */
+  const moving = state(false);
   const tree = derived(() => {
     tick.get();
     return api.components();
@@ -144,10 +148,42 @@ export default function Panel($$props) {
       [key]: value
     });
   }
+
+  /** Matches the `panel-out` animation. */
+  const CLOSE_MS = 200;
+  /** Space between the panel and the edge of the window (`--gap` in the styles). */
+  const GAP = 4;
+  const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let closeTimer: ReturnType<typeof setTimeout> | undefined;
   function setOpen(open: boolean) {
-    setPref('open', open);
-    pulses.set({});
-    if (!open) highlight.set(null);
+    clearTimeout(closeTimer);
+    if (open) {
+      closing.set(false);
+      if (!prefs.peek().open) setPref('open', true);
+      pulses.set({});
+      return;
+    }
+    if (!prefs.peek().open || closing.peek()) return;
+    // Keep the panel mounted while it animates out.
+    closing.set(true);
+    highlight.set(null);
+    closeTimer = setTimeout(() => {
+      closing.set(false);
+      setPref('open', false);
+      pulses.set({});
+    }, reducedMotion() ? 0 : CLOSE_MS);
+  }
+
+  /** Move the panel to the other side: it slides out toward its edge, then in from the other one. */
+  function dock() {
+    if (moving.peek() || closing.peek()) return;
+    const flip = () => setPref('side', prefs.peek().side === 'right' ? 'left' : 'right');
+    if (reducedMotion()) return flip();
+    moving.set(true);
+    setTimeout(() => {
+      flip();
+      moving.set(false);
+    }, CLOSE_MS);
   }
   function setTab(tab: Tab) {
     setPref('tab', tab);
@@ -252,8 +288,8 @@ export default function Panel($$props) {
     handle.setPointerCapture(e.pointerId);
     handle.classList.add('dragging');
     const onMove = (ev: PointerEvent) => {
-      const w = prefs.peek().side === 'right' ? innerWidth - ev.clientX : ev.clientX;
-      liveWidth.set(Math.max(300, Math.min(innerWidth, Math.round(w))));
+      const w = prefs.peek().side === 'right' ? innerWidth - GAP - ev.clientX : ev.clientX - GAP;
+      liveWidth.set(Math.max(300, Math.min(innerWidth - 2 * GAP, Math.round(w))));
     };
     const onUp = () => {
       handle.removeEventListener('pointermove', onMove);
@@ -307,7 +343,7 @@ export default function Panel($$props) {
       if (!e.altKey || !e.shiftKey || e.ctrlKey || e.metaKey) return;
       if (e.code === 'KeyD') {
         e.preventDefault();
-        setOpen(!prefs.peek().open);
+        setOpen(!prefs.peek().open || closing.peek());
       } else if (e.code === 'KeyC') {
         e.preventDefault();
         if (picking.peek()) stopPicker();else startPicker();
@@ -317,7 +353,7 @@ export default function Panel($$props) {
     window.addEventListener('keydown', onKey, true);
     window.addEventListener('resize', unhighlight);
     window.addEventListener('scroll', unhighlight, true);
-    console.info('%c◆ Keeno%c dev tools ready: Alt+Shift+D to open, Alt+Shift+C to pick a component.', 'color:#f5b942;font-weight:bold', 'color:inherit');
+    console.info('%cKeeno%c dev tools ready: Alt+Shift+D to open, Alt+Shift+C to pick a component.', 'font-weight:bold', 'color:inherit');
     return () => {
       off();
       stopPicker();
@@ -335,11 +371,8 @@ export default function Panel($$props) {
     }
   }, "keeno-a46bb142"), _$and(() => !prefs.get().open, () => {
     const _el$2 = _tmpl$2();
-    const _el$3 = _el$2.firstChild;
-    const _el$4 = _el$3.nextSibling;
-    const _el$5 = _el$4.nextSibling;
+    _$attr(_el$2, "class", () => ['fab', prefs.get().side], "keeno-a46bb142");
     _$on(_el$2, "click", () => setOpen(true));
-    _$insert(_el$5, () => count.get());
     _$insert(_el$2, _$and(() => errorCount.get() > 0, () => {
       const _el$1 = _tmpl$1();
       _$insert(_el$1, () => errorCount.get());
@@ -347,56 +380,56 @@ export default function Panel($$props) {
     }));
     return _el$2;
   }), _$and(() => prefs.get().open, () => {
-    const _el$7 = _tmpl$4();
-    const _el$8 = _el$7.firstChild;
+    const _el$4 = _tmpl$4();
+    const _el$5 = _el$4.firstChild;
+    const _el$6 = _el$5.nextSibling;
+    const _el$7 = _el$6.firstChild;
+    const _el$8 = _el$7.nextSibling;
     const _el$9 = _el$8.nextSibling;
-    const _el$10 = _el$9.firstChild;
+    const _el$10 = _el$9.nextSibling;
     const _el$11 = _el$10.nextSibling;
     const _el$12 = _el$11.nextSibling;
-    const _el$13 = _el$12.nextSibling;
-    const _el$14 = _el$13.nextSibling;
+    const _el$13 = _el$6.nextSibling;
+    const _el$14 = _el$13.firstChild;
     const _el$15 = _el$14.nextSibling;
-    const _el$16 = _el$9.nextSibling;
-    const _el$17 = _el$16.firstChild;
-    const _el$18 = _el$17.nextSibling;
-    _$attr(_el$7, "class", () => ['panel', prefs.get().side === 'left' && 'left'], "keeno-a46bb142");
-    _$attr(_el$7, "style", () => `width:min(${width.get()}px, 100vw)`);
-    _$on(_el$8, "pointerdown", startResize);
-    _$insert(_el$11, _$mapKeyed(() => TABS, t => t.id, t => {
-      const _el$6 = _tmpl$3();
-      _$attr(_el$6, "class", () => ['tab', prefs.get().tab === t.get().id && 'active'], "keeno-a46bb142");
-      _$attr(_el$6, "aria-selected", () => prefs.get().tab === t.get().id ? 'true' : 'false');
-      _$on(_el$6, "click", () => setTab(t.get().id));
-      _$insert(_el$6, () => t.get().label);
-      return _el$6;
+    _$attr(_el$4, "class", () => ['panel', prefs.get().side === 'left' && 'left', (closing.get() || moving.get()) && 'closing'], "keeno-a46bb142");
+    _$attr(_el$4, "style", () => `width:min(${width.get()}px, calc(100vw - ${2 * GAP}px))`);
+    _$on(_el$5, "pointerdown", startResize);
+    _$insert(_el$8, _$mapKeyed(() => TABS, t => t.id, t => {
+      const _el$3 = _tmpl$3();
+      _$attr(_el$3, "class", () => ['tab', prefs.get().tab === t.get().id && 'active'], "keeno-a46bb142");
+      _$attr(_el$3, "aria-selected", () => prefs.get().tab === t.get().id ? 'true' : 'false');
+      _$on(_el$3, "click", () => setTab(t.get().id));
+      _$insert(_el$3, () => t.get().label);
+      return _el$3;
     }));
-    _$insert(_el$9, _$createComponent(IconButton, {
+    _$insert(_el$6, _$createComponent(IconButton, {
       icon: "pick",
       title: "Pick a component on the page (Alt+Shift+C)",
       get on() {
         return picking.get();
       },
       onClick: () => picking.get() ? stopPicker() : startPicker()
-    }, "keeno-a46bb142"), _el$13);
-    _$insert(_el$9, _$createComponent(IconButton, {
+    }, "keeno-a46bb142"), _el$10);
+    _$insert(_el$6, _$createComponent(IconButton, {
       icon: "flash",
       title: "Highlight updates",
       get on() {
         return prefs.get().flash;
       },
       onClick: () => setPref('flash', !prefs.get().flash)
-    }, "keeno-a46bb142"), _el$14);
-    _$insert(_el$9, _$createComponent(IconButton, {
+    }, "keeno-a46bb142"), _el$11);
+    _$insert(_el$6, _$createComponent(IconButton, {
       icon: "dock",
       title: "Dock to the other side",
-      onClick: () => setPref('side', prefs.get().side === 'right' ? 'left' : 'right')
-    }, "keeno-a46bb142"), _el$15);
-    _$insert(_el$9, _$createComponent(IconButton, {
+      onClick: dock
+    }, "keeno-a46bb142"), _el$12);
+    _$insert(_el$6, _$createComponent(IconButton, {
       icon: "close",
       title: "Close (Alt+Shift+D)",
       onClick: () => setOpen(false)
     }, "keeno-a46bb142"));
-    _$insert(_el$16, _$and(() => prefs.get().tab === 'components', () => _$createComponent(Components, {
+    _$insert(_el$13, _$and(() => prefs.get().tab === 'components', () => _$createComponent(Components, {
       get rows() {
         return rows.get();
       },
@@ -419,8 +452,8 @@ export default function Panel($$props) {
       get split() {
         return prefs.get().split;
       }
-    }, "keeno-a46bb142")), _el$17);
-    _$insert(_el$16, _$and(() => prefs.get().tab === 'timeline', () => _$createComponent(Timeline, {
+    }, "keeno-a46bb142")), _el$14);
+    _$insert(_el$13, _$and(() => prefs.get().tab === 'timeline', () => _$createComponent(Timeline, {
       get events() {
         return events.get();
       },
@@ -433,12 +466,12 @@ export default function Panel($$props) {
       onQuery: q => timelineQuery.set(q),
       onPause: pause,
       onClear: clear
-    }, "keeno-a46bb142")), _el$18);
-    _$insert(_el$16, _$and(() => prefs.get().tab === 'perf', () => _$createComponent(Perf, {
+    }, "keeno-a46bb142")), _el$15);
+    _$insert(_el$13, _$and(() => prefs.get().tab === 'perf', () => _$createComponent(Perf, {
       get stats() {
         return stats.get();
       }
     }, "keeno-a46bb142")));
-    return _el$7;
+    return _el$4;
   })];
 }

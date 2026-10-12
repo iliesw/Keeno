@@ -5,8 +5,10 @@
   import { nav } from '../docs'
   import { GITHUB } from '../icons'
   import { searchOpen } from '../search'
-  import { VERSION } from '../version'
 
+  // `narrow` lines the bar up with pages whose content is 72rem wide (the home page).
+  const { narrow = false } = props<{ narrow?: boolean }>()
+  const container = derived(() => (narrow ? 'max-w-6xl px-4 md:px-6' : 'max-w-400 px-6 md:px-10'))
   const route = useRoute()
   const menu = state(false)
   const scrolled = state(false)
@@ -28,19 +30,32 @@
   }
 
   // The new theme grows as a circle from the button, where the browser supports view transitions.
+  // Colour transitions are off while it switches: otherwise the snapshot of the new theme is taken
+  // mid-fade, and the page snaps to its real colours when the circle finishes.
   function toggleTheme(e: MouseEvent) {
-    const next = !document.documentElement.classList.contains('dark')
-    const doc = document as Document & { startViewTransition?: (cb: () => void) => { ready: Promise<void> } }
-    if (!doc.startViewTransition || matchMedia('(prefers-reduced-motion: reduce)').matches) return applyTheme(next)
+    const root = document.documentElement
+    const next = !root.classList.contains('dark')
+    const doc = document as Document & { startViewTransition?: (cb: () => void) => { ready: Promise<void>; finished: Promise<void> } }
+    root.classList.add('theme-switching')
+    const done = () => root.classList.remove('theme-switching')
+    if (!doc.startViewTransition || matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      applyTheme(next)
+      return done()
+    }
     const x = e.clientX
     const y = e.clientY
-    const r = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y))
-    doc.startViewTransition(() => applyTheme(next)).ready.then(() => {
-      document.documentElement.animate(
+    // past the farthest corner, so the screen is covered well before the curve's slow tail
+    const r = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y)) * 1.25
+    const t = doc.startViewTransition(() => applyTheme(next))
+    t.ready.then(() => {
+      root.animate(
         { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${r}px at ${x}px ${y}px)`] },
-        { duration: 450, easing: 'cubic-bezier(.4,0,.2,1)', pseudoElement: '::view-transition-new(root)' },
+        { duration: 420, easing: 'cubic-bezier(.4,0,.2,1)', fill: 'forwards', pseudoElement: '::view-transition-new(root)' },
       )
     })
+    // finished settles when the circle is done; the timer covers a transition that never runs
+    t.finished.then(done, done)
+    setTimeout(done, 1000)
   }
 
   init(() => {
@@ -64,20 +79,19 @@
 <header
   class={[
     'fixed inset-x-0 top-0 z-40 border-b transition-[background,border-color,backdrop-filter] duration-200',
-    scrolled || menu ? 'border-neutral-200/80 bg-white/75 backdrop-blur-xl dark:border-neutral-800/80 dark:bg-ink/75' : 'border-transparent',
+    scrolled || menu ? 'border-neutral-200 bg-white/80 backdrop-blur-xl backdrop-saturate-150 dark:border-neutral-800 dark:bg-ink/80' : 'border-transparent',
   ]}
 >
-  <div class="mx-auto flex h-14 w-full max-w-400 items-center justify-between gap-3 px-4">
+  <div class={['mx-auto flex h-14 w-full items-center justify-between gap-3', container]}>
     <div class="flex items-center gap-1">
-      <Link href="/" class="mr-1 flex items-center gap-2" aria-label="Keeno home"><Logo /></Link>
-      <Link href="/docs/stability" class="mr-3 hidden rounded-full border px-2 py-0.5 font-code text-[10px] text-neutral-500 transition hover:text-neutral-900 sm:block dark:hover:text-white">v{VERSION}</Link>
+      <Link href="/" class="mr-4 flex items-center gap-2" aria-label="Keeno home"><Logo /></Link>
       {tabs.map((t) => (
         <Link
           key={t.name}
           href={t.href}
           class={[
-            'hidden rounded-lg px-2.5 py-1 text-sm font-bold transition-colors md:block',
-            t.match(route.path) ? 'bg-neutral-200/70 text-neutral-900 dark:bg-neutral-800 dark:text-white' : 'text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white',
+            'hidden rounded-full px-3 py-1.5 text-sm transition-colors md:block',
+            t.match(route.path) ? 'text-neutral-900 dark:text-white' : 'text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-neutral-900 dark:hover:text-white',
           ]}
         >
           {t.name}
@@ -88,36 +102,36 @@
       <button
         type="button"
         onClick={() => searchOpen.set(true)}
-        class="group flex h-8.5 cursor-pointer items-center gap-2 rounded-lg border bg-neutral-100/70 pr-1.5 pl-2.5 text-sm text-neutral-500 transition hover:border-neutral-300 hover:text-neutral-900 sm:w-56 dark:bg-neutral-900/70 dark:hover:border-neutral-700 dark:hover:text-white"
+        class="group flex h-8 cursor-pointer items-center gap-2 rounded-lg border bg-white pr-1.5 pl-2.5 text-sm text-neutral-500 shadow-xs transition hover:border-neutral-300 hover:text-neutral-900 sm:w-60 dark:bg-neutral-950 dark:hover:border-neutral-700 dark:hover:text-white"
         aria-label="Search"
       >
         <Icon name="search" />
         <span class="hidden flex-1 text-left sm:block">Search…</span>
         <span class="hidden items-center gap-0.5 sm:flex"><kbd class="search-kbd">{isMac ? '⌘' : 'Ctrl'}</kbd><kbd class="search-kbd">K</kbd></span>
       </button>
-      <a href={GITHUB} target="_blank" rel="noreferrer" aria-label="GitHub" class="rounded-lg p-2 text-neutral-500 transition hover:bg-neutral-200/70 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-white">
+      <a href={GITHUB} target="_blank" rel="noreferrer" aria-label="GitHub" class="grid size-9 place-items-center rounded-lg text-neutral-500 transition hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-neutral-900 dark:hover:text-white">
         <Icon name="github" />
       </a>
-      <button type="button" aria-label={dark ? 'Switch to light theme' : 'Switch to dark theme'} onClick={toggleTheme} class="cursor-pointer rounded-lg p-2 text-neutral-500 transition hover:bg-neutral-200/70 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-white">
+      <button type="button" aria-label={dark ? 'Switch to light theme' : 'Switch to dark theme'} onClick={toggleTheme} class="grid size-9 cursor-pointer place-items-center rounded-lg text-neutral-500 transition hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-neutral-900 dark:hover:text-white">
         <Icon name={dark ? 'sun' : 'moon'} />
       </button>
-      <button type="button" aria-label="Menu" aria-expanded={menu} onClick={() => menu.set(!menu)} class="cursor-pointer rounded-lg p-2 transition hover:bg-neutral-200/70 min-[1080px]:hidden dark:hover:bg-neutral-800">
+      <button type="button" aria-label="Menu" aria-expanded={menu} onClick={() => menu.set(!menu)} class="grid size-9 cursor-pointer place-items-center rounded-lg transition hover:bg-neutral-100 min-[1080px]:hidden dark:hover:bg-neutral-900">
         <Icon name={menu ? 'close' : 'menu'} />
       </button>
     </div>
   </div>
   {menu && (
-    <nav class="animate-pop mx-auto max-h-[calc(100svh-4rem)] max-w-400 overflow-y-auto px-4 pb-4 min-[1080px]:hidden" aria-label="Site">
+    <nav class={['animate-pop mx-auto max-h-[calc(100svh-4rem)] overflow-y-auto pb-4 min-[1080px]:hidden', container]} aria-label="Site">
       <div class="mb-4 grid grid-cols-2 gap-1.5 md:hidden">
         {tabs.map((t) => (
-          <Link key={t.name} href={t.href} class={['rounded-lg border px-3 py-2 text-sm font-bold', t.match(route.path) && 'border-orange-400 text-orange-500']}>{t.name}</Link>
+          <Link key={t.name} href={t.href} class={['rounded-lg border px-3 py-2 text-sm font-medium', t.match(route.path) && 'border-neutral-900 dark:border-white']}>{t.name}</Link>
         ))}
       </div>
       {nav.map((group) => (
         <div key={group.title} class="mb-3 flex flex-col gap-0.5">
-          <p class="px-2 pb-1 text-xs font-bold tracking-wider text-neutral-500 uppercase">{group.title}</p>
+          <p class="px-2 pb-1 text-xs font-medium text-neutral-500">{group.title}</p>
           {group.items.map((item) => (
-            <Link key={item.slug} href={`/docs/${item.slug}`} exact class="rounded-md px-2 py-1.5 text-sm font-medium hover:bg-neutral-200/70 dark:hover:bg-neutral-800 [&.active]:bg-neutral-200/70 [&.active]:text-orange-600 dark:[&.active]:bg-neutral-800 dark:[&.active]:text-orange-400">{item.title}</Link>
+            <Link key={item.slug} href={`/docs/${item.slug}`} exact class="rounded-md px-2 py-1.5 text-sm font-medium hover:bg-neutral-100 dark:hover:bg-neutral-900 [&.active]:bg-neutral-100 [&.active]:text-neutral-900 dark:[&.active]:bg-neutral-900 dark:[&.active]:text-white">{item.title}</Link>
           ))}
         </div>
       ))}

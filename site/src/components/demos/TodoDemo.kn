@@ -20,16 +20,16 @@
     bind:value={draft}
     onKeyDown={(e: KeyboardEvent) => e.key === 'Enter' && add()}
     placeholder="What needs doing? ⏎"
-    class="w-full rounded-lg border bg-white px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-orange-400 dark:bg-neutral-800"
+    class="w-full rounded-lg border bg-white px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-neutral-400 dark:bg-neutral-800"
   />
   <ul class="flex flex-col gap-1">
     {todos.map((t) => (
       <li key={t.id} class="group flex items-center gap-2 rounded-md px-2 py-1 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800">
-        <input type="checkbox" checked={t.done} onChange={() => toggle(t.id)} class="accent-orange-500" />
+        <input type="checkbox" checked={t.done} onChange={() => toggle(t.id)} class="accent-neutral-900 dark:accent-white" />
         <span class={['flex-1', t.done && 'line-through opacity-50']}>{t.text}</span>
         <button type="button" class="cursor-pointer opacity-0 group-hover:opacity-60" aria-label="Remove" onClick={() => remove(t.id)}>×</button>
       </li>
     ))}
   </ul>
-  <p class="font-code text-xs opacity-60">{left} left</p>
+  <p class="font-mono text-xs opacity-60">{left} left</p>
 </div>

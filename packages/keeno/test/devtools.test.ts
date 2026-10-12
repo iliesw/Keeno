@@ -160,6 +160,9 @@ describe('dev tools panel', () => {
     // Close, open and switch tabs: plenty of panel state changes and re-renders.
     ;(root.querySelector('button[title^="Close"]') as HTMLElement).click()
     await frame()
+    // The panel animates out before it is removed.
+    expect(root.querySelector('.panel.closing')).not.toBeNull()
+    await new Promise((r) => setTimeout(r, 250))
     ;(root.querySelector('.fab') as HTMLElement).click()
     await frame()
     ;(root.querySelectorAll('.tab')[2] as HTMLElement).click()

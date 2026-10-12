@@ -8,26 +8,51 @@
 </script>
 
 <section style={`--c:${color(accent)}`}>
-  <h3>{title}</h3>
-  <p>Nested two levels deep, no props passed down.</p>
-  <Badge count={count} />
+  <header>
+    <span class="icon">{title[0]}</span>
+    <h3>{title}</h3>
+    <Badge count={count} />
+  </header>
+  <p>Two levels deep, no props passed down.</p>
 </section>
 
 <style>
   section {
-    padding: 1rem;
+    padding: 0.875rem;
     border: 1px solid var(--border);
-    border-top: 3px solid var(--c);
-    border-radius: 12px;
-    transition: border-color 0.3s;
+    border-radius: 0.75rem;
+    background: var(--bg);
+  }
+  header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+  .icon {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 0.4rem;
+    background: color-mix(in srgb, var(--c) 15%, transparent);
+    color: var(--c);
+    font-size: 0.75rem;
+    font-weight: 600;
+    transition:
+      background 0.3s,
+      color 0.3s;
   }
   h3 {
-    margin: 0 0 0.25rem;
-    color: var(--c);
-    transition: color 0.3s;
+    flex: 1;
+    margin: 0;
+    font-size: 0.9rem;
+    font-weight: 500;
+    letter-spacing: 0;
   }
   p {
-    margin: 0 0 0.75rem;
+    margin: 0;
     font-size: 0.8rem;
     color: var(--muted);
   }

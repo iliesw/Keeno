@@ -6,16 +6,19 @@
   const accent = inject(AccentContext)
 </script>
 
-<span style={`background:${color(accent)}`}>{count} new · {accent}</span>
+<span style={`--c:${color(accent)}`}>{count} new</span>
 
 <style>
   span {
-    display: inline-block;
-    padding: 2px 10px;
+    padding: 0 0.45rem;
     border-radius: 999px;
-    color: white;
-    font-size: 0.75rem;
-    font-weight: 600;
-    transition: background 0.3s;
+    background: color-mix(in srgb, var(--c) 15%, transparent);
+    color: var(--c);
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    line-height: 1.25rem;
+    transition:
+      background 0.3s,
+      color 0.3s;
   }
 </style>

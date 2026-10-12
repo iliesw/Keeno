@@ -15,14 +15,14 @@
 </div>
 
 <style>
-  .section { border-top: 1px solid var(--border); padding: 6px 0; }
+  .section { border-top: 1px solid var(--border); padding: 8px 0; }
   .section-head {
     display: flex;
     align-items: center;
     gap: 4px;
     width: 100%;
     text-align: left;
-    font-weight: 700;
+    font-weight: 500;
     color: var(--text);
     padding: 2px 0;
   }

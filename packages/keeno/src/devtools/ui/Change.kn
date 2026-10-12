@@ -28,7 +28,7 @@
   .change { display: flex; gap: 6px; min-width: 0; overflow: hidden; white-space: nowrap; }
   .change > span { overflow: hidden; text-overflow: ellipsis; }
   .path { color: var(--muted); flex: none; }
-  .added { color: var(--str); font-weight: 700; flex: none; }
+  .added { color: var(--str); font-weight: 500; flex: none; }
   .removed { color: var(--err); font-style: italic; }
   .old { opacity: 0.6; text-decoration: line-through; text-decoration-color: rgba(255, 255, 255, 0.25); }
   .arrow { color: var(--muted); flex: none; }

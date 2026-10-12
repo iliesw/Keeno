@@ -1,0 +1,147 @@
+<script lang="ts">
+  // Home page hero: a snippet next to the component it compiles to, running live. Every DOM write
+  // in the preview flashes and is counted, to show that only what changed is touched.
+  import BindingDemo from './demos/BindingDemo.kn'
+  import CounterDemo from './demos/CounterDemo.kn'
+  import TodoDemo from './demos/TodoDemo.kn'
+  import binding from '../snippets/binding.md'
+  import counter from '../snippets/counter.md'
+  import todo from '../snippets/todo.md'
+
+  const tabs = [
+    { id: 'counter', name: 'Counter', html: counter.html, blurb: 'state() and derived(): read a state like a value, write it with .set().', hint: 'Click the buttons' },
+    { id: 'todo', name: 'Todo', html: todo.html, blurb: 'Keyed lists: only the rows that change are touched.', hint: 'Add, tick or remove a todo' },
+    { id: 'binding', name: 'Binding', html: binding.html, blurb: 'bind:value and bind:checked bind an input straight to a state.', hint: 'Type in the field' },
+  ]
+  const tab = state('counter')
+  const index = derived(() => tabs.findIndex((t) => t.id === tab))
+  const current = derived(() => tabs[index])
+  // Keyed on the tab, so both panels remount (and animate in) when it changes.
+  const panel = derived(() => [tab])
+
+  const writes = state(0)
+  const stage = ref<HTMLDivElement>()
+
+  // Count and flash DOM writes. The flash uses the Web Animations API, so it doesn't write to the
+  // DOM itself (a class would trigger the observer again).
+  const flash = (el: Element | null) =>
+    el?.animate(
+      [
+        { boxShadow: '0 0 0 2px rgb(82 168 255 / 0.9)', backgroundColor: 'rgb(82 168 255 / 0.14)' },
+        { boxShadow: '0 0 0 2px rgb(82 168 255 / 0)', backgroundColor: 'rgb(82 168 255 / 0)' },
+      ],
+      { duration: 800, easing: 'cubic-bezier(0.32, 0.72, 0, 1)' },
+    )
+
+  // `stage` wraps the demo. Its own child list changes when the tab switches, which isn't counted.
+  init(() => {
+    const root = stage.current
+    if (!root) return
+    const observer = new MutationObserver((records) => {
+      const own = records.filter((r) => r.target !== root)
+      if (!own.length) return
+      writes.set(writes.peek() + own.length)
+      const seen = new Set<Element>()
+      for (const r of own) {
+        const el = r.target.nodeType === 1 ? (r.target as Element) : r.target.parentElement
+        if (el && !seen.has(el) && root.contains(el)) {
+          seen.add(el)
+          flash(el)
+        }
+      }
+    })
+    observer.observe(root, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['class', 'disabled'] })
+    return () => observer.disconnect()
+  })
+  update(() => writes.set(0), [tab])
+</script>
+
+<div class="flex flex-col justify-between gap-4 pb-5 md:flex-row md:items-end">
+  <div class="min-w-0">
+    <p class="text-lg font-medium tracking-tight">Components that read like HTML</p>
+    {panel.map((id) => (
+      <p key={id} class="hs-fade text-sm text-neutral-500">{current.blurb}</p>
+    ))}
+  </div>
+  <div class="relative grid w-fit grid-cols-3 rounded-full border bg-neutral-100 p-1 text-sm dark:bg-neutral-900" role="tablist" aria-label="Snippets">
+    <span class="hs-pill absolute inset-y-1 left-1 w-[calc((100%-0.5rem)/3)] rounded-full bg-white shadow-sm dark:bg-neutral-800" style={`transform:translateX(${index * 100}%)`} aria-hidden="true"></span>
+    {tabs.map((t) => (
+      <button
+        key={t.id}
+        type="button"
+        role="tab"
+        aria-selected={tab === t.id ? 'true' : 'false'}
+        onClick={() => tab.set(t.id)}
+        class={['relative cursor-pointer rounded-full px-5 py-1 font-medium transition-colors', tab === t.id ? 'text-neutral-900 dark:text-white' : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white']}
+      >
+        {t.name}
+      </button>
+    ))}
+  </div>
+</div>
+
+<div class="showcase relative grid grid-cols-1 gap-3 lg:grid-cols-[3fr_2fr]">
+  {panel.map((id) => (
+    <div key={id} class="hs-in relative min-w-0 text-left" innerHTML={current.html}></div>
+  ))}
+
+  <div class="relative flex min-h-72 flex-col overflow-hidden rounded-xl border bg-white dark:bg-ink">
+    <div class="grid-dots relative flex flex-1 items-center justify-center p-6">
+      <div ref={stage} class="flex w-full justify-center">
+        {panel.map((id) => (
+          <div key={id} class="hs-in flex w-full justify-center">
+            {id === 'counter' && <CounterDemo />}
+            {id === 'todo' && <TodoDemo />}
+            {id === 'binding' && <BindingDemo />}
+          </div>
+        ))}
+      </div>
+      {writes === 0 && (
+        <p class="hs-hint pointer-events-none absolute inset-x-0 bottom-3 flex items-center justify-center gap-1.5 text-xs text-neutral-400">
+          <span class="hs-hand">👆</span> {current.hint} and watch what updates
+        </p>
+      )}
+    </div>
+  </div>
+</div>
+
+<style>
+  .hs-pill {
+    transition: transform 0.45s var(--ease-spring);
+  }
+  .hs-in {
+    animation: hs-in 0.5s var(--ease-spring) both;
+  }
+  .hs-fade {
+    animation: hs-fade 0.4s var(--ease-spring) both;
+  }
+  .hs-hint {
+    animation: hs-fade 0.6s 0.8s var(--ease-spring) both;
+  }
+  .hs-hand {
+    display: inline-block;
+    animation: hs-tap 1.6s ease-in-out infinite;
+  }
+  @keyframes hs-in {
+    from {
+      opacity: 0;
+      transform: scale(0.98);
+      filter: blur(6px);
+    }
+  }
+  @keyframes hs-fade {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+  }
+  @keyframes hs-tap {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-3px);
+    }
+  }
+</style>

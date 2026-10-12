@@ -22,7 +22,7 @@ export default function Value($$props) {
   function logNode() {
     ;
     (globalThis as any).$keenoNode = $$props.value;
-    console.log('%c$keenoNode', 'color:#f5b942', $$props.value);
+    console.log('%c$keenoNode', 'font-weight:bold', $$props.value);
   }
   return [_$and(() => kind.get() === 'object', () => {
     const _el$12 = _tmpl$5();

@@ -50,10 +50,15 @@
   .bar span {
     min-width: 5rem;
     text-align: center;
-    font-weight: 600;
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
   }
   .bar label {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
     margin-left: auto;
+    cursor: pointer;
     font-size: 0.85rem;
     color: var(--muted);
   }
@@ -64,7 +69,8 @@
     min-height: 88px;
     padding: 1rem;
     border: 1px solid var(--border);
-    border-radius: 14px;
+    border-radius: 0.75rem;
+    background: var(--bg);
   }
   .card h3 {
     margin: 0;
@@ -81,8 +87,8 @@
     height: 52px;
     border-radius: 50%;
     color: white;
-    font-size: 1.4rem;
-    font-weight: 700;
+    font-size: 1.3rem;
+    font-weight: 600;
     background: var(--surface);
   }
   .lines {
@@ -103,10 +109,11 @@
   }
   .error {
     justify-content: space-between;
-    border-color: #ef4444;
+    border-color: color-mix(in srgb, var(--danger) 40%, transparent);
+    background: color-mix(in srgb, var(--danger) 6%, transparent);
   }
   .error p {
-    color: #ef4444;
+    color: var(--danger);
   }
   @keyframes pulse {
     to {

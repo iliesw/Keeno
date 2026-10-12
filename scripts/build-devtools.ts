@@ -5,7 +5,8 @@
 //
 //   bun run devtools          regenerate
 //   bun run devtools --check  fail if the generated files are out of date (CI, tests)
-import { readFileSync, readdirSync, rmSync, mkdirSync, writeFileSync, existsSync } from 'node:fs'
+//   bun run devtools --watch  regenerate whenever a ui/*.kn file changes (`bun dev` runs this)
+import { readFileSync, readdirSync, rmSync, mkdirSync, writeFileSync, existsSync, watch } from 'node:fs'
 import path from 'node:path'
 import { compile } from '../packages/compiler/src/index'
 
@@ -50,6 +51,23 @@ export function stale(): string[] {
   return bad
 }
 
+/**
+ * Write the generated files into gen/, touching only those whose contents changed and removing
+ * stale ones. The directory itself is never deleted: a running Vite server would stop watching it.
+ */
+export function write(files = generate()): string[] {
+  mkdirSync(genDir, { recursive: true })
+  const changed: string[] = []
+  for (const [name, code] of files) {
+    const p = path.join(genDir, name)
+    if (existsSync(p) && readFileSync(p, 'utf8').replace(/\r\n/g, '\n') === code) continue
+    writeFileSync(p, code)
+    changed.push(name)
+  }
+  for (const f of readdirSync(genDir)) if (f.endsWith('.ts') && !files.has(f)) rmSync(path.join(genDir, f))
+  return changed
+}
+
 if (import.meta.main) {
   if (process.argv.includes('--check')) {
     const bad = stale()
@@ -57,11 +75,26 @@ if (import.meta.main) {
       console.error(`dev tools: out of date: ${bad.join(', ')}. Run \`bun run devtools\`.`)
       process.exit(1)
     }
+  } else if (process.argv.includes('--watch')) {
+    const update = () => {
+      try {
+        const changed = write()
+        if (changed.length) console.log(`dev tools: recompiled ${changed.join(', ')}`)
+      } catch (err: any) {
+        console.error(`dev tools: ${err.message}`)
+      }
+    }
+    update()
+    let timer: ReturnType<typeof setTimeout> | undefined
+    watch(uiDir, (_, file) => {
+      if (!file?.endsWith('.kn')) return
+      clearTimeout(timer)
+      timer = setTimeout(update, 50)
+    })
+    console.log('dev tools: watching packages/keeno/src/devtools/ui')
   } else {
     const files = generate()
-    rmSync(genDir, { recursive: true, force: true })
-    mkdirSync(genDir, { recursive: true })
-    for (const [name, code] of files) writeFileSync(path.join(genDir, name), code)
-    console.log(`dev tools: compiled ${files.size - 1} component(s) into packages/keeno/src/devtools/gen`)
+    const changed = write(files)
+    console.log(`dev tools: compiled ${files.size - 1} component(s) into packages/keeno/src/devtools/gen (${changed.length} changed)`)
   }
 }

@@ -22,8 +22,15 @@
     align-items: center;
     justify-content: space-between;
     gap: 0.5rem;
-    padding: 0.5rem 0.25rem;
+    padding: 0.5rem 0.75rem;
     border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+  }
+  li:last-child {
+    border-bottom: none;
+  }
+  li:hover {
+    background: var(--hover);
   }
   label {
     display: flex;
@@ -36,13 +43,20 @@
     color: var(--muted);
   }
   button {
-    padding: 0 8px;
+    min-height: 1.5rem;
+    padding: 0 0.4rem;
     border: none;
     background: none;
+    box-shadow: none;
+    color: var(--muted);
     opacity: 0;
+  }
+  button:hover:not(:disabled) {
+    background: var(--surface);
+    color: var(--danger);
   }
   li:hover button,
   button:focus-visible {
-    opacity: 0.6;
+    opacity: 1;
   }
 </style>

@@ -5,42 +5,84 @@
   const caught = state(0)
 </script>
 
-<p class="lead">The counter throws while rendering when it reaches 3. The boundary catches it and shows a fallback; the rest of the page keeps working.</p>
+<div class="demo">
+  <ErrorBoundary
+    fallback={(error, reset) => (
+      <div class="fallback" role="alert">
+        <span class="icon">!</span>
+        <div class="body">
+          <strong>Something broke</strong>
+          <code>{String(error)}</code>
+        </div>
+        <button onClick={reset}>Try again</button>
+      </div>
+    )}
+    onError={(error) => {
+      caught.set(caught.peek() + 1)
+      console.warn('Caught by the boundary:', error)
+    }}
+  >
+    <Fragile />
+  </ErrorBoundary>
 
-<ErrorBoundary
-  fallback={(error, reset) => (
-    <div class="fallback">
-      <strong>Something broke</strong>
-      <code>{String(error)}</code>
-      <button onClick={reset}>Try again</button>
-    </div>
-  )}
-  onError={(error) => {
-    caught.set(caught.peek() + 1)
-    console.warn('Caught by the boundary:', error)
-  }}
->
-  <Fragile />
-</ErrorBoundary>
-
-<p class="meta">Errors caught: {caught}</p>
+  <p class="meta">
+    <span>The child throws at 3; the boundary shows a fallback.</span>
+    <span class="count">caught {caught}</span>
+  </p>
+</div>
 
 <style>
-  .lead,
-  .meta {
-    color: var(--muted);
-    font-size: 0.85rem;
+  .demo {
+    display: grid;
+    gap: 0.75rem;
   }
   .fallback {
-    display: grid;
-    justify-items: start;
-    gap: 0.5rem;
-    padding: 1rem;
-    border: 1px solid #ef4444;
-    border-radius: 12px;
-    background: color-mix(in srgb, #ef4444 8%, transparent);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: 4.5rem;
+    padding: 0.875rem 1rem;
+    border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent);
+    border-radius: 0.75rem;
+    background: color-mix(in srgb, var(--danger) 6%, var(--bg));
   }
-  .fallback code {
-    color: #ef4444;
+  .icon {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--danger) 15%, transparent);
+    color: var(--danger);
+    font-size: 0.8rem;
+    font-weight: 700;
+  }
+  .body {
+    display: grid;
+    flex: 1;
+    min-width: 0;
+  }
+  strong {
+    font-weight: 500;
+  }
+  code {
+    overflow: hidden;
+    color: var(--muted);
+    font-size: 0.75rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .meta {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    margin: 0;
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+  .count {
+    flex: none;
+    font-family: var(--font-mono);
   }
 </style>

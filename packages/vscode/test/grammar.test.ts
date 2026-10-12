@@ -94,4 +94,11 @@ describe.skipIf(!ext)('grammar', () => {
     const scope = await tokenize(SAMPLE)
     expect(scope('Counter')).toContain('comment.block.html')
   })
+
+  test('HTML comments nested in markup', async () => {
+    const scope = await tokenize(`<div>\n  <!-- Nested -->\n  <!-- <span>{x}</span> -->\n  <p>hi</p>\n</div>`)
+    expect(scope('Nested')).toContain('comment.block.html')
+    expect(scope('<span>{x}</span>')).toContain('comment.block.html')
+    expect(scope('hi')).not.toContain('comment')
+  })
 })

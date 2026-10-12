@@ -113,7 +113,7 @@
     display: flex;
     align-items: center;
     gap: 4px;
-    height: 22px;
+    height: 24px;
     padding-right: 8px;
     white-space: nowrap;
     cursor: default;
@@ -121,16 +121,16 @@
   }
   .row:hover { background: var(--hover); }
   .row.sel { background: var(--accent-dim); border-left-color: var(--accent); }
-  .tree:focus .row.sel { background: rgba(245, 185, 66, 0.22); }
+  .tree:focus .row.sel { background: rgba(255, 255, 255, 0.12); }
   /* The class alternates between pulse-0 and pulse-1 on each update, which restarts the animation. */
   .row.pulse-0 { animation: pulse-0 0.8s ease-out; }
   .row.pulse-1 { animation: pulse-1 0.8s ease-out; }
-  @keyframes pulse-0 { from { background: rgba(245, 185, 66, 0.35); } }
-  @keyframes pulse-1 { from { background: rgba(245, 185, 66, 0.35); } }
+  @keyframes pulse-0 { from { background: rgba(82, 168, 255, 0.22); } }
+  @keyframes pulse-1 { from { background: rgba(82, 168, 255, 0.22); } }
   .caret.none { visibility: hidden; }
-  mark { background: var(--accent); color: #000; border-radius: 2px; }
+  mark { background: rgba(82, 168, 255, 0.3); color: var(--text); border-radius: 2px; }
   .renders { color: var(--muted); font-size: 10px; margin-left: 2px; }
-  .err-badge { background: var(--err); color: #fff; border-radius: 3px; padding: 0 4px; font-size: 10px; font-weight: 700; }
+  .err-badge { background: var(--err); color: #fff; border-radius: 999px; padding: 0 6px; font-size: 10px; font-weight: 600; }
 
   @media (prefers-reduced-motion: reduce) {
     .row.pulse-0,

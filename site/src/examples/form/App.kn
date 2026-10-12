@@ -19,6 +19,7 @@
     if (/[^A-Za-z0-9]/.test(password)) s++
     return s
   })
+  const METER = ['var(--danger)', 'var(--danger)', 'var(--warning)', 'var(--success)', 'var(--success)']
   const valid = derived(() => !errors.email && !errors.password && !errors.agree)
 
   const touch = (field: string) => touched.set({ ...touched, [field]: true })
@@ -47,7 +48,7 @@
       Password
       <input type="password" bind:value={password} onBlur={() => touch('password')} class={{ bad: show('password') }} />
       <div class="meter">
-        {[1, 2, 3, 4].map((n) => <span key={n} class={{ on: strength >= n }} style={`--n:${strength}`}></span>)}
+        {[1, 2, 3, 4].map((n) => <span key={n} class={{ on: strength >= n }} style={`--c:${METER[strength]}`}></span>)}
       </div>
       {show('password') && <small>{errors.password}</small>}
     </label>
@@ -63,25 +64,36 @@
   form {
     display: grid;
     gap: 0.9rem;
-    max-width: 340px;
+    width: min(100%, 340px);
+    margin: 0 auto;
   }
   label {
     display: grid;
     gap: 0.3rem;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     font-weight: 500;
+    color: var(--muted);
+  }
+  label input {
+    color: var(--fg);
   }
   .check {
     display: flex;
     align-items: center;
     gap: 0.5rem;
     font-weight: 400;
+    color: var(--fg);
+    cursor: pointer;
   }
   input.bad {
-    border-color: #ef4444;
+    border-color: var(--danger);
+  }
+  input.bad:focus-visible {
+    border-color: var(--danger);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 18%, transparent);
   }
   small {
-    color: #ef4444;
+    color: var(--danger);
     font-size: 0.75rem;
     font-weight: 400;
   }
@@ -97,17 +109,22 @@
     transition: background 0.2s;
   }
   .meter span.on {
-    background: hsl(calc(var(--n) * 30) 80% 50%);
+    background: var(--c);
   }
   .submit {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: black;
-    font-weight: 600;
+    min-height: 2.25rem;
+    border-color: var(--fg);
+    background: var(--fg);
+    color: var(--bg);
+  }
+  .submit:hover:not(:disabled) {
+    border-color: var(--fg);
+    background: color-mix(in srgb, var(--fg) 85%, var(--bg));
   }
   .done {
     display: grid;
-    justify-items: start;
+    justify-items: center;
     gap: 0.5rem;
+    text-align: center;
   }
 </style>

@@ -688,7 +688,7 @@ export default defineConfig({ plugins: [keeno(), tailwindcss()] })
 </style>
 ```
 
-This is on whenever `@tailwindcss/vite` is in the plugins. Turn it off with `keeno({ tailwind: false })`. For editor support, see [Tooling](tooling.md#tailwind-css-intellisense). `examples/tailwind` is a complete app.
+This is on whenever `@tailwindcss/vite` is in the plugins. Turn it off with `keeno({ tailwind: false })`. For editor support, see [Tooling](tooling.md#tailwind-css-intellisense). `examples/todo` is a complete app.
 
 ## Virtual CSS module
 

@@ -77,22 +77,27 @@ ${options.tailwind ? '<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/bro
 }
 
 const BASE_CSS = `
-:root { color-scheme: light; --fg: #0a0a0a; --bg: #ffffff; --muted: #737373; --border: #e5e5e5; --accent: #f97316; --surface: #f5f5f5 }
-.dark { color-scheme: dark; --fg: #fafafa; --bg: #141413; --muted: #a3a3a3; --border: #2a2a2a; --surface: #1f1f1e }
+:root { color-scheme: light; --fg: #171717; --bg: #ffffff; --muted: #666666; --faint: #8f8f8f; --border: #ebebeb; --border-strong: #d4d4d4; --accent: #171717; --surface: #f5f5f5; --hover: #f2f2f2; --link: #0068d6; --success: #28a948; --danger: #e5484d; --warning: #f5a623; --info: #0070f3; --font-sans: Geist, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace; --ease-spring: cubic-bezier(.32, .72, 0, 1) }
+.dark { color-scheme: dark; --fg: #ededed; --bg: #0a0a0a; --muted: #a1a1a1; --faint: #707070; --border: #242424; --border-strong: #333333; --accent: #ededed; --surface: #1a1a1a; --hover: #1f1f1f; --link: #52a8ff; --success: #3cb35b; --danger: #ff6166; --warning: #ffb224; --info: #52a8ff }
 * { box-sizing: border-box }
 html, body { margin: 0; min-height: 100% }
-body { padding: 24px; font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--fg); background: var(--bg); -webkit-font-smoothing: antialiased }
+body { padding: 24px; font: 14px/1.5 var(--font-sans); color: var(--fg); background: var(--bg); -webkit-font-smoothing: antialiased }
 @layer base {
-:root button { font: inherit; color: inherit; cursor: pointer; padding: 6px 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); transition: background .15s, transform .1s }
-:root button:hover:not(:disabled) { background: color-mix(in srgb, var(--surface), var(--fg) 8%) }
+:root button { display: inline-flex; align-items: center; justify-content: center; gap: .375rem; min-height: 2rem; padding: 0 .75rem; font: inherit; font-weight: 500; color: inherit; cursor: pointer; border-radius: .5rem; border: 1px solid var(--border); background: var(--bg); box-shadow: 0 1px 1px rgb(0 0 0 / .03); transition: background .15s, border-color .15s, color .15s, transform .15s var(--ease-spring) }
+:root button:hover:not(:disabled) { background: var(--hover); border-color: var(--border-strong) }
 :root button:active:not(:disabled) { transform: scale(.97) }
-:root button:disabled { opacity: .45; cursor: not-allowed }
-:root input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]), :root textarea, :root select { font: inherit; color: inherit; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); outline: none }
-:root input:focus-visible, :root textarea:focus-visible, :root select:focus-visible { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent) }
-:root input[type=checkbox], :root input[type=radio], :root input[type=range] { accent-color: var(--accent) }
+:root button:focus-visible { outline: 2px solid var(--link); outline-offset: 2px }
+:root button:disabled { opacity: .4; cursor: not-allowed }
+:root input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]), :root textarea, :root select { min-height: 2.25rem; font: inherit; color: inherit; padding: 0 .75rem; border-radius: .5rem; border: 1px solid var(--border); background: var(--bg); outline: none; transition: border-color .15s, box-shadow .15s }
+:root textarea { padding-block: .5rem }
+:root input::placeholder, :root textarea::placeholder { color: var(--faint) }
+:root input:hover:not(:focus):not(:disabled), :root textarea:hover:not(:focus):not(:disabled), :root select:hover:not(:focus):not(:disabled) { border-color: var(--border-strong) }
+:root input:focus-visible, :root textarea:focus-visible, :root select:focus-visible { border-color: var(--faint); box-shadow: 0 0 0 3px color-mix(in srgb, var(--fg) 10%, transparent) }
+:root input[type=checkbox], :root input[type=radio], :root input[type=range] { accent-color: var(--fg) }
+:root input[type=checkbox], :root input[type=radio] { width: 1rem; height: 1rem; margin: 0 }
 }
-h1, h2, h3 { line-height: 1.2; margin: 0 0 .5em }
-code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .9em }
+h1, h2, h3 { line-height: 1.2; margin: 0 0 .5em; font-weight: 600; letter-spacing: -.02em }
+code { font-family: var(--font-mono); font-size: .9em }
 `
 
 // Runs inside the iframe: forwards the console and errors to the playground, swaps the storage

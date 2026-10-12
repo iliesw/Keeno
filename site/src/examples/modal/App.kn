@@ -23,13 +23,23 @@
     font-size: 0.85rem;
   }
   /* The modal renders in <body>, outside any page styles: style what goes in it here. */
+  label {
+    color: var(--muted);
+    font-weight: 500;
+  }
   input {
-    padding: 6px 10px;
+    min-height: 2.25rem;
+    padding: 0 0.75rem;
     border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: 0.5rem;
     background: var(--bg);
-    color: inherit;
+    color: var(--fg);
     font: inherit;
+    outline: none;
+  }
+  input:focus-visible {
+    border-color: var(--faint);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--fg) 10%, transparent);
   }
   .hint {
     color: var(--muted);

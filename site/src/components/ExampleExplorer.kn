@@ -1,0 +1,76 @@
+<script lang="ts">
+  // Home page: pick an example on the left and play with it live on the right.
+  import Icon from './Icon.kn'
+  import LiveDemo from './LiveDemo.kn'
+  import { exampleComponent, findExample } from '../examples'
+
+  const picks = ['counter', 'pixel-art', 'kanban', 'todos', 'clock', 'stopwatch', 'toasts', 'temperature'].map((slug) => findExample(slug)!)
+
+  const active = state(picks[1].slug)
+  const index = derived(() => picks.findIndex((p) => p.slug === active))
+  // Keyed on the example, so the stage remounts (and animates in) on every change.
+  const stage = derived(() => [active])
+
+  const step = (by: number) => active.set(picks[(index.peek() + by + picks.length) % picks.length].slug)
+
+  function onListKey(e: KeyboardEvent) {
+    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp' && e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return
+    e.preventDefault()
+    step(e.key === 'ArrowDown' || e.key === 'ArrowRight' ? 1 : -1)
+    requestAnimationFrame(() => document.querySelector<HTMLElement>('.xp-item[aria-selected="true"]')?.focus())
+  }
+</script>
+
+<div class="xp grid gap-3 lg:grid-cols-[17rem_minmax(0,1fr)]">
+  <!-- The list: a column on large screens, a scrolling row on small ones -->
+  <div class="xp-list flex gap-1.5 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0" role="tablist" aria-label="Examples" aria-orientation="vertical" onKeyDown={onListKey}>
+    {picks.map((p, i) => (
+      <button
+        key={p.slug}
+        type="button"
+        role="tab"
+        aria-selected={active === p.slug ? 'true' : 'false'}
+        tabIndex={active === p.slug ? 0 : -1}
+        onClick={() => active.set(p.slug)}
+        class={['xp-item group flex min-w-44 flex-none cursor-pointer items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition lg:min-w-0', active === p.slug ? 'border-neutral-300 bg-white shadow-sm dark:border-neutral-700 dark:bg-neutral-900' : 'border-transparent text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 dark:hover:bg-neutral-900/60 dark:hover:text-white']}
+      >
+        <span class={['grid size-7 flex-none place-items-center rounded-lg border font-mono text-[11px] transition', active === p.slug ? 'bg-neutral-900 text-white dark:bg-white dark:text-black' : 'bg-white dark:bg-neutral-950']}>{String(i + 1).padStart(2, '0')}</span>
+        <span class="min-w-0 flex-1">
+          <span class={['block truncate text-sm font-medium', active === p.slug && 'text-neutral-900 dark:text-white']}>{p.title}</span>
+          <span class="block truncate text-xs text-neutral-500">{p.category}</span>
+        </span>
+        <span class={['hidden text-neutral-400 transition lg:block', active === p.slug ? 'translate-x-0 opacity-100' : '-translate-x-1 opacity-0 group-hover:translate-x-0 group-hover:opacity-100']}><Icon name="arrowRight" /></span>
+      </button>
+    ))}
+  </div>
+
+  <!-- The live example -->
+  <div class="xp-scroll grid-dots h-[26rem] min-w-0 overflow-auto rounded-2xl border bg-white lg:h-auto dark:bg-ink">
+    {stage.map((slug) => (
+      <div key={slug} class="xp-stage grid min-h-full place-items-center p-6">
+        <LiveDemo component={exampleComponent(slug)!} />
+      </div>
+    ))}
+  </div>
+</div>
+
+<style>
+  .xp-list {
+    scrollbar-width: none;
+  }
+  /* Space for the scrollbar is kept on both sides, so switching examples (or one animating in)
+     never shifts the content sideways. */
+  .xp-scroll {
+    scrollbar-gutter: stable both-edges;
+  }
+  .xp-stage {
+    animation: stage-in 0.45s var(--ease-spring) both;
+  }
+  @keyframes stage-in {
+    from {
+      opacity: 0;
+      transform: scale(0.97);
+      filter: blur(4px);
+    }
+  }
+</style>

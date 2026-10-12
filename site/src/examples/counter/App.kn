@@ -12,7 +12,7 @@
   <div class="row">
     <button onClick={() => count.set(count - 1)}>−1</button>
     <button onClick={() => count.set(0)} disabled={count === 0}>Reset</button>
-    <button onClick={() => count.set(count + 1)}>+1</button>
+    <button class="primary" onClick={() => count.set(count + 1)}>+1</button>
   </div>
 </div>
 
@@ -25,17 +25,32 @@
   }
   .value {
     margin: 0;
-    font-size: 4rem;
-    font-weight: 800;
+    font-size: 4.5rem;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: -0.05em;
     font-variant-numeric: tabular-nums;
-    color: var(--accent);
   }
   .meta {
     margin: 0 0 0.75rem;
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
     color: var(--muted);
   }
   .row {
     display: flex;
     gap: 0.5rem;
+  }
+  .row button {
+    min-width: 3rem;
+  }
+  .primary {
+    border-color: var(--fg);
+    background: var(--fg);
+    color: var(--bg);
+  }
+  .primary:hover:not(:disabled) {
+    border-color: var(--fg);
+    background: color-mix(in srgb, var(--fg) 85%, var(--bg));
   }
 </style>

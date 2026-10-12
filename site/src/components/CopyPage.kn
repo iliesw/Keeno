@@ -37,20 +37,21 @@
   })
 </script>
 
-<div id="copy-page" class="absolute top-0 right-0 flex h-8 rounded-lg border bg-neutral-100 dark:bg-neutral-900">
-  <button type="button" onClick={copy} class="flex cursor-pointer items-center justify-center gap-2 rounded-l-lg px-2.5 text-sm hover:bg-neutral-200 dark:text-neutral-200 dark:hover:bg-neutral-800 dark:hover:text-white">
+<div id="copy-page" class="absolute top-0 right-0 flex h-8 items-center rounded-lg border bg-white shadow-xs dark:bg-neutral-950">
+  <button type="button" onClick={copy} class="flex cursor-pointer items-center justify-center gap-2 h-full rounded-l-lg px-2.5 text-sm hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-neutral-900 dark:hover:text-white">
     <Icon name={copied ? 'check' : 'copy'} />
     {copied ? 'Copied' : 'Copy Page'}
   </button>
-  <button type="button" aria-label="More options" aria-expanded={open} onClick={() => open.set(!open)} class="cursor-pointer rounded-r-lg border-l p-2 transition-all hover:bg-neutral-200 dark:text-neutral-200 dark:hover:bg-neutral-800">
+  <span class="h-4 w-px bg-neutral-200 dark:bg-neutral-800" aria-hidden="true"></span>
+  <button type="button" aria-label="More options" aria-expanded={open} onClick={() => open.set(!open)} class="h-full cursor-pointer rounded-r-lg px-2 transition-all hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-neutral-900">
     <span class={['inline-flex transition-transform', open && 'rotate-180']}><Icon name="chevronDown" /></span>
   </button>
   {open && (
-    <div class="animate-fade-up absolute top-9 right-0 z-30 flex w-48 flex-col rounded-[11px] border bg-neutral-100 p-0.75 text-sm shadow-xl dark:bg-neutral-900">
-      <button type="button" onClick={() => openIn('https://cursor.com/link/prompt?text=')} class="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-left hover:bg-neutral-200 dark:hover:bg-neutral-800">
+    <div class="animate-fade-up absolute top-9 right-0 z-30 flex w-48 flex-col rounded-xl border bg-white p-1 text-sm shadow-xl dark:bg-neutral-950">
+      <button type="button" onClick={() => openIn('https://cursor.com/link/prompt?text=')} class="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-left hover:bg-neutral-100 dark:hover:bg-neutral-900">
         <span class="inline-flex opacity-60" innerHTML={CURSOR}></span> Open in Cursor
       </button>
-      <button type="button" onClick={() => openIn('https://claude.ai/new?q=')} class="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-left hover:bg-neutral-200 dark:hover:bg-neutral-800">
+      <button type="button" onClick={() => openIn('https://claude.ai/new?q=')} class="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-left hover:bg-neutral-100 dark:hover:bg-neutral-900">
         <span class="inline-flex opacity-60" innerHTML={CLAUDE}></span> Open in Claude
       </button>
       <a href={`${GITHUB}/blob/main/${sourcePath(slug)}`} target="_blank" rel="noreferrer" class="flex items-center gap-2 rounded-md px-2 py-1 hover:bg-neutral-200 dark:hover:bg-neutral-800">
