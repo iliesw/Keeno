@@ -23,7 +23,7 @@
     "version-packages": "bun run scripts/version.ts",
     "release": "bun run scripts/release.ts",
     "docs:dev": "bun run --cwd site dev",
-    "docs:build": "bun run --cwd site build"
+    "docs:build": "bun run build && bun run --cwd site build"
   },
   "devDependencies": {
     "@changesets/changelog-github": "^1.0.1",

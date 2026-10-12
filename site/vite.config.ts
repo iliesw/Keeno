@@ -11,7 +11,9 @@ export default defineConfig({
   // The docs live in ../docs, outside the Vite root.
   server: { fs: { allow: ['..'] } },
   // The playground's editor and in-browser compiler are large, but load only on /playground.
-  build: { target: 'es2022', chunkSizeWarningLimit: 1500 },
+  // strictRequires: Babel (bundled into the playground's compiler worker) has circular requires that the
+  // default 'auto' mode hoists differently per OS, which broke the worker on Linux builds.
+  build: { target: 'es2022', chunkSizeWarningLimit: 1500, commonjsOptions: { strictRequires: true } },
   // The playground compiles `.kn` files in a worker with the real compiler.
   worker: { format: 'es' },
 })
