@@ -1,5 +1,6 @@
 import { mount } from '@inflector/keeno'
+import Pages from 'virtual:keeno-pages'
 import './app.css'
-import App from './App.kn'
 
-mount(App, document.getElementById('app')!)
+// Routes come from the files in src/pages (see vite.config.ts).
+mount(Pages, document.getElementById('app')!)

@@ -45,6 +45,7 @@ export const nav: { title: string; items: NavItem[] }[] = [
     items: [
       { slug: 'built-ins', title: 'Built-in Components' },
       { slug: 'routing', title: 'Routing' },
+      { slug: 'file-routing', title: 'File-based Routing' },
       { slug: 'ssr', title: 'Server Rendering' },
       { slug: 'security', title: 'Security' },
       { slug: 'tooling', title: 'Tooling' },

@@ -53,7 +53,7 @@ describe('@inflector/vite-plugin-keeno', () => {
 describe('Tailwind', () => {
   const twRoot = path.resolve(import.meta.dir, '../../../examples/todo')
   const posix = (p: string) => p.replaceAll(path.sep, '/')
-  const app = posix(path.join(twRoot, 'src/App.kn'))
+  const app = posix(path.join(twRoot, 'src/pages/index.kn'))
   const entry = posix(path.join(twRoot, 'src/app.css'))
   const css = (options: Parameters<typeof keeno>[0], plugins: { name: string }[], id = app, root = twRoot) => {
     const p = keeno(options) as any
@@ -89,11 +89,58 @@ describe('Tailwind', () => {
       build: { write: false },
     })
     const assets = (Array.isArray(out) ? out[0] : out).output
-    const built = assets.find((a: any) => a.fileName.endsWith('.css')).source as string
+    // Pages load on demand, each with its own stylesheet.
+    const built = assets
+      .filter((a: any) => a.fileName.endsWith('.css'))
+      .map((a: any) => a.source)
+      .join('\n') as string
     expect(built).not.toMatch(/@apply|@variant|@reference|--spacing\(/)
     // The custom theme color from src/app.css reaches the component's scoped `h1`.
     expect(built).toMatch(/h1\.keeno-[0-9a-f]{8}\{[^}]*color:var\(--color-brand/)
     // Utilities written in .kn markup are generated.
     expect(built).toContain('.text-sm')
   }, 60_000)
+})
+
+describe('file router', () => {
+  const setupPages = (options: Parameters<typeof keeno>[0] = {}) => {
+    const p = keeno(options) as any
+    p.configResolved({ root, command: 'build', isProduction: true, plugins: [] })
+    return p
+  }
+
+  test('virtual:keeno-pages globs the pages directory', async () => {
+    const p = setupPages()
+    const id = await p.resolveId('virtual:keeno-pages')
+    expect(id).toBe('\0virtual:keeno-pages')
+    const code = p.load(id)
+    expect(code).toContain('import.meta.glob(["/src/pages/**/*.kn","!/src/pages/**/_layout.kn"')
+    expect(code).toContain('import.meta.glob(["/src/pages/**/_layout.kn","/src/pages/**/_[1-5][0-9][0-9].kn"], { eager: true })')
+    expect(code).toContain('}, "/src/pages")')
+  })
+
+  test('custom directory, and off', async () => {
+    expect(setupPages({ pages: './app/routes/' }).load('\0virtual:keeno-pages')).toContain('"/app/routes/**/*.kn"')
+    expect(await setupPages({ useFileRouter: false }).resolveId('virtual:keeno-pages')).toBeUndefined()
+    expect(() => setupPages({ pages: '../elsewhere' }).load('\0virtual:keeno-pages')).toThrow(/inside the Vite root/)
+  })
+})
+
+describe('router', () => {
+  test("resolves @inflector/keeno-router from the plugin when the app has no copy", async () => {
+    const p = keeno() as any
+    const calls: (string | undefined)[] = []
+    const ctx = {
+      resolve: async (id: string, importer?: string) => {
+        calls.push(importer)
+        return importer === '/app/src/main.ts' ? null : { id: `/plugin/node_modules/${id}` }
+      },
+    }
+    expect(await p.resolveId.call(ctx, '@inflector/keeno-router', '/app/src/main.ts', {})).toEqual({
+      id: '/plugin/node_modules/@inflector/keeno-router',
+    })
+    expect(calls[0]).toBe('/app/src/main.ts')
+    expect(calls[1]).toMatch(/vite-plugin-keeno/)
+    expect(await p.resolveId.call(ctx, 'other', '/app/src/main.ts', {})).toBeUndefined()
+  })
 })

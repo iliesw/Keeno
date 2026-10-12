@@ -1,0 +1,22 @@
+<script lang="ts">
+  import { Link, useRoute } from '@inflector/keeno-router'
+  const route = useRoute()
+</script>
+
+<article>
+  <h1>Not found</h1>
+  <p>There is no page at <code>{route.path}</code>. <Link href="/">Go to your todos</Link></p>
+</article>
+
+<style>
+  article {
+    max-width: 28rem;
+    margin: 0 auto 2rem;
+    padding: 1.5rem;
+    background: white;
+    border-radius: 12px;
+  }
+  a {
+    color: teal;
+  }
+</style>

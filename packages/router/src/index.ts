@@ -1,5 +1,5 @@
 // Client-side router for Keeno: <Router>, <Link>, the `link` click handler, navigate() and useRoute().
-import { State, createContext, derived, inject, provide, untrack, type Children, type Component } from '@inflector/keeno'
+import { ErrorBoundary, State, createContext, derived, inject, lazy, provide, untrack, type Children, type Component } from '@inflector/keeno'
 import { attr, callerScope, createComponent, insert, on, template } from '@inflector/keeno/internal'
 
 export type Params = Record<string, string>
@@ -18,6 +18,52 @@ export interface RouteDefinition {
   path: string
   /** Receives `RouteProps`. Typed loosely so components can declare their own params type. */
   component: Component<any>
+  /**
+   * Layouts around the component, outermost first. Each receives `params` and `children`. A layout
+   * is kept while the routes navigated between share it at the same depth.
+   */
+  layouts?: Component<any>[]
+  /**
+   * Pages for errors thrown while the component renders, by HTTP status (`httpError(404)`, other
+   * errors are 500). Each receives `ErrorPageProps` and renders inside the route's layouts.
+   */
+  errors?: Record<number, Component<any>>
+}
+
+/** Props passed to a layout. */
+export interface LayoutProps extends RouteProps {
+  children: Children
+}
+
+/** Props passed to an error page (`_404.kn`, `_500.kn`, ...). */
+export interface ErrorPageProps extends RouteProps {
+  status: number
+  /** What was thrown: an `HttpError` for `httpError()`, anything else for a 500. */
+  error: unknown
+  /** Render the page again. */
+  reset: () => void
+}
+
+/** An error carrying an HTTP status: throw it from a page to show that status's error page. */
+export class HttpError extends Error {
+  constructor(
+    readonly status: number,
+    message?: string,
+  ) {
+    super(message ?? `HTTP ${status}`)
+    this.name = 'HttpError'
+  }
+}
+
+/** `throw httpError(403)` renders the route's 403 page (`_403.kn`). */
+export function httpError(status: number, message?: string): HttpError {
+  return new HttpError(status, message)
+}
+
+/** The HTTP status of a thrown value: its numeric `status`, else 500. */
+export function errorStatus(error: unknown): number {
+  const status = (error as { status?: unknown } | null)?.status
+  return typeof status === 'number' && status >= 100 && status <= 599 ? status : 500
 }
 
 /** The current route. Its fields are reactive: reading them in a template or `update` tracks them. */
@@ -323,16 +369,65 @@ export function Router(props: RouterProps): unknown {
   }
   provide(RouteContext, route)
   provide(BaseContext, routerBase)
-  return () => {
+
+  /** Props for the components of a route: `params` stays a getter, so it follows navigation. */
+  const withParams = <T extends object>(extra: T): T & RouteProps =>
+    Object.defineProperty(extra, 'params', { get: () => info.get().params, enumerable: true }) as T & RouteProps
+  // What renders at each depth: the route's layouts, then the route itself. A depth keeps its
+  // instance while its entry stays the same, so shared layouts survive navigation.
+  const chain = derived(() => {
     const r = matched.get()
-    if (!r) return props.fallback ? untrack(props.fallback) : null
-    return untrack(() =>
-      createComponent(r.component, {
-        get params() {
-          return info.get().params
-        },
-      }),
-    )
+    return r ? [...(r.layouts ?? []), r] : []
+  })
+  const depth = untrack(() => Math.max(1, ...props.routes.map((r) => (r.layouts?.length ?? 0) + 1)))
+  const levels: (() => unknown)[] = []
+  for (let i = 0; i < depth; i++) {
+    const entry = derived(() => chain.get()[i] as Component<any> | RouteDefinition | undefined)
+    levels.push(() => {
+      const e = entry.get()
+      if (!e) return null
+      if (typeof e === 'function') return untrack(() => createComponent(e, withParams({ children: levels[i + 1] })))
+      return untrack(() => renderPage(e))
+    })
+  }
+
+  // A route with error pages renders inside an ErrorBoundary, reset when the path changes.
+  let resetError: (() => void) | null = null
+  derived(() => info.get().path).onUpdate(() => {
+    const reset = resetError
+    resetError = null
+    reset?.()
+  })
+  const renderPage = (r: RouteDefinition) => {
+    const page = () => createComponent(r.component, withParams({}))
+    const errors = r.errors
+    if (!errors || !Object.keys(errors).length) return page()
+    return createComponent(ErrorBoundary, {
+      children: page,
+      fallback: (error: unknown, reset: () => void) => {
+        const status = errorStatus(error)
+        const ErrorPage = errors[status]
+        if (!ErrorPage) throw error
+        resetError = reset
+        return createComponent(
+          ErrorPage,
+          withParams({
+            status,
+            error,
+            reset: () => {
+              resetError = null
+              reset()
+            },
+          }),
+        )
+      },
+    })
+  }
+
+  const found = derived(() => !!matched.get())
+  return () => {
+    if (!found.get()) return props.fallback ? untrack(props.fallback) : null
+    return levels[0]()
   }
 }
 
@@ -386,4 +481,121 @@ export function Link(props: LinkProps): unknown {
   })
   insert(a, () => props.children?.())
   return a
+}
+
+// ---------------------------------------------------------------------------
+// File routes
+
+/** A page module: loaded (`{ default }`) or a loader (`() => import('./page.kn')`). */
+export type PageModule = { default: Component<any> } | (() => Promise<{ default: Component<any> }>)
+
+interface Dir {
+  path: string[]
+  layout?: Component<any>
+  errors: Record<number, Component<any>>
+}
+
+const ERROR_FILE = /^_([1-5]\d\d)$/
+
+/** `[id]` → `:id`, `[...rest]` → `*rest`; other names stay as they are. */
+function fileSegment(name: string): string {
+  const m = /^\[(\.\.\.)?([^\]]+)\]$/.exec(name)
+  return m ? (m[1] ? '*' : ':') + m[2] : name
+}
+
+/** Order routes from most to least specific: static, `:param`, end of path, then `*`. */
+function rank(seg: string | undefined): number {
+  if (seg === undefined) return 1
+  if (seg.startsWith('*')) return 0
+  return seg.startsWith(':') ? 2 : 3
+}
+
+function compareRoutes(a: string, b: string): number {
+  const sa = a.split('/').filter(Boolean)
+  const sb = b.split('/').filter(Boolean)
+  for (let i = 0; i < Math.max(sa.length, sb.length); i++) {
+    const d = rank(sb[i]) - rank(sa[i])
+    if (d) return d
+  }
+  return 0
+}
+
+function notFound(): never {
+  throw new HttpError(404, 'Not found')
+}
+
+/**
+ * Routes from a directory of page files, as `import.meta.glob('/src/pages/**\/*.kn')` returns it
+ * (keys starting with `dir`):
+ *
+ * - `index.kn` is the directory's path, `about.kn` is `/about`, `[id].kn` is `/:id`.
+ * - `_layout.kn` wraps every page of its directory and the ones below it.
+ * - `_all.kn` matches every path below its directory that no other page does (`params['*']`).
+ * - `_404.kn` renders for paths below its directory that match nothing, and `_500.kn`, `_403.kn`…
+ *   for errors with that status thrown by a page (`throw httpError(403)`; other errors are 500).
+ * - Other files starting with `_` are left out, so pages can keep their own components next to them.
+ */
+export function pageRoutes(files: Record<string, PageModule>, dir = ''): RouteDefinition[] {
+  const prefix = dir.replace(/\/+$/, '') + '/'
+  const dirs = new Map<string, Dir>()
+  const getDir = (key: string): Dir => {
+    let d = dirs.get(key)
+    if (!d) dirs.set(key, (d = { path: key ? key.split('/').map(fileSegment) : [], errors: {} }))
+    return d
+  }
+  const pages: { dir: string; path: string[]; component: Component<any> }[] = []
+  const component = (m: PageModule) => (typeof m === 'function' ? lazy(m) : m.default)
+
+  for (const file of Object.keys(files).sort()) {
+    if (!file.startsWith(prefix) || !file.endsWith('.kn')) continue
+    const parts = file.slice(prefix.length, -'.kn'.length).split('/')
+    const name = parts.pop()!
+    if (parts.some((p) => p.startsWith('_'))) continue
+    const key = parts.join('/')
+    const d = getDir(key)
+    const mod = files[file]
+    const error = ERROR_FILE.exec(name)
+    if (name === '_layout') d.layout = component(mod)
+    else if (error) d.errors[+error[1]] = component(mod)
+    else if (name === '_all') pages.push({ dir: key, path: [...d.path, '*'], component: component(mod) })
+    else if (name === 'index') pages.push({ dir: key, path: d.path, component: component(mod) })
+    else if (!name.startsWith('_')) pages.push({ dir: key, path: [...d.path, fileSegment(name)], component: component(mod) })
+  }
+
+  /** The directories from the root down to `key`. */
+  const ancestors = (key: string): Dir[] => {
+    const parts = key ? key.split('/') : []
+    return [getDir(''), ...parts.map((_, i) => getDir(parts.slice(0, i + 1).join('/')))]
+  }
+  const scope = (key: string) => {
+    const chain = ancestors(key)
+    return {
+      layouts: chain.flatMap((d) => (d.layout ? [d.layout] : [])),
+      errors: Object.assign({}, ...chain.map((d) => d.errors)) as Record<number, Component<any>>,
+    }
+  }
+
+  const routes: (RouteDefinition & { fallback?: boolean })[] = pages.map((p) => ({
+    path: '/' + p.path.join('/'),
+    component: p.component,
+    ...scope(p.dir),
+  }))
+  // A directory's 404 page catches the paths below it that no page matches.
+  for (const [key, d] of [...dirs]) {
+    if (d.errors[404]) routes.push({ path: '/' + [...d.path, '*'].join('/'), component: notFound, fallback: true, ...scope(key) })
+  }
+  return routes
+    .map((r, i) => ({ r, i }))
+    .sort((a, b) => compareRoutes(a.r.path, b.r.path) || Number(!!a.r.fallback) - Number(!!b.r.fallback) || a.i - b.i)
+    .map(({ r: { fallback, ...r } }) => r)
+}
+
+/**
+ * Load the page that matches `url` (an app path or full URL), if it loads on demand. Await it
+ * before `renderToString` or `hydrate`, so the page renders in the first pass.
+ */
+export async function preloadRoute(routes: RouteDefinition[], url: string): Promise<void> {
+  const path = parseUrl(url).pathname
+  const route = routes.find((r) => matchPath(r, path))
+  await (route?.component as { preload?: () => Promise<unknown> } | undefined)?.preload?.()
 }

@@ -1,4 +1,4 @@
-// examples/todo in Chromium: keyed lists, bindings, scoped styles, lifecycle and state options.
+// examples/todo in Chromium: keyed lists, bindings, scoped styles, lifecycle, state options and file routes.
 import { expect, test, type Page } from '@playwright/test'
 import { TODO } from './apps'
 
@@ -108,12 +108,12 @@ test.describe('lifecycle', () => {
   test('init and destroy run when the list is hidden and shown', async ({ page }) => {
     const logs: string[] = []
     page.on('console', (m) => {
-      if (/^\[(App|TodoItem)\]/.test(m.text())) logs.push(m.text())
+      if (/^\[(Todos|TodoItem)\]/.test(m.text())) logs.push(m.text())
     })
     await open(page)
     await expect(items(page)).toHaveCount(2)
     await expect.poll(() => logs.length).toBe(3)
-    expect([...logs].sort()).toEqual(['[App] init', '[TodoItem] init Build Keeno', '[TodoItem] init Read the plan'])
+    expect([...logs].sort()).toEqual(['[TodoItem] init Build Keeno', '[TodoItem] init Read the plan', '[Todos] init'])
 
     logs.length = 0
     await page.click('button.toggle-list')
@@ -245,5 +245,24 @@ test.describe('undo / redo', () => {
     await addTodo(page, 'Three')
     await expect(redo).toBeDisabled()
     await expect(items(page)).toHaveCount(5)
+  })
+})
+
+test.describe('file routes', () => {
+  test('pages share the layout, and unknown paths show the 404 page', async ({ page }) => {
+    await open(page)
+    await addTodo(page, 'Kept')
+    const nav = page.locator('nav')
+    await expect(nav.locator('a[aria-current=page]')).toHaveText('Todos')
+    await nav.getByText('About').click()
+    await expect(page).toHaveURL(/\/about$/)
+    await expect(page.locator('h1')).toHaveText('About')
+    await expect(nav.locator('a[aria-current=page]')).toHaveText('About')
+    await page.goBack()
+    await expect(page.locator('h1')).toHaveText('Todos')
+    await expect(items(page)).toHaveCount(3)
+    await page.goto(TODO + 'nope')
+    await expect(page.locator('h1')).toHaveText('Not found')
+    await expect(page.locator('nav')).toBeVisible()
   })
 })

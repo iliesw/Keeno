@@ -1,10 +1,8 @@
 # Routing
 
-`@inflector/keeno-router` is a small client-side router built on the History API.
+`@inflector/keeno-router` is a small client-side router built on the History API. It comes with the Vite plugin (`@inflector/vite-plugin-keeno`), so with Vite there is nothing more to install: import from `@inflector/keeno-router` and the plugin resolves it. Install it yourself (`bun add @inflector/keeno-router`) to pin its version, or to use it without the plugin.
 
-```bash
-bun add @inflector/keeno-router
-```
+The quickest way to use it is [file-based routing](file-routing.md), as `examples/todo` does.
 
 ## Routes
 
@@ -63,6 +61,10 @@ A route component receives `params`:
 - `navigate('/users/2')` navigates from code. `navigate('/login', { replace: true })` replaces the current entry, and `{ scroll: false }` keeps the scroll position. A URL with a `#hash` scrolls to that element instead of the top. On back/forward, the router restores the scroll position the page had, once the route has rendered. Relative URLs such as `navigate('?tab=2')` work too.
 - Clicks with a modifier key, a middle click, `target="_blank"`, `download` and links to other sites are left to the browser.
 - Query parameters synced with `state(v, { url: 'tab' })` follow navigation, including back and forward.
+
+## File-based routing
+
+With the Vite plugin, the routes can come from the files in `src/pages` instead: `about.kn` is `/about`, `[id].kn` is `/:id`, with `_layout.kn`, `_404.kn` and `_500.kn` for layouts and error pages. See [File-based routing](file-routing.md).
 
 ## Server rendering
 

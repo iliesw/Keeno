@@ -159,7 +159,14 @@ const route = useRoute()   // route.params.id, route.query.get('tab'), route.pat
 navigate('/settings', { replace: true })
 ```
 
-More in [Routing](routing.md).
+File routes (Vite): `src/pages/index.kn` is `/`, `about.kn` is `/about`, `users/[id].kn` is `/users/:id`, `docs/_all.kn` catches the rest of `/docs`. `_layout.kn` wraps a directory, `_404.kn` and `_500.kn` are error pages, and a page can `throw httpError(403)`.
+
+```ts
+import Pages from 'virtual:keeno-pages'
+mount(Pages, document.getElementById('app')!)
+```
+
+More in [Routing](routing.md) and [File-based routing](file-routing.md).
 
 ## Mounting and server rendering
 

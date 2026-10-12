@@ -1,5 +1,5 @@
 <script lang="ts">
-  import TodoItem from './TodoItem.kn'
+  import TodoItem from '../TodoItem.kn'
 
   type Todo = { id: number; text: string; done: boolean }
   type Filter = 'all' | 'active' | 'done'
@@ -42,7 +42,7 @@
   const toggle = (id: number) => todos.set(todos.map((t) => (t.id === id ? { ...t, done: !t.done } : t)))
   const remove = (id: number) => todos.set(todos.filter((t) => t.id !== id))
 
-  init(() => console.log('[App] init'))
+  init(() => console.log('[Todos] init'))
 </script>
 
 <main>
@@ -85,14 +85,9 @@
 </main>
 
 <style>
-  :global(body) {
-    margin: 0;
-    font-family: system-ui, sans-serif;
-    @apply bg-neutral-500;
-  }
   main {
     max-width: 28rem;
-    margin: 2rem auto;
+    margin: 0 auto 2rem;
     padding: 1.5rem;
     background: white;
     border-radius: 12px;

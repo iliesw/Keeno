@@ -13,7 +13,7 @@ function run(...args: string[]) {
 describe('keeno-check', () => {
   test('the todo example is clean', () => {
     const { code, out } = run('examples/todo')
-    expect(out).toMatch(/^0 errors in 3 files\n$/)
+    expect(out).toMatch(/^0 errors in 6 files\n$/)
     expect(code).toBe(0)
   }, 60_000)
 

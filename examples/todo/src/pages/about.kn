@@ -1,0 +1,32 @@
+<script lang="ts">
+  import { Link } from '@inflector/keeno-router'
+</script>
+
+<article>
+  <h1>About</h1>
+  <p>
+    A small Keeno app routed by its files: <code>src/pages/index.kn</code> is <code>/</code>, this page is
+    <code>src/pages/about.kn</code>, and <code>_layout.kn</code> holds the navigation around both.
+  </p>
+  <p>Your todos are saved in this browser. <Link href="/">Back to the list</Link></p>
+</article>
+
+<style>
+  article {
+    max-width: 28rem;
+    margin: 0 auto 2rem;
+    padding: 1.5rem;
+    background: white;
+    border-radius: 12px;
+  }
+  h1 {
+    margin-top: 0;
+    @apply text-brand;
+  }
+  p {
+    color: #555;
+  }
+  a {
+    color: teal;
+  }
+</style>

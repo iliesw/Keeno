@@ -2,6 +2,7 @@
 import { compile } from '@inflector/keeno-compiler'
 import { readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import * as vite from 'vite'
 import type { Plugin, ResolvedConfig } from 'vite'
 
@@ -42,6 +43,45 @@ export interface KeenoPluginOptions {
    * editing, element picker, state timeline and render stats. Toggle it with Alt+Shift+D.
    */
   devtools?: boolean
+  /**
+   * File-based routing (default true): `virtual:keeno-pages` exports the routes of the `pages`
+   * directory and a `<Pages>` component rendering them with `@inflector/keeno-router`.
+   */
+  useFileRouter?: boolean
+  /** The directory of page files, relative to the Vite root (default `./src/pages`). */
+  pages?: string
+}
+
+/** Comes with the plugin, so apps can import it without installing it. */
+const ROUTER = '@inflector/keeno-router'
+/** This file: the router is resolved from here when the app has no copy of its own. */
+const SELF = fileURLToPath(import.meta.url)
+
+/** The module that holds the file routes: `import Pages from 'virtual:keeno-pages'`. */
+export const PAGES_ID = 'virtual:keeno-pages'
+const RESOLVED_PAGES_ID = '\0' + PAGES_ID
+
+/**
+ * The file routes module. Layouts and error pages are bundled with it, so they show without a
+ * loading step; pages load on demand, each in its own chunk.
+ */
+export function pagesModule(dir: string): string {
+  const glob = (patterns: string[], eager = false) =>
+    `import.meta.glob(${JSON.stringify(patterns)}${eager ? ', { eager: true }' : ''})`
+  const shared = [`${dir}/**/_layout.kn`, `${dir}/**/_[1-5][0-9][0-9].kn`]
+  return [
+    `import { createComponent, mergeProps } from '@inflector/keeno/internal'`,
+    `import { Router, pageRoutes } from '@inflector/keeno-router'`,
+    `export const routes = pageRoutes({`,
+    `  ...${glob([`${dir}/**/*.kn`, ...shared.map((p) => '!' + p)])},`,
+    `  ...${glob(shared, true)},`,
+    `}, ${JSON.stringify(dir)})`,
+    `/** Renders the page for the current URL. Takes the other props of <Router> (base, url, fallback). */`,
+    `export default function Pages(props) {`,
+    `  return createComponent(Router, mergeProps(props ?? {}, { routes }))`,
+    `}`,
+    ``,
+  ].join('\n')
 }
 
 // `&lang.css` (as Vue and Svelte do) is what makes `@tailwindcss/vite` and other CSS tools process it.
@@ -101,6 +141,13 @@ export default function keeno(options: KeenoPluginOptions = {}): Plugin {
     },
 
     load(id) {
+      if (id === RESOLVED_PAGES_ID) {
+        const dir = relative(path.resolve(config.root, options.pages ?? './src/pages')).replace(/\/+$/, '')
+        if (dir.startsWith('..') || path.isAbsolute(dir)) {
+          throw new Error(`[keeno] The pages directory must be inside the Vite root: ${options.pages}`)
+        }
+        return pagesModule(dir ? '/' + dir : '')
+      }
       const { file, query } = parseId(id)
       if (!file.endsWith('.kn') || query !== STYLE_QUERY) return
       // Compile from disk so the CSS is never stale relative to the component during HMR.
@@ -111,6 +158,19 @@ export default function keeno(options: KeenoPluginOptions = {}): Plugin {
       reference ??= findTailwindEntry(config.root) ?? 'tailwindcss'
       const ref = path.isAbsolute(reference) ? reference.replace(/\\/g, '/') : reference
       return `@reference ${JSON.stringify(ref)};\n${css}`
+    },
+
+    config() {
+      // One runtime, even when the router comes from the plugin's own dependencies.
+      return { resolve: { dedupe: ['@inflector/keeno'] } }
+    },
+
+    async resolveId(id, importer, opts) {
+      if (id === PAGES_ID && options.useFileRouter !== false) return RESOLVED_PAGES_ID
+      if (id !== ROUTER) return
+      // The app's own copy if it installed one, else the plugin's.
+      const resolveOpts = { ...opts, skipSelf: true }
+      return (await this.resolve(id, importer, resolveOpts)) ?? this.resolve(id, SELF, resolveOpts)
     },
 
     async transform(code, id, opts) {

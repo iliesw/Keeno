@@ -56,7 +56,7 @@ async function labels(uri: string, pos: { line: number; character: number }) {
 
 describe('diagnostics', () => {
   test('the todo example has no type errors', async () => {
-    for (const file of ['App.kn', 'TodoItem.kn']) {
+    for (const file of ['pages/index.kn', 'pages/_layout.kn', 'pages/about.kn', 'pages/_404.kn', 'TodoItem.kn']) {
       const doc = await server.openTextDocument(path.join(exampleSrc, file), 'keeno')
       expect({ file, errors: await errors(doc.uri) }).toEqual({ file, errors: [] })
     }

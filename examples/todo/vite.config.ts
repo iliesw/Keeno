@@ -3,7 +3,8 @@ import keeno from '@inflector/vite-plugin-keeno'
 import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
-  plugins: [keeno(), tailwindcss()],
+  // File-based routing from src/pages (these are the defaults).
+  plugins: [keeno({ useFileRouter: true, pages: './src/pages' }), tailwindcss()],
   // Workspace only: load the `@inflector/keeno` runtime from packages/keeno/src instead of its dist/ build.
   // Apps installing keeno from npm don't need this.
   resolve: { conditions: ['keeno-source'] },

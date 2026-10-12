@@ -119,9 +119,16 @@ link(event: MouseEvent): void                 // onClick handler for your own <a
 href(path: string): string                    // path with the router's base
 isActive(path: string, exact?: boolean): boolean
 matchPath(pattern: string, path: string): Record<string, string> | null
+// RouteDefinition: { path, component, layouts?: Component[], errors?: Record<number, Component> }
+httpError(status: number, message?: string): HttpError   // throw it to show the status's error page
+errorStatus(error: unknown): number                      // error.status, else 500
+pageRoutes(files: Record<string, PageModule>, dir?: string): RouteDefinition[]   // from import.meta.glob
+preloadRoute(routes: RouteDefinition[], url: string): Promise<void>             // before SSR / hydrate
 ```
 
-See [Routing](routing.md).
+`virtual:keeno-pages` (Vite plugin): `export default Pages` (`<Router>` props except `routes`), `export const routes`.
+
+See [Routing](routing.md) and [File-based routing](file-routing.md).
 
 ## Development mode
 

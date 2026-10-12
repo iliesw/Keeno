@@ -1,0 +1,35 @@
+<script lang="ts">
+  import type { Children } from '@inflector/keeno'
+  import { Link } from '@inflector/keeno-router'
+  // The layout wraps every page and stays mounted while you navigate between them.
+  const { children } = props<{ children: Children }>()
+</script>
+
+<nav>
+  <Link href="/" exact>Todos</Link>
+  <Link href="/about">About</Link>
+</nav>
+{children}
+
+<style>
+  :global(body) {
+    margin: 0;
+    font-family: system-ui, sans-serif;
+    @apply bg-neutral-500;
+  }
+  nav {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 1rem;
+  }
+  a {
+    color: white;
+    text-decoration: none;
+    padding: 0.3rem 0.8rem;
+    border-radius: 6px;
+  }
+  .active {
+    background: rgb(255 255 255 / 0.2);
+  }
+</style>
