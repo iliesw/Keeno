@@ -1,0 +1,18 @@
+<script lang="ts">
+  import { Link, Router, type RouteDefinition } from '@inflector/keeno-router'
+  import Profile from './Profile.kn'
+  import Cart from './Cart.kn'
+
+  const routes: RouteDefinition[] = [
+    { path: '/', component: Profile },
+    { path: '/cart', component: Cart },
+  ]
+</script>
+
+<nav>
+  <Link href="/" exact class="nav-profile">Profile</Link>
+  <Link href="/cart" class="nav-cart">Cart</Link>
+</nav>
+<main>
+  <Router routes={routes} base="/next" viewTransition />
+</main>

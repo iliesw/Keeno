@@ -1,5 +1,5 @@
 // Client-side router for Keeno: <Router>, <Link>, the `link` click handler, navigate() and useRoute().
-import { ErrorBoundary, State, createContext, derived, inject, lazy, provide, untrack, type Children, type Component } from '@inflector/keeno'
+import { ErrorBoundary, State, createContext, derived, flush, inject, lazy, provide, untrack, type Children, type Component } from '@inflector/keeno'
 import { attr, callerScope, createComponent, insert, on, template } from '@inflector/keeno/internal'
 
 export type Params = Record<string, string>
@@ -138,6 +138,31 @@ function restoreScroll(l: Loc) {
   else setTimeout(run, 0)
 }
 
+/** Whether navigations animate with the View Transitions API (`<Router viewTransition>`). */
+let transitionsDefault = false
+
+/**
+ * Run `update` (which changes the location and scrolls) inside `document.startViewTransition`,
+ * flushing so the new page is rendered before the browser takes its snapshot. Without the API,
+ * `update` just runs.
+ */
+function withTransition(enabled: boolean, update: () => void) {
+  const start = enabled && hasWindow ? (document as any).startViewTransition : undefined
+  if (typeof start !== 'function') return update()
+  start.call(document, () => {
+    update()
+    flush()
+  })
+}
+
+function scrollTo(x: number, y: number) {
+  try {
+    window.scrollTo(x, y)
+  } catch {
+    // not implemented (test DOMs)
+  }
+}
+
 /** Start following the browser location, and pick up changes made without `navigate()`. */
 function sync() {
   if (!hasWindow) return
@@ -147,6 +172,17 @@ function sync() {
   window.addEventListener('popstate', () => {
     saveScroll(current.peek())
     const next = readLocation()
+    if (transitionsDefault && typeof (document as any).startViewTransition === 'function') {
+      // Scroll inside the transition, so the new snapshot has the restored position.
+      withTransition(true, () => {
+        current.set(next)
+        flush()
+        const saved = scrollPositions.get(locKey(next))
+        if (!saved && next.hash) scrollToHash(next.hash)
+        else scrollTo(saved?.[0] ?? 0, saved?.[1] ?? 0)
+      })
+      return
+    }
     current.set(next)
     restoreScroll(next)
   })
@@ -200,6 +236,11 @@ export interface NavigateOptions {
   state?: unknown
   /** Scroll to the top after navigating (default true, unless the URL has a hash). */
   scroll?: boolean
+  /**
+   * Animate the change with the View Transitions API, where the browser supports it (default:
+   * the `viewTransition` prop of `<Router>`). The new page renders inside the transition.
+   */
+  transition?: boolean
 }
 
 /** Go to an app path (`/users/1`, prefixed with `base`) or a relative URL (`?tab=2`). */
@@ -216,16 +257,12 @@ export function navigate(to: string, options: NavigateOptions = {}): void {
   // Let everything that follows the URL (including `state(v, { url })`) see the change. Not a
   // `popstate`: other code would take that for a back/forward navigation.
   window.dispatchEvent(new CustomEvent('keeno:navigate', { detail: { url: url.href, state: options.state ?? null } }))
-  current.set(readLocation())
-  if (options.scroll === false) return
-  if (url.hash) scrollToHash(url.hash)
-  else if (typeof window.scrollTo === 'function') {
-    try {
-      window.scrollTo(0, 0)
-    } catch {
-      // not implemented (test DOMs)
-    }
-  }
+  withTransition(options.transition ?? transitionsDefault, () => {
+    current.set(readLocation())
+    if (options.scroll === false) return
+    if (url.hash) scrollToHash(url.hash)
+    else if (typeof window.scrollTo === 'function') scrollTo(0, 0)
+  })
 }
 
 /** True when a click should be left to the browser (new tab, download, other site…). */
@@ -247,7 +284,10 @@ export function link(e: MouseEvent): void {
   // Outside the app's base: another app on this origin, so a normal page load.
   if (!underBase(url.pathname, base.peek())) return
   e.preventDefault()
-  navigate(stripBase(url.pathname, base.peek()) + url.search + url.hash, { replace: a.hasAttribute('data-replace') })
+  navigate(stripBase(url.pathname, base.peek()) + url.search + url.hash, {
+    replace: a.hasAttribute('data-replace'),
+    transition: a.hasAttribute('data-transition') ? a.getAttribute('data-transition') !== 'false' : undefined,
+  })
 }
 
 // ---------------------------------------------------------------------------
@@ -323,6 +363,11 @@ export interface RouterProps {
   url?: string
   /** Rendered when no route matches. */
   fallback?: () => unknown
+  /**
+   * Animate navigations (links, `navigate()`, back and forward) with the View Transitions API,
+   * where the browser supports it. A navigation can opt out with `transition: false`.
+   */
+  viewTransition?: boolean
 }
 
 /**
@@ -335,6 +380,7 @@ export function Router(props: RouterProps): unknown {
   const loc = url != null ? new State(parseUrl(url)) : current
   if (url == null) {
     base.set(routerBase)
+    transitionsDefault = !!untrack(() => props.viewTransition)
     sync()
   }
   // URLs outside the base aren't this app's: they match nothing.
@@ -446,6 +492,8 @@ export interface LinkProps {
   href: string
   /** Replace the current history entry. */
   replace?: boolean
+  /** Animate the navigation with the View Transitions API (default: `<Router viewTransition>`). */
+  transition?: boolean
   /** Class added while the link's path is active (default `active`). */
   activeClass?: string
   /** Only active on exactly this path, not below it. */
@@ -477,7 +525,7 @@ export function Link(props: LinkProps): unknown {
   on(a, 'click', (e: MouseEvent) => {
     if (isExternalClick(e, a)) return
     e.preventDefault()
-    navigate(props.href, { replace: props.replace })
+    navigate(props.href, { replace: props.replace, transition: props.transition })
   })
   insert(a, () => props.children?.())
   return a

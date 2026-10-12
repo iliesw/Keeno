@@ -33,9 +33,31 @@ An error thrown while a component renders, updates or mounts (including inside `
 
 A `derived` that throws passes the error on to whatever reads it, and it recovers on its own once its sources change.
 
+## Loading
+
+`<Loading>` shows `fallback` while an [async derived](reactivity.md#async-derived) read by its children has no value yet:
+
+```html Profile.kn
+<script lang="ts">
+  import { Loading } from '@inflector/keeno'
+  const user = derived(async () => (await fetch('/api/me')).json())
+</script>
+
+<Loading fallback={() => <Spinner />}>
+  <h1>{user.name}</h1>
+  <Settings />
+</Loading>
+```
+
+- The children are created once. While the fallback shows they stay alive off-screen, so `<Settings />` keeps its state.
+- Only the first load shows the fallback. Re-runs keep the current content; use `pending()` to show that something is refreshing.
+- Nested `<Loading>` boundaries each wait for what is read inside them.
+- Errors pass through to the closest `<ErrorBoundary>`, which can sit inside or outside it.
+- An async value read outside any `<Loading>` renders nothing until it resolves, with a warning in development.
+
 ## Await
 
-`<Await>` renders the states of a promise:
+`<Await>` renders the states of a promise. For data that depends on states or props, an [async derived](reactivity.md#async-derived) with `<Loading>` is usually simpler.
 
 ```html User.kn
 <script lang="ts">

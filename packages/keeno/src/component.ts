@@ -2,8 +2,8 @@
 import { devHook, isDev } from './dev'
 import { installDevtools, internalRoots } from './devtools'
 import { ComponentOwner, callerScope, mountComponent } from './lifecycle'
-import { insert, isStatic, region } from './dom'
-import { Owner, flush, getOwner, handleError, queueMount, runWithOwner, untrack } from './signal'
+import { insert, isServer, isStatic, region } from './dom'
+import { Owner, flush, getOwner, handleError, installAsyncRegistry, queueMount, runWithOwner, untrack, type AsyncRegistry } from './signal'
 
 export type Component<P = any> = (props: P) => unknown
 
@@ -31,7 +31,8 @@ export function createComponent<P extends Record<string, any>>(Comp: Component<P
     return undefined
   }
   devHook?.component(owner, out)
-  queueMount(() => mountComponent(owner))
+  // Nothing mounts on the server: `init` and `update` don't run there.
+  if (!isServer()) queueMount(() => mountComponent(owner))
   return out
 }
 
@@ -106,8 +107,16 @@ export function mountDevtools<P extends Record<string, any>>(Comp: Component<P>,
   return mountRoot(Comp, target, props, true)
 }
 
-function mountRoot<P extends Record<string, any>>(Comp: Component<P>, target: Node, props: P, internal: boolean): MountedApp {
+function mountRoot<P extends Record<string, any>>(
+  Comp: Component<P>,
+  target: Node,
+  props: P,
+  internal: boolean,
+  registry?: AsyncRegistry,
+): MountedApp {
   const root = new Owner(null)
+  // Hydration: async deriveds created by the first render start with the server's values.
+  const removeRegistry = registry ? installAsyncRegistry(root, registry) : null
   if (internal) internalRoots.add(root)
   else if (isDev()) {
     roots.add(root)
@@ -118,6 +127,7 @@ function mountRoot<P extends Record<string, any>>(Comp: Component<P>, target: No
     nodes = runWithOwner(root, () => insert(target, () => createComponent(Comp, props)))
     flush()
   } catch (err) {
+    removeRegistry?.()
     // Don't leave a half-mounted app behind: its computations would keep running.
     const current = nodes?.() ?? []
     root.dispose()
@@ -125,6 +135,7 @@ function mountRoot<P extends Record<string, any>>(Comp: Component<P>, target: No
     for (const n of current) n.parentNode?.removeChild(n)
     throw err
   }
+  removeRegistry?.()
   const rendered = nodes
   return {
     destroy() {
@@ -142,15 +153,33 @@ function mountRoot<P extends Record<string, any>>(Comp: Component<P>, target: No
  * inputs before this runs are not kept.
  */
 export function hydrate<P extends Record<string, any>>(Comp: Component<P>, target: Element, props: P = {} as P): MountedApp {
+  const data = readServerData(target.ownerDocument)
   const fragment = target.ownerDocument.createDocumentFragment()
   while (target.firstChild) fragment.appendChild(target.firstChild)
   try {
-    return mount(Comp, target, props)
+    return mountRoot(Comp, target, props, false, {
+      next: 0,
+      peek: (id) => (Object.hasOwn(data, id) ? { value: data[id] } : undefined),
+      created: () => {},
+    })
   } catch (err) {
     // Keep the server markup if the client render fails.
     target.replaceChildren(fragment)
     throw err
   }
+}
+
+/** Values of async deriveds that renderToString / renderToStream sent (`<script data-keeno-data>`). */
+function readServerData(doc: Document): Record<string, unknown> {
+  const data: Record<string, unknown> = {}
+  for (const el of doc.querySelectorAll('script[data-keeno-data]')) {
+    try {
+      Object.assign(data, JSON.parse(el.textContent ?? '{}'))
+    } catch {
+      // malformed: those values are fetched again
+    }
+  }
+  return data
 }
 
 // ---------------------------------------------------------------------------

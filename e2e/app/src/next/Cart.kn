@@ -1,0 +1,15 @@
+<script lang="ts">
+  const cart = store({ items: [{ id: 1, name: 'pen', qty: 1 }] })
+  const total = derived(() => cart.items.reduce((n, i) => n + i.qty, 0))
+</script>
+
+<ul>
+  {cart.items.map((item) => (
+    <li key={item.id} class="cart-item">
+      <input class="cart-name" bind:value={item.name} />
+      <button class="cart-more" onClick={() => item.qty++}>+</button>
+    </li>
+  ))}
+</ul>
+<p class="cart-total">{total}</p>
+<button class="cart-add" onClick={() => cart.items.push({ id: cart.items.length + 1, name: 'ink', qty: 2 })}>add</button>

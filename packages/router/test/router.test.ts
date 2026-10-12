@@ -217,3 +217,68 @@ describe('scroll restoration', () => {
     }
   })
 })
+
+describe('view transitions', () => {
+  const routes: RouteDefinition[] = [
+    { path: '/', component: () => 'home' },
+    { path: '/about', component: () => 'about' },
+  ]
+  let calls: string[] = []
+  const install = () => {
+    calls = []
+    ;(document as any).startViewTransition = (cb: () => void) => {
+      calls.push('start')
+      // The browser calls back after capturing the old page: the new one must be rendered when it returns.
+      queueMicrotask(() => {
+        cb()
+        calls.push(`rendered: ${document.body.textContent}`)
+      })
+      return {}
+    }
+  }
+  afterEach(() => {
+    delete (document as any).startViewTransition
+  })
+
+  test('<Router viewTransition> renders navigations inside startViewTransition', async () => {
+    install()
+    render(() => createComponent(Router, { routes, viewTransition: true }))
+    navigate('/about')
+    await tick()
+    expect(calls).toEqual(['start', 'rendered: about'])
+    navigate('/', { transition: false })
+    await tick()
+    expect(calls.length).toBe(2)
+    expect(document.body.textContent).toBe('home')
+  })
+
+  test('Link can opt in per link', async () => {
+    install()
+    const el = render(() => [
+      createComponent(Router, { routes }),
+      createComponent(Link, { href: '/about', transition: true, children: () => 'go' }),
+    ])
+    el.querySelector('a')!.click()
+    await tick()
+    expect(calls).toEqual(['start', 'rendered: aboutgo'])
+    navigate('/')
+    await tick()
+    expect(calls.length).toBe(2) // no default: plain navigation
+  })
+
+  test('back and forward transition with <Router viewTransition>', async () => {
+    install()
+    render(() => createComponent(Router, { routes, viewTransition: true }))
+    history.pushState(null, '', '/about')
+    window.dispatchEvent(new PopStateEvent('popstate'))
+    await tick()
+    expect(calls).toEqual(['start', 'rendered: about'])
+  })
+
+  test('without the API, navigation works as before', async () => {
+    const el = render(() => createComponent(Router, { routes, viewTransition: true }))
+    navigate('/about')
+    await tick()
+    expect(el.textContent).toBe('about')
+  })
+})

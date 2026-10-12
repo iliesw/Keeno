@@ -62,6 +62,45 @@ A route component receives `params`:
 - Clicks with a modifier key, a middle click, `target="_blank"`, `download` and links to other sites are left to the browser.
 - Query parameters synced with `state(v, { url: 'tab' })` follow navigation, including back and forward.
 
+## View transitions
+
+`<Router viewTransition>` animates navigations with the browser's [View Transitions API](https://developer.mozilla.org/docs/Web/API/View_Transition_API): links, `navigate()`, and back and forward. By default the browser cross-fades the old page into the new one. Browsers without the API navigate as usual.
+
+```html App.kn
+<Router routes={routes} viewTransition />
+```
+
+- One navigation can opt out with `navigate(to, { transition: false })`, or opt in without the router default with `navigate(to, { transition: true })`, `<Link transition>` or `<a data-transition onClick={link}>`.
+- The new page is rendered inside the transition, so code right after `navigate()` still sees the old route until the browser starts the transition.
+- Give an element the same `view-transition-name` on both pages to animate it from one position to the other, for example a thumbnail that grows into a hero image:
+
+```html
+<!-- List.kn -->
+<img src={photo.thumb} style={`view-transition-name: photo-${photo.id}`} />
+
+<!-- Photo.kn -->
+<img src={photo.full} style={`view-transition-name: photo-${photo.id}`} />
+```
+
+Customize the animation with the `::view-transition-*` pseudo-elements, and respect users who prefer less motion:
+
+```css
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 200ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}
+```
+
+Put this CSS in a global stylesheet, or inside `:global()` in a component's `<style>`.
+
 ## File-based routing
 
 With the Vite plugin, the routes can come from the files in `src/pages` instead: `about.kn` is `/about`, `[id].kn` is `/:id`, with `_layout.kn`, `_404.kn` and `_500.kn` for layouts and error pages. See [File-based routing](file-routing.md).
