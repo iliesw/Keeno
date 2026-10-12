@@ -1,5 +1,12 @@
 # @inflector/keeno-language-server
 
+## 0.2.1
+
+### Patch Changes
+
+- Updated dependencies [[`6c85982`](https://github.com/iliesw/Keeno/commit/6c859820b58232e41d06a0592aa441f5065fd99c), [`6c85982`](https://github.com/iliesw/Keeno/commit/6c859820b58232e41d06a0592aa441f5065fd99c)]:
+  - @inflector/keeno-compiler@0.3.0
+
 ## 0.2.0
 
 ### Minor Changes
