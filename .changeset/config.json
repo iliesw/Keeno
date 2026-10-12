@@ -2,7 +2,7 @@
   "$schema": "https://unpkg.com/@changesets/config@4.0.1/schema.json",
   "changelog": ["@changesets/changelog-github", { "repo": "iliesw/Keeno" }],
   "commit": false,
-  "fixed": [["@inflector/keeno", "@inflector/keeno-compiler", "@inflector/vite-plugin-keeno"]],
+  "fixed": [["@inflector/keeno", "@inflector/keeno-compiler", "@inflector/vite-plugin-keeno", "create-keeno"]],
   "linked": [],
   "access": "public",
   "baseBranch": "main",

@@ -57,6 +57,19 @@
         "@types/babel__traverse": "^7.20.6",
       },
     },
+    "packages/create-keeno": {
+      "name": "create-keeno",
+      "version": "0.1.0",
+      "bin": {
+        "create-keeno": "./dist/cli.js",
+      },
+      "devDependencies": {
+        "@inflector/keeno": "workspace:^",
+        "@inflector/keeno-check": "workspace:^",
+        "@inflector/keeno-router": "workspace:^",
+        "@inflector/vite-plugin-keeno": "workspace:^",
+      },
+    },
     "packages/keeno": {
       "name": "@inflector/keeno",
       "version": "0.3.0",
@@ -578,6 +591,8 @@
     "codemirror": ["codemirror@6.0.2", "", { "dependencies": { "@codemirror/autocomplete": "^6.0.0", "@codemirror/commands": "^6.0.0", "@codemirror/language": "^6.0.0", "@codemirror/lint": "^6.0.0", "@codemirror/search": "^6.0.0", "@codemirror/state": "^6.0.0", "@codemirror/view": "^6.0.0" } }, "sha512-VhydHotNW5w1UGK0Qj96BwSk/Zqbp9WbnyK2W/eVMv4QyF41INRGpjUhFJY7/uDNuudSc33a/PKr4iDqRduvHw=="],
 
     "commander": ["commander@12.1.0", "", {}, "sha512-Vw8qHK3bZM9y/P10u3Vib8o/DdkvA2OtPtZvD871QKjy74Wj1WSKFILMPRPSdUSx5RFK1arlJzEtA4PkFgnbuA=="],
+
+    "create-keeno": ["create-keeno@workspace:packages/create-keeno"],
 
     "crelt": ["crelt@1.0.7", "", {}, "sha512-aK6BbWfhf4U/wCcLHKPJl/xa6VkVstRaPywWtMKGwuOLc/wZTyQYuoxgvZnNsBvv7Kg3YTBQYYBCggcviQczuA=="],
 

@@ -6,6 +6,14 @@ Keeno is a compiled, signal-based frontend framework. You write components in `.
 
 Keeno uses Bun for packages, scripts and tests, and Vite for the dev server and builds.
 
+The quickest start is the project generator. It asks for a directory, a template (file-based routing or a single component) and whether to add Tailwind CSS:
+
+```bash
+bun create keeno my-app
+```
+
+To set a project up by hand instead:
+
 ```bash
 bun add @inflector/keeno
 bun add -d vite @inflector/vite-plugin-keeno

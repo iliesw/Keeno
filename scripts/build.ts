@@ -5,7 +5,7 @@ import path from 'node:path'
 const devtools = Bun.spawnSync([process.execPath, 'run', path.join(import.meta.dir, 'build-devtools.ts')], { stdout: 'inherit', stderr: 'inherit' })
 if (devtools.exitCode !== 0) process.exit(devtools.exitCode ?? 1)
 
-const order = ['keeno', 'router', 'compiler', 'vite-plugin-keeno', 'language-server', 'keeno-check']
+const order = ['keeno', 'router', 'compiler', 'vite-plugin-keeno', 'language-server', 'keeno-check', 'create-keeno']
 const root = path.resolve(import.meta.dir, '..')
 
 for (const name of order) {
