@@ -1,5 +1,12 @@
 # @inflector/keeno-language-server
 
+## 0.2.2
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @inflector/keeno-compiler@0.4.0
+
 ## 0.2.1
 
 ### Patch Changes
