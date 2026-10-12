@@ -19,6 +19,12 @@ Keeno is a compiled, signal-based frontend framework. Components are `.kn` files
 ## Quick start
 
 ```bash
+bun create keeno my-app
+```
+
+(`npm create keeno@latest`, `pnpm create keeno` and `yarn create keeno` work too.) Or add Keeno to an existing Vite project:
+
+```bash
 bun add @inflector/keeno
 bun add -d vite @inflector/vite-plugin-keeno
 ```
@@ -58,6 +64,7 @@ npm, pnpm and yarn work too. Continue with [Getting started](docs/getting-starte
 | [`@inflector/vite-plugin-keeno`](packages/vite-plugin-keeno) | Vite plugin: compiles `.kn` files, scoped CSS, HMR |
 | [`@inflector/keeno-router`](packages/router) | Client-side router |
 | [`@inflector/keeno-check`](packages/keeno-check) | Type-checks `.kn` and `.ts` files from the command line |
+| [`create-keeno`](packages/create-keeno) | Scaffolds a new project: `bun create keeno` |
 | [`@inflector/keeno-compiler`](packages/compiler) | The `.kn` compiler (used by the Vite plugin) |
 | [`@inflector/keeno-language-server`](packages/language-server) | Volar-based language server (used by the editor extension and `keeno-check`) |
 | [Keeno for VS Code](packages/vscode) | Syntax highlighting and IntelliSense (`inflector.inflector-keeno`) |

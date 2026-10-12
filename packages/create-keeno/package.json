@@ -1,0 +1,63 @@
+{
+  "name": "create-keeno",
+  "version": "0.1.0",
+  "description": "Scaffold a new Keeno project: npm create keeno",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iliesw/Keeno.git",
+    "directory": "packages/create-keeno"
+  },
+  "homepage": "https://github.com/iliesw/Keeno/tree/main/packages/create-keeno#readme",
+  "bugs": {
+    "url": "https://github.com/iliesw/Keeno/issues"
+  },
+  "keywords": [
+    "keeno",
+    "create",
+    "scaffold",
+    "template",
+    "cli"
+  ],
+  "type": "module",
+  "bin": {
+    "create-keeno": "./dist/cli.js"
+  },
+  "main": "./dist/scaffold.js",
+  "types": "./dist/scaffold.d.ts",
+  "exports": {
+    ".": {
+      "keeno-source": "./src/scaffold.ts",
+      "types": "./dist/scaffold.d.ts",
+      "import": "./dist/scaffold.js",
+      "default": "./dist/scaffold.js"
+    },
+    "./cli": {
+      "keeno-source": "./src/cli.ts",
+      "types": "./dist/cli.d.ts",
+      "import": "./dist/cli.js",
+      "default": "./dist/cli.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "bun ../../scripts/build-package.ts --target=node",
+    "prepack": "bun run build"
+  },
+  "//": "Not installed with the CLI: the generated project depends on these. `bun pm pack` turns the workspace ranges into the released versions, which the CLI reads from this file.",
+  "devDependencies": {
+    "@inflector/keeno": "workspace:^",
+    "@inflector/keeno-check": "workspace:^",
+    "@inflector/keeno-router": "workspace:^",
+    "@inflector/vite-plugin-keeno": "workspace:^"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

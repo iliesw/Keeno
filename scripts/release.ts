@@ -21,7 +21,7 @@ const provenance = ci && process.env.REPO_VISIBILITY === 'public'
 const out = path.join(tmpdir(), 'keeno-release')
 
 /** Publish order: dependencies first. */
-const npmPackages = ['keeno', 'router', 'compiler', 'vite-plugin-keeno', 'language-server', 'keeno-check']
+const npmPackages = ['keeno', 'router', 'compiler', 'vite-plugin-keeno', 'language-server', 'keeno-check', 'create-keeno']
 
 const readPkg = (dir: string) => JSON.parse(readFileSync(path.join(root, 'packages', dir, 'package.json'), 'utf8'))
 
