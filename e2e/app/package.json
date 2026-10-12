@@ -4,5 +4,5 @@
   "type": "module",
   "scripts": { "dev": "bunx --bun vite" },
   "dependencies": { "@inflector/keeno": "workspace:*", "@inflector/keeno-router": "workspace:*" },
-  "devDependencies": { "vite": "^5.4.11", "@inflector/vite-plugin-keeno": "workspace:*" }
+  "devDependencies": { "vite": "^8.3.4", "@inflector/vite-plugin-keeno": "workspace:*" }
 }
