@@ -356,6 +356,31 @@ describe('derived, history members, spread, class arrays', () => {
     expect(out).toContain('() => !text.canUndo')
   })
 
+  test('refresh is a reserved member (async deriveds)', () => {
+    const out = body(
+      '<button onClick={() => user.refresh()}>{user.name}</button>',
+      'const user = derived(async () => ({ name: "ada" }))',
+    )
+    expect(out).toContain('user.refresh()')
+    expect(out).toContain('user.get().name')
+  })
+
+  test('a store is not unwrapped, and bind: on a member path uses bindPath', () => {
+    const out = body(
+      '<input bind:value={form.user.name} /><p>{form.user.name}</p><input bind:value={rows[i].title} />',
+      'const form = store({ user: { name: "" } })\nconst rows = store([{ title: "" }])\nconst i = 0',
+    )
+    expect(out).not.toContain('form.get()')
+    expect(out).toContain('_$bindPath(() => form.user, () => "name")')
+    expect(out).toContain('_$bindPath(() => rows[i], () => "title")')
+    expect(out).toContain('() => form.user.name')
+  })
+
+  test('bind: on a state member path reads the state inside bindPath', () => {
+    const out = body('<input bind:value={fields.name} />', 'const fields = state({ name: "" })')
+    expect(out).toContain('_$bindPath(() => fields.get(), () => "name")')
+  })
+
   test('class arrays and objects go through attr', () => {
     const out = body('<button class={["btn", active && "on", { big }]}>x</button>', 'const active = state(false)\nconst big = true')
     expect(out).toContain('_$attr(_el$1, "class", () => ["btn", active.get() && "on", {')

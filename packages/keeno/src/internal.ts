@@ -1,5 +1,5 @@
 // Helpers used by compiled `.kn` output. Not part of the public API.
-export { template, insert, mapKeyed, attr, spread, on, bind, and, or, cond } from './dom'
+export { template, insert, mapKeyed, attr, spread, on, bind, bindPath, and, or, cond } from './dom'
 export { createComponent, mergeProps } from './component'
 export { hot } from './hmr'
 export { setRef } from './ref'

@@ -302,3 +302,39 @@ describe('Context', () => {
     expect($(el, '.leaf').textContent).toBe('dark Grace blue')
   })
 })
+
+describe('StoreTodos (store, async derived, Loading)', () => {
+  test('store mutations, bind on store paths, and async data', async () => {
+    const pendingLoads: { owner: string; resolve: (v: any) => void }[] = []
+    const load = (owner: string) => new Promise((resolve) => pendingLoads.push({ owner, resolve }))
+    const el = await render('StoreTodos', { load })
+    expect($(el, '.fallback').textContent).toBe('loading…')
+    pendingLoads[0]!.resolve([{ id: 1, title: 'from ada', done: false }])
+    await tick()
+    expect($(el, '.remote').textContent).toBe('from ada')
+
+    type($(el, '.draft') as HTMLInputElement, 'milk')
+    $(el, '.add').click()
+    type($(el, '.draft') as HTMLInputElement, 'eggs')
+    $(el, '.add').click()
+    await tick()
+    expect((($(el, '.draft') as HTMLInputElement).value)).toBe('')
+    expect([...el.querySelectorAll('.items span')].map((s) => s.textContent)).toEqual(['milk', 'eggs'])
+    expect($(el, '.left').textContent).toBe('2 left')
+    const box = el.querySelector('.items input') as HTMLInputElement
+    box.checked = true
+    box.dispatchEvent(new Event('change'))
+    await tick()
+    expect($(el, '.left').textContent).toBe('1 left')
+
+    $(el, '.owner').click()
+    await tick()
+    expect(pendingLoads[1]!.owner).toBe('grace')
+    expect($(el, '.remote').textContent).toBe('from ada') // stale while revalidating
+    expect($(el, '.refreshing')).not.toBeNull()
+    pendingLoads[1]!.resolve([{ id: 2, title: 'from grace', done: false }])
+    await tick()
+    expect($(el, '.remote').textContent).toBe('from grace')
+    expect($(el, '.refreshing')).toBeNull()
+  })
+})

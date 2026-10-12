@@ -1,0 +1,117 @@
+<script lang="ts">
+  import { snapshot } from '@inflector/keeno'
+
+  interface Item { id: number; name: string; qty: number; done: boolean }
+  interface Group { id: number; title: string; items: Item[] }
+
+  let nextId = 10
+  const list = store({
+    draft: '',
+    groups: [
+      { id: 1, title: 'Produce', items: [{ id: 2, name: 'Apples', qty: 6, done: false }, { id: 3, name: 'Spinach', qty: 1, done: true }] },
+      { id: 4, title: 'Bakery', items: [{ id: 5, name: 'Sourdough', qty: 1, done: false }] },
+    ] as Group[],
+  })
+
+  const remaining = derived(() => list.groups.reduce((n, g) => n + g.items.filter((i) => !i.done).length, 0))
+
+  function addTo(group: Group) {
+    if (!list.draft.trim()) return
+    group.items.push({ id: nextId++, name: list.draft.trim(), qty: 1, done: false })
+    list.draft = ''
+  }
+</script>
+
+<div class="top">
+  <input placeholder="New item…" bind:value={list.draft} />
+  <span class="count">{remaining} to buy</span>
+</div>
+
+{list.groups.map((group) => (
+  <section key={group.id}>
+    <header>
+      <h3>{group.title}</h3>
+      <button onClick={() => addTo(group)}>+ Add here</button>
+    </header>
+    <ul>
+      {group.items.map((item) => (
+        <li key={item.id} class={{ done: item.done }}>
+          <input type="checkbox" bind:checked={item.done} />
+          <input class="name" bind:value={item.name} />
+          <button onClick={() => item.qty > 1 && item.qty--}>−</button>
+          <span class="qty">{item.qty}</span>
+          <button onClick={() => item.qty++}>+</button>
+          <button class="remove" onClick={() => group.items.splice(group.items.indexOf(item), 1)}>✕</button>
+        </li>
+      ))}
+    </ul>
+  </section>
+))}
+
+<details>
+  <summary>snapshot(list)</summary>
+  <pre>{JSON.stringify(snapshot(list.groups), null, 2)}</pre>
+</details>
+
+<style>
+  .top {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+  .top input {
+    flex: 1;
+  }
+  .count {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+  section {
+    margin-bottom: 1rem;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+  }
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  h3 {
+    margin: 0;
+  }
+  ul {
+    margin: 0.5rem 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  li {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.25rem 0;
+  }
+  li.done .name {
+    text-decoration: line-through;
+    color: var(--muted);
+  }
+  .name {
+    flex: 1;
+    min-width: 0;
+  }
+  .qty {
+    min-width: 1.5rem;
+    text-align: center;
+    font-family: var(--font-mono);
+  }
+  .remove {
+    color: var(--danger);
+  }
+  pre {
+    max-height: 200px;
+    overflow: auto;
+    font-size: 0.75rem;
+  }
+</style>

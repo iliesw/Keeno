@@ -1,0 +1,16 @@
+<script lang="ts">
+  import { Loading, pending } from '@inflector/keeno'
+
+  const id = state(1)
+  const user = derived(async () => {
+    const n = id
+    await new Promise((r) => setTimeout(r, 800))
+    return { name: `user ${n}` }
+  })
+</script>
+
+<Loading fallback={() => <p class="profile-loading">loading…</p>}>
+  <h1 class="profile-name">{user.name}</h1>
+  {pending(() => user) && <small class="profile-refreshing">refreshing</small>}
+</Loading>
+<button class="next-user" onClick={() => id.set(id + 1)}>next</button>

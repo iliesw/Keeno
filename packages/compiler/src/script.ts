@@ -246,6 +246,20 @@ export function analyze(file: t.File, ctx: CompileContext) {
     CallExpression(path) {
       if (isKeenoApi(path.get('callee'), 'provide')) prepareProvide(path, ctx)
     },
+    JSXAttribute(path) {
+      // `bind:value={form.name}`: pass where to read and write (a state there, or a store property).
+      const name = path.node.name
+      if (!t.isJSXNamespacedName(name) || name.namespace.name !== 'bind') return
+      const value = path.node.value
+      if (!t.isJSXExpressionContainer(value) || !t.isMemberExpression(value.expression)) return
+      const member = value.expression
+      if (t.isPrivateName(member.property)) return
+      const key = member.computed ? (member.property as t.Expression) : t.stringLiteral((member.property as t.Identifier).name)
+      value.expression = t.callExpression(ctx.helper('bindPath'), [
+        t.arrowFunctionExpression([], member.object as t.Expression),
+        t.arrowFunctionExpression([], key),
+      ])
+    },
   })
 }
 

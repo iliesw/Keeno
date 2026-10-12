@@ -1,8 +1,17 @@
 // Built-in control components: ErrorBoundary, Portal, Await and lazy().
 import { createComponent, type Children, type Component } from './component'
-import { getDocument, insert, isServer } from './dom'
+import { getDocument, insert, isServer, region } from './dom'
 import { callerScope } from './lifecycle'
-import { createComputation, getOwner, onCleanup, untrack } from './signal'
+import {
+  createComputation,
+  currentRegistry,
+  getOwner,
+  NotReady,
+  onCleanup,
+  untrack,
+  type Derived,
+  type LoadingBoundary,
+} from './signal'
 import { State } from './state'
 
 // ---------------------------------------------------------------------------
@@ -28,6 +37,8 @@ export function ErrorBoundary(props: ErrorBoundaryProps): unknown {
   const error = new State<{ value: unknown } | null>(null)
   const owner = getOwner()!
   owner.onError = (err) => {
+    // A value that isn't ready yet is for <Loading>, not an error.
+    if (err instanceof NotReady) throw err
     // An error in the fallback itself goes to the next boundary up.
     if (error.peek()) throw err
     props.onError?.(err)
@@ -43,13 +54,71 @@ export function ErrorBoundary(props: ErrorBoundaryProps): unknown {
 }
 
 // ---------------------------------------------------------------------------
+// Loading
+
+export interface LoadingProps {
+  /** Rendered while an async derived read inside has no value yet. */
+  fallback?: (() => unknown) | string | number | Node | null
+  children?: Children
+}
+
+/**
+ * Show `fallback` while an async derived read by the children has no value yet:
+ * `<Loading fallback={() => <Spinner />}><Profile /></Loading>`. The children are created once and
+ * kept while the fallback shows, so their state survives. Re-runs of a derived that already has a
+ * value keep the content (see `pending()`).
+ */
+export function Loading(props: LoadingProps): unknown {
+  const waiting = new State<Set<Derived<any>>>(new Set(), { equals: () => false })
+  const owner = getOwner()!
+  owner.onError = (err) => {
+    if (!(err instanceof NotReady)) throw err
+    const d = err.derived
+    const set = waiting.peek()
+    if (set.has(d)) return
+    set.add(d)
+    waiting.set(set)
+    void d._settled().then(() => {
+      if (owner.disposed || !set.delete(d)) return
+      waiting.set(set)
+    })
+  }
+  // Streaming server render: tell the stream about this boundary, and mark where its content goes.
+  const registry = isServer() ? currentRegistry() : null
+  let boundary: LoadingBoundary | null = null
+  if (registry?.boundary) {
+    let parent: LoadingBoundary | null = null
+    for (let o = owner.parent; o && !parent; o = o.parent) parent = (o.context?.get(BOUNDARY) as LoadingBoundary) ?? null
+    boundary = { waiting: () => waiting.get().size, content: () => content(), parent }
+    ;(owner.context ??= new Map()).set(BOUNDARY, boundary)
+    registry.boundary(boundary)
+  }
+  const content = region(() => props.children?.())
+  const view = () => {
+    if (!waiting.get().size) return content()
+    const fallback = props.fallback
+    return typeof fallback === 'function' ? untrack(fallback) : fallback
+  }
+  if (!boundary) return view
+  const doc = getDocument()
+  return [doc.createComment(`kn-l:${boundary.id}`), view, doc.createComment(`/kn-l:${boundary.id}`)]
+}
+
+/** Key of the enclosing <Loading> in an owner's context (streaming server renders only). */
+const BOUNDARY = Symbol('keeno.loading')
+
+// ---------------------------------------------------------------------------
 // Portal
 
-let serverOutlet: Element | null = null
+/** @internal Key, in the root owner's context, of where server-rendered portals go (per render). */
+export const PORTAL_OUTLET = Symbol('keeno.portals')
 
-/** @internal Where server-rendered portals go during renderToString (null: dropped). */
-export function setServerPortalOutlet(el: Element | null): void {
-  serverOutlet = el
+function serverOutlet(): Element | null {
+  for (let o = getOwner(); o; o = o.parent) {
+    const el = o.context?.get(PORTAL_OUTLET)
+    if (el) return el as Element
+  }
+  return null
 }
 
 export interface PortalProps {
@@ -67,10 +136,11 @@ export function Portal(props: PortalProps): unknown {
   // On the server the target isn't part of the HTML being rendered: render into the outlet that
   // renderToString() appends after the app (hydrate() then renders the portal at its target).
   if (isServer()) {
-    if (!serverOutlet) return null
+    const outlet = serverOutlet()
+    if (!outlet) return null
     const holder = getDocument().createElement('div')
     holder.setAttribute('data-keeno-portal', typeof where === 'string' ? where : '')
-    serverOutlet.appendChild(holder)
+    outlet.appendChild(holder)
     insert(holder, () => props.children?.())
     return null
   }

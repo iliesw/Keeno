@@ -3,6 +3,7 @@ import { isDev, warn } from './dev'
 import { Owner, createComputation, memo, queueMount, runWithOwner, untrack } from './signal'
 import { State } from './state'
 import { setRef } from './ref'
+import { isStore, trackKeys } from './store'
 
 let serverDocument: Document | null = null
 
@@ -456,6 +457,8 @@ export function mapKeyed<T>(
 
   createComputation(() => {
     const items = list() || []
+    // A store array keeps its identity when it changes: track its items and order.
+    trackKeys(items)
     untrack(() => {
       const old = new Map<unknown, Row<T>[]>()
       for (const r of rows) {
@@ -625,9 +628,44 @@ export function on(el: Element, type: string, handler: (e: any) => void): void {
   el.addEventListener(type, handler)
 }
 
-/** Two-way binding between an input property (`value` or `checked`) and a state. */
-export function bind(el: Element, prop: 'value' | 'checked', target: State<any>): void {
-  if (!(target instanceof State)) throw new Error(`[keeno] bind:${prop} needs a state, got ${typeof target}`)
+/** What `bind:` reads and writes: a state, or a property of a store. */
+interface Bindable {
+  get(): any
+  peek(): any
+  set(value: any): void
+  _isPending(): boolean
+}
+
+/** `bind:value={a.b.c}` compiles to `bindPath(() => a.b, () => 'c')`: a state there, or a store property. */
+export interface BindPath {
+  readonly parent: () => any
+  readonly key: () => PropertyKey
+}
+const BIND_PATH = Symbol('keeno.bindPath')
+
+/** @internal Emitted by the compiler for `bind:` on a member expression. */
+export function bindPath(parent: () => any, key: () => PropertyKey): BindPath {
+  return { [BIND_PATH]: true, parent, key } as BindPath
+}
+
+function toBindable(target: unknown, prop: string): Bindable {
+  if (target instanceof State) return target
+  if (typeof target === 'object' && target !== null && (target as any)[BIND_PATH]) {
+    const path = target as BindPath
+    const parent = untrack(path.parent)
+    const value = untrack(() => parent?.[path.key()])
+    if (value instanceof State) return value
+    if (isStore(parent)) {
+      const get = () => path.parent()[path.key()]
+      return { get, peek: () => untrack(get), set: (v) => (untrack(path.parent)[untrack(path.key)] = v), _isPending: () => false }
+    }
+  }
+  throw new Error(`[keeno] bind:${prop} needs a state or a property of a store, got ${typeof target}`)
+}
+
+/** Two-way binding between an input property (`value` or `checked`) and a state or store property. */
+export function bind(el: Element, prop: 'value' | 'checked', bound: State<any> | BindPath): void {
+  const target = toBindable(bound, prop)
   const input = el as HTMLInputElement
   if (prop === 'checked') {
     createComputation(() => setProp(input, 'checked', !!target.get()))

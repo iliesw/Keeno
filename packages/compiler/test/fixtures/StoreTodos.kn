@@ -1,0 +1,33 @@
+<script lang="ts">
+  import { Loading, pending } from '@inflector/keeno'
+
+  const { load } = props<{ load: (owner: string) => Promise<{ id: number; title: string; done: boolean }[]> }>()
+
+  const owner = state('ada')
+  const todos = store({ draft: '', items: [] as { id: number; title: string; done: boolean }[] })
+  const left = derived(() => todos.items.filter((t) => !t.done).length)
+  const remote = derived(async () => load(owner))
+
+  function add() {
+    todos.items.push({ id: todos.items.length + 1, title: todos.draft, done: false })
+    todos.draft = ''
+  }
+</script>
+
+<input class="draft" bind:value={todos.draft} />
+<button class="add" onClick={add}>add</button>
+<ul class="items">
+  {todos.items.map((t) => (
+    <li key={t.id}>
+      <input type="checkbox" bind:checked={t.done} />
+      <span>{t.title}</span>
+    </li>
+  ))}
+</ul>
+<p class="left">{left} left</p>
+<Loading fallback={() => <p class="fallback">loading…</p>}>
+  <p class="remote">{remote.map((t) => t.title).join(', ')}</p>
+  {pending(() => remote) && <small class="refreshing">refreshing</small>}
+  <button class="reload" onClick={() => remote.refresh()}>reload</button>
+</Loading>
+<button class="owner" onClick={() => owner.set('grace')}>grace</button>

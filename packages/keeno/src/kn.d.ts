@@ -1,7 +1,7 @@
 // Editor-only types for code inside `.kn` files (used by @inflector/keeno-language-server, never at runtime).
 // In a .kn file a local state reads as its value, so `state(v)` is typed as the value plus the
 // reserved members. `x.foo` on anything else is `x.get().foo`, which is what the intersection gives.
-import type { Component, Context, Dep, DerivedOptions, RefTarget, Signal, State, StateOptions, UpdateListener } from './index'
+import type { AsyncContext, Component, Context, Dep, DerivedOptions, RefTarget, Signal, State, StateOptions, UpdateListener } from './index'
 
 export * from './index'
 
@@ -28,6 +28,13 @@ export type KnState<T> = KnDerived<T> & {
 export declare function state<T>(value: T, options?: StateOptions<NoInfer<T>>): KnState<NoInfer<T>>
 export declare function state<T = undefined>(): KnState<T | undefined>
 
+/** An async derived declared in a .kn file: reads as the resolved value (inside `<Loading>`). */
+export type KnAsyncDerived<T> = KnDerived<T> & {
+  /** Run the function again, keeping the current value until the new one arrives. */
+  refresh(): void
+}
+
+export declare function derived<T>(fn: (ctx: AsyncContext) => Promise<T>, options?: DerivedOptions<NoInfer<T>>): KnAsyncDerived<NoInfer<T>>
 export declare function derived<T>(fn: () => T, options?: DerivedOptions<NoInfer<T>>): KnDerived<NoInfer<T>>
 
 type SignalValue<T> = T extends Signal<infer V> ? V : T
@@ -43,7 +50,8 @@ export declare function inject<T>(
 type MaybeCleanup = void | (() => void) | undefined
 export declare function update(fn: () => MaybeCleanup, deps?: readonly (Dep | KnState<any> | unknown)[]): void
 
-type Bindable = { set(value: any): void; peek(): any }
+// A state, or a property of a store (typed as its value: `bind:value={form.name}`).
+type Bindable = { set(value: any): void; peek(): any } | string | number | boolean | null | undefined
 
 /**
  * What a parent writes for a component whose script calls `props<P>()`. The component receives

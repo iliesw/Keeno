@@ -1,5 +1,5 @@
 // Core reactive graph: owners, computations, signals (base of State and Derived) and the scheduler.
-import { devHook } from './dev'
+import { devHook, warn } from './dev'
 
 export type Cleanup = () => void
 export type UpdateListener<T> = (old: T, next: T) => void
@@ -70,7 +70,7 @@ const unhandled = new WeakSet<object>()
  */
 export function handleError(error: unknown, owner: Owner | null): void {
   if (typeof error === 'object' && error !== null && unhandled.has(error)) throw error
-  devHook?.error(error, owner)
+  if (!(error instanceof NotReady)) devHook?.error(error, owner)
   for (let o = owner; o; o = o.parent) {
     if (!o.onError || o.disposed) continue
     try {
@@ -80,8 +80,22 @@ export function handleError(error: unknown, owner: Owner | null): void {
       error = err
     }
   }
+  // An async value read outside <Loading>: that region renders nothing until it resolves (the
+  // computation that read it is tracked on it, so it re-runs then).
+  if (error instanceof NotReady) {
+    warn('an async derived was read outside <Loading>: wrap the content that reads it in <Loading fallback={…}>')
+    return
+  }
   if (typeof error === 'object' && error !== null) unhandled.add(error)
   throw error
+}
+
+/**
+ * Thrown by reading an async derived that has no value yet. `<Loading>` catches it and shows its
+ * fallback until the derived settles.
+ */
+export class NotReady {
+  constructor(readonly derived: Derived<any>) {}
 }
 
 function runCleanup(fn: Cleanup) {
@@ -217,24 +231,141 @@ export abstract class Signal<T> {
 export interface DerivedOptions<T> {
   /** Downstream code re-runs only when this says the value changed (default `Object.is`). */
   equals?: Equals<T>
+  /** Async deriveds: the id its server-rendered value is sent under (default: creation order). */
+  key?: string
+  /** Async deriveds: don't send the server-rendered value to the client (it fetches again). */
+  ssr?: boolean
+}
+
+/** What an async derived's function receives. */
+export interface AsyncContext {
+  /** Aborted when a newer run starts or the derived is disposed: pass it to `fetch`. */
+  readonly signal: AbortSignal
+}
+
+/** A minimal writable signal, for internal flags (State lives in state.ts, which imports this file). */
+class Cell<T> extends Signal<T> {
+  constructor(value: T) {
+    super()
+    this._value = value
+  }
+  set(value: T) {
+    const old = this._value
+    if (Object.is(old, value)) return
+    this._value = value
+    this._notify(old, value)
+  }
+}
+
+function isThenable(v: unknown): v is PromiseLike<unknown> {
+  return (typeof v === 'object' || typeof v === 'function') && v !== null && typeof (v as any).then === 'function'
+}
+
+/** Async deriveds read by the running `pending()` call. */
+let pendingReads: Derived<any>[] | null = null
+
+/**
+ * Server rendering and hydration: where async deriveds report themselves (to be awaited and
+ * serialized) and find values the server sent.
+ * @internal
+ */
+export interface AsyncRegistry {
+  /** Next id for an async derived without a `key`. */
+  next: number
+  /** The value the server sent under `id`, if any (hydration). */
+  peek(id: string): { value: unknown } | undefined
+  /** Called when a derived turns out to be async (its `_ssrId` is set). */
+  created(d: Derived<any>): void
+  /** Streaming server render: a `<Loading>` was created (see renderToStream). */
+  boundary?(b: LoadingBoundary): void
+}
+
+/** @internal What renderToStream needs to know about a `<Loading>`. */
+export interface LoadingBoundary {
+  /** Number of async deriveds it waits for (reactive). */
+  waiting(): number
+  /** Its children's nodes (rendered even while the fallback shows). */
+  content(): Node[]
+  /** The closest enclosing boundary. */
+  parent: LoadingBoundary | null
+  /** Set by the stream: the id used in its markers. */
+  id?: number
+}
+
+/** @internal The registry of the render the current owner belongs to. */
+export function currentRegistry(): AsyncRegistry | null {
+  return findRegistry(currentOwner)
+}
+
+/** Key of the registry in a root owner's `context` (per render, so concurrent server renders stay apart). */
+const REGISTRY = Symbol('keeno.async')
+/** Number of installed registries: while it is 0, deriveds skip looking for one. */
+let registries = 0
+
+/** @internal Install `r` on the root owner of a render or hydration. Returns a function that removes it. */
+export function installAsyncRegistry(root: Owner, r: AsyncRegistry): () => void {
+  ;(root.context ??= new Map()).set(REGISTRY, r)
+  registries++
+  let removed = false
+  return () => {
+    if (removed) return
+    removed = true
+    root.context?.delete(REGISTRY)
+    registries--
+  }
+}
+
+function findRegistry(owner: Owner | null): AsyncRegistry | null {
+  if (!registries) return null
+  for (let o = owner; o; o = o.parent) {
+    const r = o.context?.get(REGISTRY)
+    if (r) return r as AsyncRegistry
+  }
+  return null
 }
 
 /**
  * A computed signal. Its value is always up to date when read, even synchronously right after a
  * write, and it only recomputes when something it read has changed.
+ *
+ * When the function returns a promise, the derived is async: reading it before the first value
+ * throws `NotReady` (caught by `<Loading>`), later re-runs keep the previous value until the new
+ * one arrives, and results of runs that were superseded are ignored.
  */
 export class Derived<T> extends Signal<T> implements Listener {
   sources: Signal<any>[] = []
   disposed = false
-  /** @internal */ _fn: () => T
+  /** @internal */ _fn: (ctx?: AsyncContext) => T
   /** @internal */ _dirty = true
   /** @internal */ _initialized = false
   /** @internal */ _computing = false
   /** @internal */ _queued = false
+  /** @internal True once the function returned a promise. */
+  _async = false
+  /** @internal Async: whether a value arrived (before that, reads throw NotReady). */
+  _hasValue = false
+  /** @internal Async: true while a run is in flight (reactive, for `pending()`). */
+  _loading: Cell<boolean> | null = null
+  /** @internal Async: the id of the current run; results of older runs are ignored. */
+  _version = 0
+  /** @internal Async: aborts the current run. */
+  _abort: AbortController | null = null
+  /** @internal Async: resolved when the current run settles (see `_settled`). */
+  _settle: { promise: Promise<void>; resolve: () => void } | null = null
+  /** @internal Async: the thrown NotReady (one per derived). */
+  _notReady: NotReady | null = null
+  /** @internal Async: server rendering id and options. */
+  _ssrId: string | null = null
+  _ssr: boolean
+  _key: string | undefined
+  /** @internal Where it was created: the owner chain leads to the render's registry. */
+  _owner: Owner | null = currentOwner
 
-  constructor(fn: () => T, options: DerivedOptions<T> = {}) {
+  constructor(fn: (ctx?: AsyncContext) => T, options: DerivedOptions<T> = {}) {
     super(options.equals)
     this._fn = fn
+    this._key = options.key
+    this._ssr = options.ssr !== false
     if (currentOwner) onCleanup(() => this.dispose())
   }
 
@@ -244,14 +375,95 @@ export class Derived<T> extends Signal<T> implements Listener {
   override get(): T {
     this._refresh()
     this._track()
+    if (this._async) {
+      if (pendingReads) pendingReads.push(this)
+      if (!this._hasValue && !this._error) throw (this._notReady ??= new NotReady(this))
+    }
     if (this._error) throw this._error.value
     return this._value
   }
 
   override peek(): T {
     this._refresh()
+    if (this._async && !this._hasValue && !this._error) throw (this._notReady ??= new NotReady(this))
     if (this._error) throw this._error.value
     return this._value
+  }
+
+  /** Run the function again now (for an async derived: fetch again, keeping the current value meanwhile). */
+  refresh(): void {
+    if (this.disposed) return
+    this._dirty = true
+    this._refresh()
+  }
+
+  /** @internal Resolves once no run is in flight (immediately if none is). */
+  _settled(): Promise<void> {
+    if (!this._loading?.peek()) return Promise.resolve()
+    if (!this._settle) {
+      let resolve!: () => void
+      const promise = new Promise<void>((r) => (resolve = r))
+      this._settle = { promise, resolve }
+    }
+    return this._settle.promise
+  }
+
+  /** @internal The function returned a promise: wait for it (run `version`). */
+  _startAsync(p: PromiseLike<T>, version: number, seeded?: { value: unknown }) {
+    if (!this._async) {
+      this._async = true
+      this._loading = new Cell(false)
+      const r = findRegistry(this._owner)
+      if (r) {
+        this._ssrId = this._key ?? `k${r.next++}`
+        r.created(this)
+      }
+      // A value the server sent: start with it instead of waiting.
+      if (seeded) {
+        this._resolveAsync(seeded.value as T, version)
+        return
+      }
+    }
+    this._loading!.set(true)
+    p.then(
+      (value) => this._resolveAsync(value, version),
+      (error) => this._rejectAsync(error, version),
+    )
+  }
+
+  /** @internal */
+  _resolveAsync(value: T, version: number) {
+    if (version !== this._version || this.disposed) return
+    const old = this._value
+    const first = !this._hasValue
+    const recovered = this._error !== null
+    this._hasValue = true
+    this._error = null
+    this._value = value
+    this._finishRun()
+    if (first || recovered) {
+      if (this._observers) for (const o of [...this._observers]) o.notify()
+      if (first && !recovered && this._listeners) this._notify(old, value)
+    } else if (!this._equals(old, value)) this._notify(old, value)
+  }
+
+  /** @internal */
+  _rejectAsync(error: unknown, version: number) {
+    if (version !== this._version || this.disposed) return
+    // It read another async derived that isn't ready: it re-runs when that one settles.
+    if (error instanceof NotReady) return
+    this._error = { value: error }
+    this._finishRun()
+    if (this._observers) for (const o of [...this._observers]) o.notify()
+  }
+
+  /** @internal A run settled: no longer loading. */
+  _finishRun() {
+    this._abort = null
+    this._loading!.set(false)
+    const s = this._settle
+    this._settle = null
+    s?.resolve()
   }
 
   /** A source changed: the value may be stale. */
@@ -274,13 +486,29 @@ export class Derived<T> extends Signal<T> implements Listener {
     unlinkSources(this)
     const prev = currentListener
     currentListener = this
+    // A value the server sent for this async derived (hydration): run the function only to track
+    // what it reads, with an aborted signal so a `fetch` given it never reaches the network.
+    const r = findRegistry(this._owner)
+    let seeded: { value: unknown } | undefined
+    if (r && !this._async && !this._initialized) seeded = r.peek(this._key ?? `k${r.next}`)
+    let controller: AbortController | null = null
     let next: T
     try {
-      next = this._fn()
+      if (this._fn.length > 0) {
+        controller = new AbortController()
+        if (seeded) controller.abort()
+        next = this._fn({ signal: controller.signal })
+      } else next = this._fn()
     } catch (err) {
       // Keep the error for readers; clearing `_dirty` lets the next source change notify again.
       this._dirty = false
       this._error = { value: err }
+      if (this._async) {
+        // A run still in flight is superseded by this failure.
+        this._version++
+        this._abort?.abort()
+        this._finishRun()
+      }
       if (this._observers) for (const o of [...this._observers]) o.notify()
       return
     } finally {
@@ -288,6 +516,21 @@ export class Derived<T> extends Signal<T> implements Listener {
       this._computing = false
     }
     this._dirty = false
+    if (this._async || isThenable(next)) {
+      if (!isThenable(next)) next = Promise.resolve(next) as T
+      const version = ++this._version
+      this._abort?.abort()
+      this._abort = controller
+      this._initialized = true
+      // A new run replaces a failed one: readers wait for it (or keep the last good value).
+      if (this._error) {
+        this._error = null
+        if (this._observers) for (const o of [...this._observers]) o.notify()
+      }
+      if (seeded) (next as PromiseLike<T>).then(undefined, () => {}) // the ignored run must not report
+      this._startAsync(next as PromiseLike<T>, version, seeded)
+      return
+    }
     const old = this._value
     const recovered = this._error !== null
     this._error = null
@@ -308,14 +551,47 @@ export class Derived<T> extends Signal<T> implements Listener {
   dispose() {
     this.disposed = true
     unlinkSources(this)
+    if (this._async) {
+      this._abort?.abort()
+      this._abort = null
+      const s = this._settle
+      this._settle = null
+      s?.resolve()
+    }
   }
 }
 
-/** Create a computed signal: `const total = derived(() => price * qty)`. */
-export function derived<T>(fn: () => T, options?: DerivedOptions<T>): Derived<T> {
-  const d = new Derived(fn, options)
+/**
+ * Create a computed signal: `const total = derived(() => price * qty)`. An async function makes
+ * an async derived, read inside `<Loading>`: `const user = derived(async () => (await fetch(url)).json())`.
+ */
+export function derived<T>(fn: (ctx: AsyncContext) => Promise<T>, options?: DerivedOptions<T>): Derived<T>
+export function derived<T>(fn: () => T, options?: DerivedOptions<T>): Derived<T>
+export function derived(fn: (ctx: AsyncContext) => unknown, options?: DerivedOptions<any>): Derived<any> {
+  const d = new Derived(fn as (ctx?: AsyncContext) => unknown, options)
   devHook?.signal(d)
   return d
+}
+
+/**
+ * True while an async derived read by `fn` is loading, including a re-run that keeps showing the
+ * previous value: `{pending(() => user) && <small>refreshing…</small>}`. Reactive.
+ */
+export function pending(fn: () => unknown): boolean {
+  const prev = pendingReads
+  const reads: Derived<any>[] = (pendingReads = [])
+  let notReady = false
+  try {
+    fn()
+  } catch (err) {
+    // A failed value isn't pending: errors are for whoever renders the value.
+    notReady = err instanceof NotReady
+  } finally {
+    pendingReads = prev
+  }
+  let loading = notReady
+  for (const d of reads) if (d._loading!.get()) loading = true
+  return loading
 }
 
 /** Name a state or derived for the dev tools (emitted by the compiler in development mode). */
@@ -333,6 +609,11 @@ export function isSignal(v: unknown): v is Signal<unknown> {
 
 export function getOwner(): Owner | null {
   return currentOwner
+}
+
+/** @internal True while a computation or derived is recording what it reads. */
+export function isTracking(): boolean {
+  return currentListener !== null && !currentListener.disposed
 }
 
 export function runWithOwner<T>(owner: Owner | null, fn: () => T): T {

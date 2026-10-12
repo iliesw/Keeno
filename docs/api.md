@@ -1,12 +1,14 @@
 # API reference
 
-Everything below is exported from `@inflector/keeno`. In `.kn` files, `state`, `derived`, `props`, `init`, `update`, `destroy` and `ref` are available without importing.
+Everything below is exported from `@inflector/keeno`. In `.kn` files, `state`, `derived`, `store`, `props`, `init`, `update`, `destroy` and `ref` are available without importing.
 
 ## Reactivity
 
 ```ts
 state<T>(value: T, options?: StateOptions<T>): State<T>
 derived<T>(fn: () => T, options?: { equals?: (a: T, b: T) => boolean }): Derived<T>
+derived<T>(fn: (ctx: { signal: AbortSignal }) => Promise<T>, options?: { equals?; key?: string; ssr?: boolean }): Derived<T>  // async
+pending(fn: () => unknown): boolean // true while an async derived read by fn is loading (reactive)
 untrack<T>(fn: () => T): T          // run fn without tracking reads
 flush(): void                       // run pending updates synchronously
 deepEqual(a: unknown, b: unknown): boolean
@@ -25,7 +27,16 @@ isSignal(v): v is Signal<unknown>   // State or Derived
 | `undo()`, `redo()` | History navigation (`history` option) |
 | `canUndo`, `canRedo` | Reactive booleans |
 
-`Derived<T>` (extends `Signal<T>`): `get()`, `peek()`, `onUpdate()`. Read-only.
+`Derived<T>` (extends `Signal<T>`): `get()`, `peek()`, `onUpdate()`, `refresh()` (run again). Read-only. Reading an async derived before its first value throws `NotReady`, which `<Loading>` catches.
+
+## Stores
+
+```ts
+store<T extends object>(value: T): T              // deep reactive proxy; mutate it directly
+snapshot<T>(value: T): T                          // plain deep copy (tracks the whole store when read reactively)
+reconcile<T extends object>(target: T, next: T, options?: { key?: string }): void  // minimal in-place update (array items matched by `key`, default 'id')
+isStore(v): boolean
+```
 
 ## Refs
 
@@ -80,6 +91,7 @@ See [Context](context.md).
 | Component | Props |
 |---|---|
 | `ErrorBoundary` | `fallback?: content \| (error, reset) => content`, `onError?: (error) => void`, children |
+| `Loading` | `fallback?: content \| () => content`, children |
 | `Await` | `promise`, `pending?: () => content`, `fulfilled?: (value) => content`, `rejected?: (error) => content` |
 | `Dynamic` | `component`, plus the props passed to it |
 | `Portal` | `target?: Element \| selector` (default `document.body`), children |
@@ -102,7 +114,8 @@ See [Built-in components](built-ins.md).
 ## Server rendering (`@inflector/keeno/server`)
 
 ```ts
-renderToString(Component, props?): Promise<string>           // needs the linkedom package
+renderToString(Component, props?, { timeout? }): Promise<string>   // waits for async deriveds; needs linkedom
+renderToStream(Component, props?, { timeout? }): ReadableStream<string>  // streams <Loading> boundaries
 renderToStringWith(document: Document, Component, props?): string
 ```
 
@@ -111,9 +124,9 @@ See [Server rendering](ssr.md).
 ## Router (`@inflector/keeno-router`)
 
 ```ts
-Router            // props: routes, base?, url?, fallback?
-Link              // props: href, replace?, activeClass?, exact?, class?, children
-navigate(to: string, options?: { replace?: boolean; state?: unknown; scroll?: boolean }): void
+Router            // props: routes, base?, url?, fallback?, viewTransition?
+Link              // props: href, replace?, transition?, activeClass?, exact?, class?, children
+navigate(to: string, options?: { replace?: boolean; state?: unknown; scroll?: boolean; transition?: boolean }): void
 useRoute(): { path, params, query: URLSearchParams, hash, matched }
 link(event: MouseEvent): void                 // onClick handler for your own <a>
 href(path: string): string                    // path with the router's base
@@ -139,10 +152,11 @@ See [Routing](routing.md) and [File-based routing](file-routing.md).
 | Source | Compiles to |
 |---|---|
 | `x` (a local `state`/`derived`) | `x.get()` |
-| `x.set(…)`, `x.peek()`, `x.get()`, `x.onUpdate(…)`, `x.undo()`, `x.redo()`, `x.canUndo`, `x.canRedo` | unchanged |
+| `x.set(…)`, `x.peek()`, `x.get()`, `x.onUpdate(…)`, `x.undo()`, `x.redo()`, `x.canUndo`, `x.canRedo`, `x.refresh()` | unchanged |
 | `x.foo` | `x.get().foo` |
 | `update(fn, [x, y])` | deps passed as the states themselves |
 | `bind:value={x}` | the state itself |
+| `bind:value={a.b.c}` | `bindPath(() => a.b, () => 'c')`: a state at that path, or a store property |
 | `ref={x}` | `setRef(el, x)`: `x.current` is the element |
 | `const { a } = props()`, then `a` | `$$props.a` (a getter) |
 | `{expr}` | a tracked text node / attribute |

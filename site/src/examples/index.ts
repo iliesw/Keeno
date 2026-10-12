@@ -33,6 +33,16 @@ export const examples: Example[] = [
     category: 'Basics',
   },
   {
+    slug: 'store',
+    title: 'Nested store',
+    description: 'A grouped shopping list kept in one store(): mutate nested items directly, bind inputs to them, snapshot it.',
+    concepts: [
+      { label: 'store()', href: '/docs/reactivity#store' },
+      { label: 'bind:value on a store', href: '/docs/reactivity#store' },
+    ],
+    category: 'State',
+  },
+  {
     slug: 'todos',
     title: 'Todo list',
     description: 'Keyed lists, two-way binding, a child component and persistence to localStorage.',
@@ -125,6 +135,17 @@ export const examples: Example[] = [
     title: 'Async data',
     description: 'Loading, success and error states of a request with <Await>.',
     concepts: [{ label: '<Await>', href: '/docs/built-ins#await' }],
+    category: 'Built-ins',
+  },
+  {
+    slug: 'async-derived',
+    title: 'Async derived',
+    description: 'An async derived inside <Loading>: refetches when its inputs change, keeps the old card while refreshing.',
+    concepts: [
+      { label: 'async derived', href: '/docs/reactivity#async-derived' },
+      { label: '<Loading>', href: '/docs/built-ins#loading' },
+      { label: 'pending()', href: '/docs/reactivity#async-derived' },
+    ],
     category: 'Built-ins',
   },
   {
