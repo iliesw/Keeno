@@ -123,8 +123,12 @@ process.stdout.write(`\n${dim(`Created ${files.length} files in`)} ${target}\n`)
 
 if (install) {
   process.stdout.write(`\n${dim(`$ ${pm} install`)}\n`)
-  // Windows needs a shell to run npm.cmd / pnpm.cmd.
-  const r = spawnSync(pm, ['install'], { cwd: target, stdio: 'inherit', shell: process.platform === 'win32' })
+  // Windows needs a shell to run npm.cmd / pnpm.cmd. Node warns about passing args alongside `shell`
+  // (DEP0190), so the command goes as one string; `pm` is one of four fixed names.
+  const r =
+    process.platform === 'win32'
+      ? spawnSync(`${pm} install`, { cwd: target, stdio: 'inherit', shell: true })
+      : spawnSync(pm, ['install'], { cwd: target, stdio: 'inherit' })
   if (r.status !== 0) fail(`${pm} install failed; run it yourself in ${dir}`)
 }
 
