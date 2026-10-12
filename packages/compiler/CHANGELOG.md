@@ -1,5 +1,13 @@
 # @inflector/keeno-compiler
 
+## 0.5.0
+
+### Minor Changes
+
+- [#14](https://github.com/iliesw/Keeno/pull/14) [`62e1633`](https://github.com/iliesw/Keeno/commit/62e163329431f04df5502c0b874980e7d1743248) Thanks [@iliesw](https://github.com/iliesw)! - Async `derived`: give `derived` an async function and read the value inside the new `<Loading fallback>` boundary. Re-runs keep the current value until the new one arrives (`pending(() => x)` tells you one is in flight), superseded runs are ignored and aborted through the optional `{ signal }` argument, `x.refresh()` runs it again, and rejections go to the closest `<ErrorBoundary>`.
+
+- [#14](https://github.com/iliesw/Keeno/pull/14) [`62e1633`](https://github.com/iliesw/Keeno/commit/62e163329431f04df5502c0b874980e7d1743248) Thanks [@iliesw](https://github.com/iliesw)! - `store()`: a deep reactive object you update by plain mutation (`todos.items.push(…)`, `todo.done = true`), tracked per property. Includes `snapshot()`, `reconcile()` and `isStore()`, works with keyed lists, and `bind:value` / `bind:checked` accept store properties (`bind:value={form.user.email}`). `store` is available in `.kn` files without importing.
+
 ## 0.4.1
 
 ### Patch Changes

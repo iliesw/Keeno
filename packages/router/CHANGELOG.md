@@ -1,5 +1,16 @@
 # @inflector/keeno-router
 
+## 0.3.0
+
+### Minor Changes
+
+- [#14](https://github.com/iliesw/Keeno/pull/14) [`62e1633`](https://github.com/iliesw/Keeno/commit/62e163329431f04df5502c0b874980e7d1743248) Thanks [@iliesw](https://github.com/iliesw)! - View Transitions: `<Router viewTransition>` animates navigations (links, `navigate()`, back and forward) with `document.startViewTransition` where supported. Per navigation: `navigate(to, { transition })`, `<Link transition>` or `data-transition` on links using `link`.
+
+### Patch Changes
+
+- Updated dependencies [[`62e1633`](https://github.com/iliesw/Keeno/commit/62e163329431f04df5502c0b874980e7d1743248), [`62e1633`](https://github.com/iliesw/Keeno/commit/62e163329431f04df5502c0b874980e7d1743248), [`62e1633`](https://github.com/iliesw/Keeno/commit/62e163329431f04df5502c0b874980e7d1743248)]:
+  - @inflector/keeno@0.5.0
+
 ## 0.2.0
 
 ### Minor Changes
