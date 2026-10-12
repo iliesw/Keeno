@@ -1,5 +1,11 @@
 # @inflector/keeno-compiler
 
+## 0.4.1
+
+### Patch Changes
+
+- [#12](https://github.com/iliesw/Keeno/pull/12) [`7f639a1`](https://github.com/iliesw/Keeno/commit/7f639a161b6484b8a9d1afa16474416ac548a9cc) Thanks [@iliesw](https://github.com/iliesw)! - `keeno-check` now runs the compiler on every .kn file and reports the errors `vite build` would stop on (such as an unsupported `.map()` row parameter) as `file:line:col - error keeno: …`, so a project that passes the check also builds. Compiler errors raised on a node now carry its `.kn` location (`err.loc`), which also points Vite's error overlay at the right spot.
+
 ## 0.4.0
 
 No changes in this release.

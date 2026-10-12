@@ -1,5 +1,11 @@
 # create-keeno
 
+## 0.4.1
+
+### Patch Changes
+
+- [#11](https://github.com/iliesw/Keeno/pull/11) [`c84b228`](https://github.com/iliesw/Keeno/commit/c84b228048f613a9e8fd9bf2f1797d9b4396db03) Thanks [@iliesw](https://github.com/iliesw)! - `--install` no longer prints Node's DEP0190 deprecation warning on Windows.
+
 ## 0.4.0
 
 ### Minor Changes
