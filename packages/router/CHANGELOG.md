@@ -1,5 +1,20 @@
 # @inflector/keeno-router
 
+## 0.2.0
+
+### Minor Changes
+
+- [`6e319e5`](https://github.com/iliesw/Keeno/commit/6e319e58a6d0acfd52eb96d07aa0af7e4439b0b3) Thanks [@iliesw](https://github.com/iliesw)! - File-based routing. `keeno({ useFileRouter: true, pages: './src/pages' })` (the defaults) provides `virtual:keeno-pages`, whose `<Pages>` component renders the page for the URL: `index.kn` is `/`, `about.kn` is `/about`, `[id].kn` is `/:id`, `_layout.kn` wraps its directory, `_all.kn` catches the rest of its directory, `_404.kn` renders for paths that match nothing, and `_500.kn`, `_403.kn`… for errors a page throws (`throw httpError(403)`).
+  
+  `<Router>` routes gain `layouts` (kept across navigation while shared) and `errors` (error pages by status), and the router exports `pageRoutes()`, `preloadRoute()`, `httpError()`, `HttpError` and `errorStatus()`.
+  
+  The Vite plugin now depends on `@inflector/keeno-router` and resolves `@inflector/keeno-router` imports itself when the app hasn't installed it, so routing needs no extra install. `examples/todo` uses file routes (`src/pages`).
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @inflector/keeno@0.4.0
+
 ## 0.1.1
 
 ### Patch Changes
