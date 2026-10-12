@@ -66,6 +66,9 @@ describe('create-keeno', () => {
       const name = pkgOf(path.join(repo, 'packages', p)).name.split('/')[1]
       symlinkSync(path.join(repo, 'packages', p), path.join(dir, 'node_modules/@inflector', name), 'junction')
     }
+    // Their sources, not dist/: CI runs the tests before building the packages.
+    const tsconfig = path.join(dir, 'tsconfig.json')
+    writeFileSync(tsconfig, readFileSync(tsconfig, 'utf8').replace('"strict": true,', '"strict": true,\n    "customConditions": ["keeno-source"],'))
     symlinkSync(path.join(repo, 'packages/vite-plugin-keeno/node_modules/vite'), path.join(dir, 'node_modules/vite'), 'junction')
     const check = Bun.spawnSync([process.execPath, path.join(repo, 'packages/keeno-check/src/cli.ts'), dir], { cwd: repo })
     expect(check.stdout.toString().replace(/\r\n/g, '\n')).toMatch(/^0 errors in \d+ files\n$/)
