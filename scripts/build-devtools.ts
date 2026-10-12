@@ -20,7 +20,9 @@ export function generate(): Map<string, string> {
   const css: string[] = []
   for (const file of readdirSync(uiDir).filter((f) => f.endsWith('.kn')).sort()) {
     const name = file.slice(0, -3)
-    const result = compile(readFileSync(path.join(uiDir, file), 'utf8'), { filename: `devtools/ui/${file}` })
+    // Git may check the sources out with CRLF (Windows); the generated files are LF.
+    const source = readFileSync(path.join(uiDir, file), 'utf8').replace(/\r\n/g, '\n')
+    const result = compile(source, { filename: `devtools/ui/${file}` })
     // Scoped component styles are collected into gen/styles.ts, which the panel puts in its shadow root.
     if (result.css.trim()) css.push(`/* ${file} */\n${result.css.trim()}\n`)
     const js = result.js

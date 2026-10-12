@@ -128,7 +128,12 @@ describe('dev tools panel', () => {
     const target = render(Page)
     const root = await panel()
     await frame()
-    const rows = () => [...root.querySelectorAll('.row:not(.stores)')]
+    // The tree is global: apps left mounted by other test files can show up before ours.
+    const rows = () => {
+      const all = [...root.querySelectorAll('.row:not(.stores)')]
+      const page = all.findIndex((r) => r.textContent!.includes('<Page>'))
+      return page < 0 ? all : all.slice(page, page + 3)
+    }
     expect(rows().map((r) => r.textContent)).toEqual(['▾<Page>', '<Counter>', '<Counter>'])
 
     ;(rows()[2] as HTMLElement).click()

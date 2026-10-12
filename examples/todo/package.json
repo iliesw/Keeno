@@ -2,7 +2,7 @@
   "name": "example-todo",
   "private": true,
   "type": "module",
-  "scripts": { "dev": "bunx --bun vite", "build": "bunx --bun vite build", "check": "keeno-check" },
+  "scripts": { "dev": "bunx --bun vite", "build": "bunx --bun vite build", "check": "node ../../packages/keeno-check/dist/cli.js" },
   "dependencies": { "@inflector/keeno": "workspace:*" },
   "devDependencies": {
     "@inflector/keeno-check": "workspace:*",
