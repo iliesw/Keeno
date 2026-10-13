@@ -75,6 +75,14 @@ type Component<P = any> = (props: P) => unknown
 type Children = () => unknown                    // the `children` prop: renders the nested markup
 ```
 
+## Directives
+
+```ts
+type Directive<E extends Element = HTMLElement, V = undefined> = (el: E, value: V) => void | (() => void)
+```
+
+`use:name={value}` on a DOM element: runs after insertion, re-runs (after the cleanup) when the value or the directive changes, cleans up on removal. See [Directives](directives.md).
+
 ## Context
 
 ```ts
@@ -143,6 +151,49 @@ preloadRoute(routes: RouteDefinition[], url: string): Promise<void>             
 
 See [Routing](routing.md) and [File-based routing](file-routing.md).
 
+## Types
+
+Exported for annotating your own code. Each is described with the API it belongs to above.
+
+```ts
+// @inflector/keeno
+type Equals<T> = (a: T, b: T) => boolean
+type UpdateListener<T> = (old: T, next: T) => void             // x.onUpdate(fn)
+interface DerivedOptions<T> { equals?: Equals<T>; key?: string; ssr?: boolean }  // key/ssr: async deriveds and SSR
+interface AsyncContext { readonly signal: AbortSignal }         // what an async derived's function receives
+interface StateOptions<T> { /* see above */ }
+interface UrlOptions { param: string; replace?: boolean }      // state(v, { url: { … } })
+type Dep = Signal<any> | (() => unknown)                       // update(fn, deps)
+interface MountedApp { destroy(): void }                       // returned by mount() / hydrate()
+type Component<P = any> = (props: P) => unknown
+type Children = () => unknown
+type Directive<E extends Element = HTMLElement, V = undefined> = (el: E, value: V) => void | (() => void)
+interface ReconcileOptions { key?: string }                    // reconcile(target, next, options)
+class NotReady { readonly derived: Derived<any> }              // thrown by reading an async derived without a value
+// Props of the built-in components:
+ErrorBoundaryProps, LoadingProps, AwaitProps<T>, DynamicProps<P>, PortalProps, TransitionProps
+interface LazyOptions { pending?: () => unknown }               // lazy(load, options)
+type LazyComponent<P> = Component<P> & { preload(): Promise<Component<P>> }
+interface ComponentInfo { name: string; props: Record<string, unknown>; children: ComponentInfo[] }  // __KEENO_DEVTOOLS__.tree()
+
+// @inflector/keeno/server
+interface RenderOptions { timeout?: number }                    // renderToString / renderToStream
+
+// @inflector/keeno-router
+type Params = Record<string, string>
+interface RouteProps { params: Params }                        // props of a route's component
+interface LayoutProps extends RouteProps { children: Children }
+interface ErrorPageProps extends RouteProps { status: number; error: unknown; reset: () => void }
+interface Route { path; params; query: URLSearchParams; hash; matched: RouteDefinition | null }  // useRoute()
+class HttpError extends Error { readonly status: number }      // httpError(status)
+interface NavigateOptions { replace?; state?; scroll?; transition? }
+RouterProps, LinkProps, RouteDefinition, PageModule
+
+// @inflector/vite-plugin-keeno
+interface KeenoPluginOptions { hmr?; tailwind?: boolean | TailwindOptions; devtools?; useFileRouter?; pages? }
+interface TailwindOptions { reference?: string }
+```
+
 ## Development mode
 
 `globalThis.__KEENO_DEV__ = true` turns on development warnings (duplicate list keys, for example) and the `__KEENO_DEVTOOLS__` hook that the dev tools panel (`@inflector/keeno/devtools`, see [Tooling](tooling.md#dev-tools-panel)) is built on. `@inflector/vite-plugin-keeno` sets it during `vite dev` and loads the panel. Production builds leave it off.
@@ -156,6 +207,7 @@ See [Routing](routing.md) and [File-based routing](file-routing.md).
 | `x.foo` | `x.get().foo` |
 | `update(fn, [x, y])` | deps passed as the states themselves |
 | `bind:value={x}` | the state itself |
+| `use:x={v}`, `use:x` | `use(el, () => x, () => v)`: after insertion, re-run on change |
 | `bind:value={a.b.c}` | `bindPath(() => a.b, () => 'c')`: a state at that path, or a store property |
 | `ref={x}` | `setRef(el, x)`: `x.current` is the element |
 | `const { a } = props()`, then `a` | `$$props.a` (a getter) |
@@ -169,6 +221,7 @@ See [Routing](routing.md) and [File-based routing](file-routing.md).
 Compile errors:
 - reassigning a state, derived or destructured prop
 - `bind:` on a prop or a derived
+- `use:` on a component, a `use:` name that isn't an identifier, or a string value
 - `export` in `<script>`
 - rest props
 - two `<script>` or `<style>` blocks

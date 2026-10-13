@@ -262,7 +262,7 @@ export class TemplateCompiler {
         continue
       }
       const name = attrName(attr)
-      if (name === 'key' || name.startsWith('bind:')) continue
+      if (name === 'key' || name.startsWith('bind:') || name.startsWith('use:')) continue
       const key = t.isValidIdentifier(name) ? t.identifier(name) : t.stringLiteral(name)
       const v = attr.value
       let expr: t.Expression
@@ -288,7 +288,7 @@ export class TemplateCompiler {
 
   private component(node: t.JSXElement): t.Expression {
     for (const attr of node.openingElement.attributes) {
-      if (t.isJSXAttribute(attr) && attrName(attr).startsWith('bind:')) {
+      if (t.isJSXAttribute(attr) && (attrName(attr).startsWith('bind:') || attrName(attr).startsWith('use:'))) {
         throw this.error(`${attrName(attr)} is only supported on DOM elements`)
       }
     }
@@ -346,7 +346,7 @@ export class TemplateCompiler {
       for (const attr of node.openingElement.attributes) {
         if (t.isJSXSpreadAttribute(attr)) continue
         let name = attrName(attr)
-        if (hasSpread && !name.startsWith('bind:') && name !== 'ref') continue
+        if (hasSpread && !name.startsWith('bind:') && !name.startsWith('use:') && name !== 'ref') continue
         if (name === 'key') continue
         const v = attr.value
         const expr = t.isJSXExpressionContainer(v) ? (t.isJSXEmptyExpression(v.expression) ? null : v.expression) : v
@@ -357,6 +357,17 @@ export class TemplateCompiler {
           continue
         }
 
+        if (name.startsWith('use:')) {
+          // script.ts turned the value into `[directive, value?]`.
+          const [directive, value] = (expr as t.ArrayExpression).elements as t.Expression[]
+          call('use', [
+            ref(path),
+            t.arrowFunctionExpression([], directive!),
+            t.arrowFunctionExpression([], value ?? t.identifier('undefined')),
+            t.stringLiteral(name.slice(4)),
+          ])
+          continue
+        }
         if (name.startsWith('bind:')) {
           const prop = name.slice(5)
           if (prop !== 'value' && prop !== 'checked') throw this.error(`Unsupported binding ${name} (use bind:value or bind:checked)`)

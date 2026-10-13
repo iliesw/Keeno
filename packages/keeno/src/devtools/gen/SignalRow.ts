@@ -10,7 +10,7 @@ import { expandable, parseInput, preview, useActions, valueClass, type DevSignal
 const _tmpl$1 = _$template("<span class=\"badge derived keeno-81c7abb8\" title=\"Read-only, computed\">derived</span>");
 const _tmpl$2 = _$template("<span class=\"badge keeno-81c7abb8\">persist</span>");
 const _tmpl$3 = _$template("<span class=\"badge keeno-81c7abb8\">?</span>");
-const _tmpl$4 = _$template("<span class=\"badge pending keeno-81c7abb8\" title=\"A debounced or throttled write is waiting\">pending</span>");
+const _tmpl$4 = _$template("<span class=\"badge pending keeno-81c7abb8\" title=\"A debounced or throttled write is waiting, or an async value is loading\">pending</span>");
 const _tmpl$5 = _$template("<span class=\"v-err keeno-81c7abb8\"></span>");
 const _tmpl$6 = _$template("<span class=\"edit-err keeno-81c7abb8\"></span>");
 const _tmpl$7 = _$template("<span class=\"inline-wrap keeno-81c7abb8\"><input class=\"inline keeno-81c7abb8\" spellcheck=\"false\"></span>");

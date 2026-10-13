@@ -1,6 +1,6 @@
 // DOM helpers used by compiled templates.
 import { isDev, warn } from './dev'
-import { Owner, createComputation, memo, queueMount, runWithOwner, untrack } from './signal'
+import { Owner, createComputation, getOwner, memo, onCleanup, queueMount, runWithOwner, untrack } from './signal'
 import { State } from './state'
 import { setRef } from './ref'
 import { isStore, trackKeys } from './store'
@@ -626,6 +626,37 @@ export function spread(el: Element, props: Record<string, unknown>, scope?: stri
 
 export function on(el: Element, type: string, handler: (e: any) => void): void {
   el.addEventListener(type, handler)
+}
+
+// ---------------------------------------------------------------------------
+// directives
+
+/**
+ * A reusable DOM behavior for `use:name={value}`: called with the element once it is in the
+ * document, and again (after the cleanup it returned) when the value changes.
+ */
+export type Directive<E extends Element = HTMLElement, V = undefined> = (el: E, value: V) => void | (() => void)
+
+/**
+ * @internal `use:name={value}` compiles to `use(el, () => name, () => value)`. Runs after the
+ * element is inserted (like `init`); a change of the directive or its value runs the cleanup,
+ * then the directive again. Never runs on the server.
+ */
+export function use(el: Element, directive: () => unknown, value: () => unknown, name?: string): void {
+  if (isServer()) return
+  const owner = getOwner()
+  queueMount(() => {
+    if (owner?.disposed) return
+    runWithOwner(owner, () =>
+      createComputation(() => {
+        const d = directive()
+        const v = value()
+        if (typeof d !== 'function') throw new Error(`[keeno] use:${name ?? ''} needs a function, got ${typeof d}`)
+        const cleanup = untrack(() => (d as Directive<Element, unknown>)(el, v))
+        if (typeof cleanup === 'function') onCleanup(cleanup)
+      }),
+    )
+  })
 }
 
 /** What `bind:` reads and writes: a state, or a property of a store. */

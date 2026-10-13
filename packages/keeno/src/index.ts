@@ -40,6 +40,6 @@ export {
 } from './control'
 export { Transition, type TransitionProps } from './transition'
 export { reparentable, keyedReparentable, type Reparentable, type KeyedReparentable } from './reparent'
-export { moveNode } from './dom'
+export { moveNode, type Directive } from './dom'
 export { Ref, ref, isRef, type RefTarget } from './ref'
 export { store, snapshot, reconcile, isStore, type ReconcileOptions } from './store'

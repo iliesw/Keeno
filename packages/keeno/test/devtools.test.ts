@@ -68,6 +68,28 @@ describe('dev tools backend', () => {
     expect(devtools().path(a.id)).toEqual([find('Page')[0].id, a.id])
   })
 
+  test('async deriveds show as pending, then their value, without starting a run', async () => {
+    let resolve!: (v: string) => void
+    let runs = 0
+    function Profile() {
+      const user = label(
+        derived(async () => (runs++, new Promise<string>((r) => (resolve = r)))),
+        'user',
+      )
+      return () => user.get()
+    }
+    ;(Profile as any).__keenoFile = 'src/Profile.kn'
+    render(() => createComponent(Profile, {}))
+    const id = find('Profile')[0].id
+    const pending = devtools().details(id).states[0]
+    expect([pending.name, pending.pending, pending.value, pending.error]).toEqual(['user', true, undefined, undefined])
+    resolve('ada')
+    await tick()
+    const done = devtools().details(id).states[0]
+    expect([done.pending, done.value]).toEqual([undefined, 'ada'])
+    expect(runs).toBe(1)
+  })
+
   test('sets states, counts updates and logs writes', async () => {
     const target = render(Page)
     const [a] = find('Counter')

@@ -1,5 +1,16 @@
 # @inflector/keeno-language-server
 
+## 0.4.0
+
+### Minor Changes
+
+- add reusable directives for DOM behaviors with use: syntax
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @inflector/keeno-compiler@0.6.0
+
 ## 0.3.0
 
 ### Minor Changes

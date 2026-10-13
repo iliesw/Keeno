@@ -1,6 +1,6 @@
 # Built-in components
 
-`@inflector/keeno` exports a few components for things plain markup can't express: catching errors, waiting for promises, loading code on demand, rendering elsewhere in the page, moving live content around without re-creating it, and animating elements in and out. Import them like any component.
+`@inflector/keeno` exports a few components for things plain markup can't express: catching errors, waiting for async data and promises, loading code on demand, rendering elsewhere in the page, moving live content around without re-creating it, and animating elements in and out. Import them like any component.
 
 ## ErrorBoundary
 

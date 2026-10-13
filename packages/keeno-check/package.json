@@ -1,6 +1,6 @@
 {
   "name": "@inflector/keeno-check",
-  "version": "0.1.5",
+  "version": "0.2.0",
   "description": "Command-line type checker for Keeno (.kn) projects",
   "license": "MIT",
   "repository": {

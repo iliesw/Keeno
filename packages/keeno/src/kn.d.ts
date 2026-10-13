@@ -51,6 +51,17 @@ type MaybeCleanup = void | (() => void) | undefined
 export declare function update(fn: () => MaybeCleanup, deps?: readonly (Dep | KnState<any> | unknown)[]): void
 
 // A state, or a property of a store (typed as its value: `bind:value={form.name}`).
+/** What `use:name={value}` checks as: a directive accepting this element type. */
+declare const knUse: unique symbol
+export type KnUse<E> = { readonly [knUse]: (el: E) => void }
+
+/**
+ * Editor-only: the language server rewrites `use:tooltip={v}` to `use:tooltip={__kn_use(tooltip, v)}`,
+ * which checks the value against the directive and, through `KnUse`, the element type.
+ */
+export declare function __kn_use<E extends Element, V>(directive: (el: E, value: V) => unknown, value: NoInfer<V>): KnUse<E>
+export declare function __kn_use<E extends Element>(directive: (el: E, value?: undefined) => unknown): KnUse<E>
+
 type Bindable = { set(value: any): void; peek(): any } | string | number | boolean | null | undefined
 
 /**
@@ -148,6 +159,9 @@ export type KnAttributes<T> = ElementProps<T> &
     'bind:value'?: Bindable
     'bind:checked'?: Bindable
     children?: any
+  } & {
+    /** `use:name={value}`: the language server checks it as `__kn_use(name, value)`. */
+    [directive: `use:${string}`]: KnUse<T>
   }
 
 declare global {

@@ -1,0 +1,77 @@
+<script lang="ts">
+  import { autofocus, autosize, clickOutside, inView, tooltip } from './directives'
+
+  const open = state(false)
+  const note = state('')
+  const unread = state(3)
+  const seen = state(false)
+</script>
+
+<div class="row">
+  <!-- The tooltip follows `unread`: a change re-runs the directive with the new text. -->
+  <button use:tooltip={`${unread} unread messages`} onClick={() => unread.set(unread + 1)}>
+    Inbox ({unread})
+  </button>
+  <button onClick={() => open.set(!open)}>{open ? 'Close' : 'Write a note'}</button>
+</div>
+
+<!-- Several directives can share an element: autofocus and autosize on the textarea. -->
+{open && (
+  <div class="popover" use:clickOutside={() => open.set(false)}>
+    <textarea placeholder="Grows as you type. Click outside to close." use:autofocus use:autosize bind:value={note}></textarea>
+    <small>{note.length} characters</small>
+  </div>
+)}
+
+<div class="scroller">
+  <p>Scroll down ↓</p>
+  <div class="spacer"></div>
+  <p class={['target', seen && 'seen']} use:inView={(v) => v && seen.set(true)}>
+    {seen ? '👋 Seen!' : 'Not seen yet'}
+  </p>
+</div>
+
+<style>
+  .row {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+  .popover {
+    display: grid;
+    gap: 0.4rem;
+    max-width: 360px;
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    background: var(--bg);
+  }
+  textarea {
+    min-height: 2.5rem;
+    resize: none;
+    overflow: hidden;
+  }
+  small {
+    color: var(--muted);
+  }
+  .scroller {
+    height: 140px;
+    overflow: auto;
+    padding: 0 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+  }
+  .spacer {
+    height: 260px;
+  }
+  .target {
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    background: var(--surface);
+    transition: background 0.3s;
+  }
+  .seen {
+    background: color-mix(in srgb, var(--accent, #22c55e) 25%, transparent);
+  }
+</style>

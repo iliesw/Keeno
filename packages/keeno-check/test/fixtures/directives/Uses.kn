@@ -1,0 +1,11 @@
+<script lang="ts">
+  import { autofocus, autosize, tooltip } from './directives'
+  const count = state(0)
+  const local = (el: HTMLButtonElement, n: number) => {
+    el.dataset.n = String(n)
+  }
+</script>
+
+<button use:tooltip={{ text: `${count} unread` }} use:local={count}>Inbox</button>
+<textarea use:autosize use:autofocus></textarea>
+<div use:tooltip={{ text: 'any element' }}></div>

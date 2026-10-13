@@ -286,6 +286,16 @@ export const examples: Example[] = [
     category: 'Built-ins',
   },
   {
+    slug: 'directives',
+    title: 'Directives',
+    description: 'Reusable DOM behaviors with use: — a reactive tooltip, click-outside, autosize, autofocus and an in-view observer.',
+    concepts: [
+      { label: 'use: directives', href: '/docs/directives' },
+      { label: 'Directive type', href: '/docs/api#directives' },
+    ],
+    category: 'Built-ins',
+  },
+  {
     slug: 'error-boundary',
     title: 'Error boundary',
     description: 'Catch an error thrown while rendering, show a fallback, and reset.',

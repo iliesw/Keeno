@@ -78,4 +78,4 @@ Start the dev server with `bunx --bun vite` and build with `bunx --bun vite buil
 - `{count}` in the markup is a live text node: only that node changes when `count` changes.
 - The `<style>` only applies to this component.
 
-Continue with [Components](components.md), [Reactivity](reactivity.md) and [Templates](templates.md).
+Continue with [Components](components.md), [Reactivity](reactivity.md) and [Templates](templates.md). To load data, see [async derived](reactivity.md#async-derived); for nested data you change in place, [`store()`](reactivity.md#store).

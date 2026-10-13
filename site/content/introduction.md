@@ -26,19 +26,21 @@ Keeno is a compiled, signal-based frontend framework. Components are `.kn` files
 ## Features
 
 - **Fine-grained reactivity:** `state()`, `derived()`, batched DOM updates, and `persist`, `url`, `history`, `debounce` and `validate` options on states.
-- **Templates:** conditionals, keyed lists, two-way `bind:value`, class arrays and spread props.
+- **Async data:** [`derived(async () => …)`](reactivity.md#async-derived) with `<Loading>` boundaries, stale-while-revalidate refetching, `refresh()` and `pending()`.
+- **Deep stores:** [`store()`](reactivity.md#store) for nested data you mutate directly (`todos.items.push(…)`), tracked per property, with `snapshot()` and `reconcile()`.
+- **Templates:** conditionals, keyed lists, two-way `bind:value`, class arrays, spread props, and `use:` [directives](directives.md) for reusable DOM behaviors.
 - **Scoped CSS** per component, with a `:global()` escape hatch, and first-class [Tailwind CSS](styles.md#tailwind-css).
-- **Built-in components:** error boundaries, `<Await>` for promises, `lazy()` code splitting, portals, state-preserving reparenting, enter/leave transitions and `<Dynamic>`. See [Built-in components](built-ins.md).
-- **Context**, [server rendering](ssr.md) with `hydrate`, and a [router](routing.md).
+- **Built-in components:** error boundaries, `<Loading>` for async data, `<Await>` for promises, `lazy()` code splitting, portals, state-preserving reparenting, enter/leave transitions and `<Dynamic>`. See [Built-in components](built-ins.md).
+- **Context**, [server rendering](ssr.md) that waits for async data and can stream, `hydrate`, and a [router](routing.md) with [View Transitions](routing.md#view-transitions).
 - **Tooling:** a Vite plugin with HMR, a VS Code extension with full TypeScript IntelliSense in `.kn` files, and `keeno-check` for type-checking in CI.
 
 ## Packages
 
 | Package | |
 |---|---|
-| `@inflector/keeno` | Runtime: reactivity, lifecycle, built-in components, `mount`/`hydrate`, `renderToString` (`/server`) |
+| `@inflector/keeno` | Runtime: reactivity, stores, lifecycle, directives, built-in components, `mount`/`hydrate`, `renderToString`/`renderToStream` (`/server`) |
 | `@inflector/vite-plugin-keeno` | Vite plugin: compiles `.kn` files, scoped CSS, HMR |
-| `@inflector/keeno-router` | Client-side router |
+| `@inflector/keeno-router` | Client-side router, with View Transitions |
 | `@inflector/keeno-check` | Type-checks `.kn` and `.ts` files from the command line |
 | `@inflector/keeno-compiler` | The `.kn` compiler (used by the Vite plugin) |
 | `@inflector/keeno-language-server` | Volar-based language server (used by the editor extension and `keeno-check`) |

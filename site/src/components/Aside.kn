@@ -6,12 +6,16 @@
   const { headings } = props<{ headings: Heading[] }>()
 
   const active = state('')
-  const thumb = state({ top: 0, height: 0, left: 0, visible: false })
+  /** The track: one path through every link, bending where the depth changes. */
+  const track = state({ d: '', height: 0 })
+  /** The part of the track the highlight shows: the active link's vertical range. */
+  const thumb = state({ top: 0, bottom: 0, visible: false })
+  let list: HTMLElement | null = null
 
   const lineOffset = (depth: number) => (depth >= 3 ? 12 : 0)
   const itemOffset = (depth: number) => (depth >= 3 ? 28 : 16)
-  const prevChanges = (i: number) => i > 0 && lineOffset(headings[i - 1].depth) !== lineOffset(headings[i].depth)
-  const nextChanges = (i: number) => i < headings.length - 1 && lineOffset(headings[i + 1].depth) !== lineOffset(headings[i].depth)
+  /** Half the height of a bend between two depths (it is centered on the boundary between links). */
+  const BEND = 6
 
   // Follow the reading position: the active heading is the last one above the top of the page.
   const onScroll = () => {
@@ -35,28 +39,65 @@
   init(measure)
   update(measure, [headings])
 
-  // Slide the thumb to the active link.
-  update(() => {
-    const id = active
-    const h = headings.find((x) => x.id === id)
-    const link = h ? document.querySelector<HTMLElement>(`#toc a[data-id="${CSS.escape(id)}"]`) : null
-    if (!h || !link) {
-      thumb.set({ ...thumb.peek(), visible: false })
-      return
-    }
-    thumb.set({ top: link.offsetTop, height: link.offsetHeight, left: lineOffset(h.depth), visible: true })
+  // Build the track from where the links actually are: a vertical line per depth, and a diagonal
+  // where it changes. +0.5 keeps the 1px line on the pixel grid.
+  const layout = () => {
+    if (!list) return
+    const links = [...list.querySelectorAll<HTMLElement>('a[data-id]')]
+    let d = ''
+    links.forEach((link, i) => {
+      const x = lineOffset(headings[i]?.depth ?? 2) + 0.5
+      const top = link.offsetTop
+      const bottom = top + link.offsetHeight
+      const next = headings[i + 1]
+      const bends = next && lineOffset(next.depth) !== lineOffset(headings[i].depth)
+      if (i === 0) d += `M${x} ${top}`
+      d += ` L${x} ${bends ? bottom - BEND : bottom}`
+      if (bends) d += ` L${lineOffset(next.depth) + 0.5} ${bottom + BEND}`
+    })
+    track.set({ d, height: list.offsetHeight })
+    placeThumb()
+  }
+  init(() => {
+    layout()
+    // Fonts loading and window resizes move the links.
+    const ro = new ResizeObserver(layout)
+    if (list) ro.observe(list)
+    return () => ro.disconnect()
   })
+  update(() => {
+    const frame = requestAnimationFrame(layout)
+    return () => cancelAnimationFrame(frame)
+  }, [headings])
+
+  // Slide the highlight to the active link's range of the track.
+  const placeThumb = () => {
+    const id = active.peek()
+    const link = id ? list?.querySelector<HTMLElement>(`a[data-id="${CSS.escape(id)}"]`) : null
+    if (!link) return thumb.set({ ...thumb.peek(), visible: false })
+    thumb.set({ top: link.offsetTop, bottom: link.offsetTop + link.offsetHeight, visible: true })
+  }
+  update(placeThumb, [active])
 </script>
 
-{headings.length > 0 && (
-  <nav id="toc" class="flex w-64 min-w-64 flex-col gap-3 pr-4 pb-2" aria-label="On this page">
-    <p class="flex h-6 items-center gap-2 text-sm font-semibold"><Icon name="listMinus" /> On this page</p>
-    <div class="relative flex flex-col">
-      <span
-        class="pointer-events-none absolute z-10 w-0.5 -translate-x-[0.5px] rounded-full bg-brand transition-all duration-150 dark:bg-white"
-        style={`top:${thumb.top}px;height:${thumb.height}px;left:${thumb.left}px;opacity:${thumb.visible ? 1 : 0}`}
-      ></span>
-      {headings.map((h, i) => (
+<!-- Always rendered (pages without sections keep "Back to top" and the playground link); the list div
+     stays in the DOM so the track can be measured as soon as a page with sections loads. -->
+<nav id="toc" class="flex w-64 min-w-64 flex-col gap-3 pr-4 pb-2" aria-label="On this page">
+    {headings.length > 0 && <p class="flex h-6 items-center gap-2 text-sm font-semibold"><Icon name="listMinus" /> On this page</p>}
+    <div class="relative flex flex-col" ref={(el) => (list = el)}>
+      <svg class={['pointer-events-none absolute top-0 left-0 overflow-visible', !headings.length && 'hidden']} width="16" height={track.height} aria-hidden="true">
+        <path d={track.d} fill="none" class="stroke-neutral-200 dark:stroke-neutral-800" stroke-width="1" />
+        <path
+          d={track.d}
+          fill="none"
+          class="toc-thumb stroke-brand dark:stroke-white"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          style={`clip-path:inset(${thumb.top}px -4px ${Math.max(0, track.height - thumb.bottom)}px -4px);opacity:${thumb.visible ? 1 : 0}`}
+        />
+      </svg>
+      {headings.map((h) => (
         <a
           key={h.id}
           href={`#${h.id}`}
@@ -69,20 +110,11 @@
               : 'text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100',
           ]}
         >
-          {prevChanges(i) && (
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" class="absolute -top-1.5 left-0 h-4 w-4">
-              <line x1={lineOffset(headings[i - 1].depth)} y1="0" x2={lineOffset(h.depth)} y2="12" class="stroke-neutral-200 dark:stroke-neutral-800" stroke-width="1" />
-            </svg>
-          )}
-          <span
-            class={['absolute inset-y-0 w-px bg-neutral-200 dark:bg-neutral-800', prevChanges(i) && 'top-1.5', nextChanges(i) && 'bottom-1.5']}
-            style={`left:${lineOffset(h.depth)}px`}
-          ></span>
           <span class="block truncate">{h.text}</span>
         </a>
       ))}
     </div>
-    <div class="mt-3 flex flex-col gap-2 border-t pt-4 text-sm text-neutral-500">
+    <div class={['flex flex-col gap-2 text-sm text-neutral-500', headings.length > 0 && 'mt-3 border-t pt-4']}>
       <button type="button" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} class="flex w-fit cursor-pointer items-center gap-2 transition hover:text-neutral-900 dark:hover:text-white">
         <span class="rotate-90"><Icon name="arrowLeft" /></span> Back to top
       </button>
@@ -91,4 +123,17 @@
       </Link>
     </div>
   </nav>
-)}
+
+<style>
+  /* The highlight slides along the track (and around its bends) as the active link changes. */
+  .toc-thumb {
+    transition:
+      clip-path 0.2s cubic-bezier(0.32, 0.72, 0, 1),
+      opacity 0.15s;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .toc-thumb {
+      transition: none;
+    }
+  }
+</style>

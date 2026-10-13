@@ -1,5 +1,11 @@
 # @inflector/keeno-compiler
 
+## 0.6.0
+
+### Minor Changes
+
+- add reusable directives for DOM behaviors with use: syntax
+
 ## 0.5.0
 
 ### Minor Changes

@@ -247,8 +247,24 @@ export function analyze(file: t.File, ctx: CompileContext) {
       if (isKeenoApi(path.get('callee'), 'provide')) prepareProvide(path, ctx)
     },
     JSXAttribute(path) {
-      // `bind:value={form.name}`: pass where to read and write (a state there, or a store property).
       const name = path.node.name
+      // `use:tooltip={v}` → `use:tooltip={[tooltip, v]}`: the directive becomes a real reference, so
+      // the passes below rewrite it (props, states) and the import it comes from counts as used.
+      if (t.isJSXNamespacedName(name) && name.namespace.name === 'use') {
+        const directive = name.name.name
+        if (!t.isValidIdentifier(directive)) {
+          throw codeFrameError(path, `use:${directive}: a directive is a function in scope, so its name must be a JavaScript identifier`)
+        }
+        const value = path.node.value
+        if (value && !t.isJSXExpressionContainer(value)) {
+          throw codeFrameError(path, `use:${directive} takes an expression: use:${directive}={value}`)
+        }
+        const elements: t.Expression[] = [t.identifier(directive)]
+        if (value && !t.isJSXEmptyExpression(value.expression)) elements.push(value.expression as t.Expression)
+        path.node.value = t.jsxExpressionContainer(t.arrayExpression(elements))
+        return
+      }
+      // `bind:value={form.name}`: pass where to read and write (a state there, or a store property).
       if (!t.isJSXNamespacedName(name) || name.namespace.name !== 'bind') return
       const value = path.node.value
       if (!t.isJSXExpressionContainer(value) || !t.isMemberExpression(value.expression)) return

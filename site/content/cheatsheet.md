@@ -31,10 +31,14 @@ A `.kn` file holds a `<script>`, markup and a scoped `<style>`, in any order. Th
 | `x.peek()` | Read without tracking |
 | `x.foo` | Read a field: `x.get().foo` |
 | `const y = derived(() => x * 2)` | A computed, read-only value |
+| `const user = derived(async () => (await fetch(url)).json())` | Async: read it inside `<Loading>`, `user.refresh()` re-runs it |
+| `pending(() => user)` | True while an async derived is (re)loading |
+| `const todos = store({ items: [] })` | Deep reactive object: `todos.items.push(t)`, `t.done = true` |
+| `snapshot(todos)`, `reconcile(todos.items, fresh)` | Plain copy; minimal in-place update |
 | `untrack(() => x)` | Read inside a tracked scope without subscribing |
 | `flush()` | Apply pending updates now |
 
-Never reassign a state (`x = 1` is a compile error), and write a new object or array rather than mutating it: `todos.set([...todos, item])`. More in [Reactivity](reactivity.md).
+Never reassign a state (`x = 1` is a compile error), and write a new object or array rather than mutating it: `todos.set([...todos, item])`. For nested data you'd rather mutate, use `store()`. More in [Reactivity](reactivity.md).
 
 ## State options
 
@@ -79,11 +83,12 @@ More in [State options](state-options.md).
 | Event | `<button onClick={(e) => save(e)}>` |
 | Two-way binding | `<input bind:value={name} />`, `<input type="checkbox" bind:checked={done} />` |
 | Element ref | `const el = ref<HTMLInputElement>()` then `<input ref={el} />` |
+| Directive | `<textarea use:autosize use:tooltip={'Notes'} />`, with `const autosize: Directive<HTMLTextAreaElement> = (el) => { …; return cleanup }` |
 | Classes | `class={['btn', active && 'on', { big: size > 2 }]}` |
 | Spread | `<input {...attrs} />`, `<Item {...item} />` |
 | Literal `>` in text | `{'>'}` or `&gt;` |
 
-`null`, `undefined` and `false` remove an attribute. More in [Templates](templates.md).
+`null`, `undefined` and `false` remove an attribute. More in [Templates](templates.md) and [Directives](directives.md).
 
 ## Lifecycle
 
@@ -134,6 +139,7 @@ More in [Context](context.md).
 | Component | Use it for |
 |---|---|
 | `<ErrorBoundary fallback={(error, reset) => …}>` | Catching render errors |
+| `<Loading fallback={() => <Spinner />}>` | Waiting for async deriveds read inside |
 | `<Await promise={p} pending={…} fulfilled={(v) => …} rejected={(e) => …} />` | Showing a promise's states |
 | `lazy(() => import('./Page.kn'))` | Loading a component on demand |
 | `<Dynamic component={C} {...props} />` | Rendering a component chosen at run time |
@@ -157,6 +163,7 @@ const routes = [
 
 const route = useRoute()   // route.params.id, route.query.get('tab'), route.path
 navigate('/settings', { replace: true })
+// <Router routes={routes} viewTransition />: animate navigations with the View Transitions API
 ```
 
 File routes (Vite): `src/pages/index.kn` is `/`, `about.kn` is `/about`, `users/[id].kn` is `/users/:id`, `docs/_all.kn` catches the rest of `/docs`. `_layout.kn` wraps a directory, `_404.kn` and `_500.kn` are error pages, and a page can `throw httpError(403)`.
@@ -172,10 +179,11 @@ More in [Routing](routing.md) and [File-based routing](file-routing.md).
 
 ```ts
 import { hydrate, mount } from '@inflector/keeno'
-import { renderToString } from '@inflector/keeno/server'
+import { renderToStream, renderToString } from '@inflector/keeno/server'
 
 mount(App, document.getElementById('app')!)
-const html = await renderToString(App, { url })   // on the server
+const html = await renderToString(App, { url })   // on the server: waits for async deriveds
+const stream = renderToStream(App, { url })       // or stream <Loading> boundaries as they resolve
 hydrate(App, document.getElementById('app')!)      // in the browser
 ```
 
