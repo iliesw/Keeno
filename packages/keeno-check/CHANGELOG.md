@@ -1,5 +1,14 @@
 # @inflector/keeno-check
 
+## 0.2.1
+
+### Patch Changes
+
+- [#17](https://github.com/iliesw/Keeno/pull/17) [`166bbbd`](https://github.com/iliesw/Keeno/commit/166bbbd16ac91ca825ebe66a4d3713235f1e156a) Thanks [@iliesw](https://github.com/iliesw)! - PR
+- Updated dependencies [[`166bbbd`](https://github.com/iliesw/Keeno/commit/166bbbd16ac91ca825ebe66a4d3713235f1e156a)]:
+  - @inflector/keeno-compiler@0.6.1
+  - @inflector/keeno-language-server@0.4.1
+
 ## 0.2.0
 
 ### Minor Changes
