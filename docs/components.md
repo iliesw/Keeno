@@ -77,6 +77,8 @@ The parent writes `children` as nested markup, any number of nodes. Declare it a
 | `destroy(fn)` | When the component unmounts. |
 | `x.onUpdate((old, next) => …)` | Synchronously on every real change of `x`. Removed automatically on destroy; also returns an unsubscribe function. |
 
+For setup tied to one element that you'd reuse elsewhere (listeners, observers, third-party widgets), a [directive](directives.md) (`use:name={value}`) is often simpler than a `ref` plus `init`.
+
 Order:
 - Children mount before their parents.
 - Within a component, `init` and `update` run in declaration order.

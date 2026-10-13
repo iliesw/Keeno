@@ -36,6 +36,7 @@ export const nav: { title: string; items: NavItem[] }[] = [
       { slug: 'reactivity', title: 'Reactivity' },
       { slug: 'state-options', title: 'State Options' },
       { slug: 'templates', title: 'Templates' },
+      { slug: 'directives', title: 'Directives' },
       { slug: 'styles', title: 'Styles' },
       { slug: 'context', title: 'Context' },
     ],

@@ -27,7 +27,7 @@ export interface DevSignal {
   history?: { past: number; future: number }
   persist?: string
   url?: string
-  /** A debounced or throttled write is waiting. */
+  /** A debounced or throttled write is waiting, or an async derived is loading. */
   pending?: boolean
 }
 
@@ -296,10 +296,17 @@ export function installDevtools(roots: Set<Owner>, legacy: Record<string, unknow
       kind: s instanceof State ? 'state' : 'derived',
       value: undefined,
     }
-    try {
-      info.value = s.peek()
-    } catch (err) {
-      info.error = err
+    if (s instanceof Derived && s._async) {
+      // Read its fields: peek() would throw while it has no value yet, and could start a run.
+      if (s._error) info.error = s._error.value
+      else if (s._hasValue) info.value = s._value
+      if (s._loading?.peek()) info.pending = true
+    } else {
+      try {
+        info.value = s.peek()
+      } catch (err) {
+        info.error = err
+      }
     }
     if (s instanceof State) {
       if (s._history) info.history = { past: s._history.past.length, future: s._history.future.length }

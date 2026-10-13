@@ -1,6 +1,6 @@
 # @inflector/keeno-router
 
-Client-side router for [Keeno](https://github.com/iliesw/Keeno): `<Router>`, `<Link>`, `navigate()`, `useRoute()` and the `link` click handler. It also supports a base path, lazy routes and server rendering.
+Client-side router for [Keeno](https://github.com/iliesw/Keeno): `<Router>`, `<Link>`, `navigate()`, `useRoute()` and the `link` click handler. It also supports a base path, lazy routes, server rendering, file-based routes (with the Vite plugin) and View Transitions (`<Router viewTransition>`).
 
 ```bash
 bun add @inflector/keeno-router

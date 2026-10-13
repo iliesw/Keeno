@@ -244,4 +244,15 @@ describe('hover and navigation', () => {
     const target = defs[0].targetSelectionRange ?? defs[0].range
     expect(target.start.line).toBe(1)
   })
+
+  test('use: directives: definition and hover on the name, errors on the value', async () => {
+    const src =
+      '<script lang="ts">\nconst tip = (el: HTMLElement, text: string) => { el.title = text }\n</script>\n<button use:ti|p={"hi"}>x</button>\n<p use:tip={1}>y</p>'
+    const { uri, pos } = await open(src)
+    const defs = (await server.sendDefinitionRequest(uri, pos)) as any[]
+    expect((defs[0].targetSelectionRange ?? defs[0].range).start.line).toBe(1)
+    const hover = await server.sendHoverRequest(uri, pos)
+    expect(JSON.stringify(hover?.contents)).toMatch(/text: string/)
+    expect(await errors(uri)).toEqual(["Argument of type 'number' is not assignable to parameter of type 'string'."])
+  })
 })

@@ -50,6 +50,18 @@ describe('keeno-check', () => {
     expect(code).toBe(0)
   }, 60_000)
 
+  test('use: directives type-check their value and element', () => {
+    expect(run('packages/keeno-check/test/fixtures/directives/tsconfig.json')).toEqual({ code: 0, out: '0 errors in 2 files\n' })
+    const { code, out } = run('packages/keeno-check/test/fixtures/directives-broken/tsconfig.json')
+    const dir = 'packages/keeno-check/test/fixtures/directives-broken'
+    expect(out.split('\n').filter((l) => l.includes(' - error '))).toEqual([
+      `${dir}/Uses.kn:5:24 - error TS2561: Object literal may only specify known properties, but 'txt' does not exist in type '{ text: string; }'. Did you mean to write 'text'?`,
+      `${dir}/Uses.kn:6:8 - error TS2322: Type 'KnUse<HTMLTextAreaElement>' is not assignable to type 'KnUse<HTMLInputElement>'.`,
+      `${dir}/Uses.kn:7:13 - error TS2345: Argument of type 'Directive<HTMLElement, { text: string; }>' is not assignable to parameter of type '(el: HTMLElement, value?: undefined) => unknown'.`,
+    ])
+    expect(code).toBe(1)
+  }, 60_000)
+
   test('a missing tsconfig is a usage error', () => {
     expect(run('does/not/exist').code).toBe(2)
   })

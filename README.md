@@ -50,19 +50,21 @@ npm, pnpm and yarn work too. Continue with [Getting started](docs/getting-starte
 ## Features
 
 - **Fine-grained reactivity:** `state()`, `derived()`, batched DOM updates, and `persist`, `url`, `history`, `debounce` and `validate` options on states.
-- **Templates:** conditionals, keyed lists, two-way `bind:value`, class arrays and spread props.
+- **Async data:** `derived(async () => …)` with `<Loading>` boundaries, stale-while-revalidate refetching, `refresh()` and `pending()`.
+- **Deep stores:** `store()` for nested data you mutate directly (`todos.items.push(…)`), tracked per property, with `snapshot()` and `reconcile()`.
+- **Templates:** conditionals, keyed lists, two-way `bind:value`, class arrays, spread props, and `use:` [directives](docs/directives.md) for reusable DOM behaviors.
 - **Scoped CSS** per component, with a `:global()` escape hatch, and first-class [Tailwind CSS](docs/styles.md#tailwind-css) (utilities in markup, `@apply` in `<style>`).
-- **Built-in components:** error boundaries, `<Await>` for promises, `lazy()` code splitting, portals, state-preserving reparenting (native `moveBefore`), enter/leave transitions and `<Dynamic>`. See [Built-in components](docs/built-ins.md).
-- **Context**, server rendering with `hydrate`, and a router.
+- **Built-in components:** error boundaries, `<Loading>` for async data, `<Await>` for promises, `lazy()` code splitting, portals, state-preserving reparenting (native `moveBefore`), enter/leave transitions and `<Dynamic>`. See [Built-in components](docs/built-ins.md).
+- **Context**, server rendering that waits for async data and can stream (`renderToString`, `renderToStream`, `hydrate`), and a router with View Transitions.
 - **Tooling:** a Vite plugin with HMR, a VS Code extension with full TypeScript IntelliSense in `.kn` files, and `keeno-check` for type-checking in CI.
 
 ## Packages
 
 | Package | |
 |---|---|
-| [`@inflector/keeno`](packages/keeno) | Runtime: reactivity, lifecycle, built-in components, `mount`/`hydrate`, `renderToString` (`/server`) |
+| [`@inflector/keeno`](packages/keeno) | Runtime: reactivity, stores, lifecycle, directives, built-in components, `mount`/`hydrate`, `renderToString`/`renderToStream` (`/server`) |
 | [`@inflector/vite-plugin-keeno`](packages/vite-plugin-keeno) | Vite plugin: compiles `.kn` files, scoped CSS, HMR |
-| [`@inflector/keeno-router`](packages/router) | Client-side router |
+| [`@inflector/keeno-router`](packages/router) | Client-side router, with View Transitions |
 | [`@inflector/keeno-check`](packages/keeno-check) | Type-checks `.kn` and `.ts` files from the command line |
 | [`create-keeno`](packages/create-keeno) | Scaffolds a new project: `bun create keeno` |
 | [`@inflector/keeno-compiler`](packages/compiler) | The `.kn` compiler (used by the Vite plugin) |
@@ -71,7 +73,7 @@ npm, pnpm and yarn work too. Continue with [Getting started](docs/getting-starte
 
 ## Documentation
 
-[Getting started](docs/getting-started.md) · [Components](docs/components.md) · [Reactivity](docs/reactivity.md) · [State options](docs/state-options.md) · [Templates](docs/templates.md) · [Styles](docs/styles.md) · [Context](docs/context.md) · [Built-in components](docs/built-ins.md) · [Routing](docs/routing.md) · [Server rendering](docs/ssr.md) · [Security](docs/security.md) · [Tooling](docs/tooling.md) · [API reference](docs/api.md) · [Versioning and support](docs/stability.md)
+[Getting started](docs/getting-started.md) · [Components](docs/components.md) · [Reactivity](docs/reactivity.md) · [State options](docs/state-options.md) · [Templates](docs/templates.md) · [Directives](docs/directives.md) · [Styles](docs/styles.md) · [Context](docs/context.md) · [Built-in components](docs/built-ins.md) · [Routing](docs/routing.md) · [Server rendering](docs/ssr.md) · [Security](docs/security.md) · [Tooling](docs/tooling.md) · [API reference](docs/api.md) · [Versioning and support](docs/stability.md)
 
 [`llms.txt`](llms.txt) and [`llms-full.txt`](llms-full.txt) summarize the docs for AI assistants.
 

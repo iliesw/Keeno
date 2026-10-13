@@ -1,0 +1,7 @@
+<script lang="ts">
+  import { autosize, tooltip } from './directives'
+</script>
+
+<button use:tooltip={{ txt: 'typo' }}>a</button>
+<input use:autosize />
+<button use:tooltip>b</button>

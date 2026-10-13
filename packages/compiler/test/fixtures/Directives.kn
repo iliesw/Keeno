@@ -1,0 +1,19 @@
+<script lang="ts">
+  import { clickOutside, label } from './directives'
+
+  const open = state(true)
+  const n = state(1)
+  const focused = state(false)
+  const markFocus = (el: HTMLElement) => {
+    focused.set(document.activeElement === el)
+  }
+</script>
+
+<button class="toggle" onClick={() => open.set(!open)}>toggle</button>
+{open && (
+  <div class="menu" use:label={`item ${n}`} use:clickOutside={() => open.set(false)}>
+    <button class="inc" onClick={() => n.set(n + 1)}>inc</button>
+    <input class="field" use:markFocus autofocus />
+  </div>
+)}
+<p class="outside">outside</p>

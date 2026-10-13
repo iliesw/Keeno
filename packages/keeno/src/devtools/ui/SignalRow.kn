@@ -77,7 +77,7 @@
     {signal.kind === 'derived' && <span class="badge derived" title="Read-only, computed">derived</span>}
     {signal.persist && <span class="badge" title={`localStorage "${signal.persist}"`}>persist</span>}
     {signal.url && <span class="badge" title={`Query parameter ?${signal.url}`}>?{signal.url}</span>}
-    {signal.pending && <span class="badge pending" title="A debounced or throttled write is waiting">pending</span>}
+    {signal.pending && <span class="badge pending" title="A debounced or throttled write is waiting, or an async value is loading">pending</span>}
     <span class="colon">:</span>
     <span class="val">
       {show === 'error' && <span class="v-err">{preview(signal.error)}</span>}

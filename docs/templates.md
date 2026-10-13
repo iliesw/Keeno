@@ -102,6 +102,19 @@ Number and range inputs store numbers. Binding a prop or a derived is a compile 
 
 `ref` also takes a function, called with the element on mount and with `null` on removal: `<canvas ref={(el) => (canvas = el)} />`. Refs work on DOM elements only.
 
+For a behavior you'd reuse on many elements, such as a tooltip, click-outside or autosize, write a [directive](directives.md) instead.
+
+## Directives
+
+`use:name={value}` adds a reusable DOM behavior to an element, such as a tooltip, click-outside or autosize. A directive is a plain function, `(el, value) => cleanup`. It runs once the element is in the document, runs again when the value changes, and cleans up when the element is removed:
+
+```html
+<textarea use:autofocus use:autosize bind:value={note}></textarea>
+<div class="menu" use:clickOutside={() => open.set(false)}>…</div>
+```
+
+See [Directives](directives.md) for writing them, reactive values, type checking and more examples.
+
 ## class
 
 `class` accepts a string, an array (falsy entries skipped, nested arrays allowed) or an object of `name: condition`:

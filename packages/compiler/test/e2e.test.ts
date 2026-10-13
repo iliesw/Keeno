@@ -338,3 +338,29 @@ describe('StoreTodos (store, async derived, Loading)', () => {
     expect($(el, '.refreshing')).toBeNull()
   })
 })
+
+describe('Directives (use:)', () => {
+  test('imported and local directives: setup after insert, re-run on change, cleanup on removal', async () => {
+    const { log } = await import('./fixtures/directives')
+    log.length = 0
+    const el = await render('Directives')
+    expect($(el, '.menu').getAttribute('data-label')).toBe('item 1')
+    $(el, '.inc').click()
+    await tick()
+    expect($(el, '.menu').getAttribute('data-label')).toBe('item 2')
+    expect(log).toEqual(['label item 1', 'unlabel item 1', 'label item 2'])
+
+    $(el, '.outside').click()
+    await tick()
+    expect(el.querySelector('.menu')).toBeNull()
+    expect(log.at(-1)).toBe('unlabel item 2')
+
+    // Removed: its clickOutside listener is gone too.
+    $(el, '.toggle').click()
+    await tick()
+    expect($(el, '.menu')).not.toBeNull()
+    $(el, '.menu').click()
+    await tick()
+    expect($(el, '.menu')).not.toBeNull()
+  })
+})

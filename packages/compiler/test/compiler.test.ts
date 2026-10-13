@@ -381,6 +381,36 @@ describe('derived, history members, spread, class arrays', () => {
     expect(out).toContain('_$bindPath(() => fields.get(), () => "name")')
   })
 
+  test('use: directives compile to use() with tracked thunks, nothing in the HTML', () => {
+    const out = body(
+      '<button class="b" use:tooltip={{ text: label }} use:autofocus>x</button>',
+      'import { tooltip } from "./t"\nconst label = state("hi")\nconst autofocus = (el: HTMLElement) => el.focus()',
+    )
+    expect(out.replace(/\s+/g, ' ')).toContain('_$use(_el$1, () => tooltip, () => ({ text: label.get() }), "tooltip")')
+    expect(out).toContain('_$use(_el$1, () => autofocus, () => undefined, "autofocus")')
+    expect(out).toContain('_$template("<button class=\\"b\\">x</button>")')
+    expect(out).toContain("import { tooltip } from \"./t\"")
+  })
+
+  test('use: with a prop or a state as the directive', () => {
+    const out = body('<div use:act={1} use:dyn />', 'const { act } = props()\nconst dyn = state((el: Element) => {})')
+    expect(out).toContain('_$use(_el$1, () => $$props.act, () => 1, "act")')
+    expect(out).toContain('_$use(_el$1, () => dyn.get(), () => undefined, "dyn")')
+  })
+
+  test('use: works next to a spread', () => {
+    const out = body('<div {...attrs} use:d={1} />', 'const attrs = { id: "a" }\nconst d = () => {}')
+    expect(out).toContain('_$spread(')
+    expect(out).toContain('_$use(_el$1, () => d, () => 1, "d")')
+    expect(out).not.toMatch(/"use:d"/)
+  })
+
+  test('use: errors: component, invalid name, string value', () => {
+    expect(() => body('<Card use:d={1} />', 'import Card from "./Card.kn"\nconst d = () => {}')).toThrow(/only supported on DOM elements/)
+    expect(() => body('<div use:click-outside={f} />', 'const f = () => {}')).toThrow(/must be a JavaScript identifier/)
+    expect(() => body('<div use:d="x" />', 'const d = () => {}')).toThrow(/takes an expression/)
+  })
+
   test('class arrays and objects go through attr', () => {
     const out = body('<button class={["btn", active && "on", { big }]}>x</button>', 'const active = state(false)\nconst big = true')
     expect(out).toContain('_$attr(_el$1, "class", () => ["btn", active.get() && "on", {')

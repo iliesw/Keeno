@@ -23,15 +23,16 @@ Rules that differ from React, Svelte and Vue, which models get wrong most often:
 
 - [Getting started](docs/getting-started.md): setup with Bun and Vite, a first component, mounting
 - [Components](docs/components.md): script, markup and style; props, children, lifecycle, mount
-- [Reactivity](docs/reactivity.md): state read and write rules, derived, update vs onUpdate, stores, batching
+- [Reactivity](docs/reactivity.md): state read and write rules, derived, async derived (`<Loading>`, `pending()`, `refresh()`), update vs onUpdate, shared states, `store()` (deep mutable data, `snapshot`, `reconcile`), batching
 - [State options](docs/state-options.md): persist, url, history (undo/redo), equals, validate, debounce, throttle
 - [Templates](docs/templates.md): expressions, conditionals, keyed lists, events, bind, class arrays, spread
+- [Directives](docs/directives.md): `use:name={value}` reusable DOM behaviors: writing them, reactive values, cleanup, type checking
 - [Styles](docs/styles.md): scoped CSS, `:global()`, Tailwind CSS (`@apply` in `<style>`, auto `@reference`)
 - [Context](docs/context.md): createContext, provide and inject
-- [Built-in components](docs/built-ins.md): ErrorBoundary, Await, lazy, Dynamic, Portal, reparentable, Transition
-- [Routing](docs/routing.md): @inflector/keeno-router: Router, Link, navigate, useRoute
+- [Built-in components](docs/built-ins.md): ErrorBoundary, Loading, Await, lazy, Dynamic, Portal, reparentable, Transition
+- [Routing](docs/routing.md): @inflector/keeno-router: Router, Link, navigate, useRoute, View Transitions
 - [File-based routing](docs/file-routing.md): src/pages routes with the Vite plugin: layouts, 404/500 pages, httpError, virtual:keeno-pages
-- [Server rendering](docs/ssr.md): renderToString, hydrate, Vite SSR setup
+- [Server rendering](docs/ssr.md): renderToString (waits for async deriveds and sends their values), renderToStream (streams `<Loading>` boundaries), hydrate, Vite SSR setup
 - [Security](docs/security.md): what is escaped, innerHTML, javascript: URLs, CSP
 - [Tooling](docs/tooling.md): Vite plugin, HMR, dev mode, VS Code extension, keeno-check, testing with `bun test`
 - [API reference](docs/api.md): every export, and the compile rules in one table
@@ -126,7 +127,7 @@ Start the dev server with `bunx --bun vite` and build with `bunx --bun vite buil
 - `{count}` in the markup is a live text node: only that node changes when `count` changes.
 - The `<style>` only applies to this component.
 
-Continue with [Components](components.md), [Reactivity](reactivity.md) and [Templates](templates.md).
+Continue with [Components](components.md), [Reactivity](reactivity.md) and [Templates](templates.md). To load data, see [async derived](reactivity.md#async-derived); for nested data you change in place, [`store()`](reactivity.md#store).
 
 ---
 
@@ -210,6 +211,8 @@ The parent writes `children` as nested markup, any number of nodes. Declare it a
 | `update(fn, [a, b])` | Only when `a` or `b` changes, not on mount. The array holds the states themselves. A returned function is cleanup. |
 | `destroy(fn)` | When the component unmounts. |
 | `x.onUpdate((old, next) => …)` | Synchronously on every real change of `x`. Removed automatically on destroy; also returns an unsubscribe function. |
+
+For setup tied to one element that you'd reuse elsewhere (listeners, observers, third-party widgets), a [directive](directives.md) (`use:name={value}`) is often simpler than a `ref` plus `init`.
 
 Order:
 - Children mount before their parents.
@@ -625,6 +628,19 @@ Number and range inputs store numbers. Binding a prop or a derived is a compile 
 
 `ref` also takes a function, called with the element on mount and with `null` on removal: `<canvas ref={(el) => (canvas = el)} />`. Refs work on DOM elements only.
 
+For a behavior you'd reuse on many elements, such as a tooltip, click-outside or autosize, write a [directive](directives.md) instead.
+
+## Directives
+
+`use:name={value}` adds a reusable DOM behavior to an element, such as a tooltip, click-outside or autosize. A directive is a plain function, `(el, value) => cleanup`. It runs once the element is in the document, runs again when the value changes, and cleans up when the element is removed:
+
+```html
+<textarea use:autofocus use:autosize bind:value={note}></textarea>
+<div class="menu" use:clickOutside={() => open.set(false)}>…</div>
+```
+
+See [Directives](directives.md) for writing them, reactive values, type checking and more examples.
+
 ## class
 
 `class` accepts a string, an array (falsy entries skipped, nested arrays allowed) or an object of `name: condition`:
@@ -712,6 +728,219 @@ Write tables with their full structure. Rows go in `<tbody>`, `<thead>` or `<tfo
 ## Components
 
 A capitalized tag is a component: `<Item text={t.text} onSave={save} />`. Dynamic props are passed as getters, so the child stays in sync. See [Components](components.md).
+
+---
+
+<!-- file: docs/directives.md -->
+
+# Directives
+
+A directive is a reusable DOM behavior: a tooltip, closing a menu on an outside click, growing a textarea, watching when an element scrolls into view. You write it once as a plain function, then put it on any element with `use:name={value}`.
+
+```html Inbox.kn
+<script lang="ts">
+  import { tooltip } from './directives'
+  const unread = state(3)
+</script>
+
+<button use:tooltip={`${unread} unread messages`} onClick={() => unread.set(unread + 1)}>
+  Inbox ({unread})
+</button>
+```
+
+## Writing a directive
+
+A directive receives the element and the value, and can return a cleanup function:
+
+```ts
+// directives.ts
+import type { Directive } from '@inflector/keeno'
+
+export const tooltip: Directive<HTMLElement, string> = (el, text) => {
+  const tip = document.createElement('div')
+  tip.className = 'tooltip'
+  tip.textContent = text
+  const show = () => {
+    const r = el.getBoundingClientRect()
+    tip.style.left = `${r.left + r.width / 2}px`
+    tip.style.top = `${r.top - 6}px`
+    document.body.append(tip)
+  }
+  const hide = () => tip.remove()
+  el.addEventListener('pointerenter', show)
+  el.addEventListener('pointerleave', hide)
+  return () => {
+    hide()
+    el.removeEventListener('pointerenter', show)
+    el.removeEventListener('pointerleave', hide)
+  }
+}
+```
+
+- `Directive<ElementType, ValueType>` types both arguments. Both are optional: `Directive` alone is `(el: HTMLElement) => …`.
+- The directive runs once the element is in the document, like `init`, so it can measure the element, focus it or attach observers.
+- The cleanup runs when the element is removed: its component is destroyed, its `{cond && …}` turns false, or its list row goes away.
+
+## Using directives
+
+```html Note.kn
+<script lang="ts">
+  import { autofocus, autosize, clickOutside } from './directives'
+  const open = state(false)
+  const note = state('')
+</script>
+
+<button onClick={() => open.set(true)}>Write a note</button>
+{open && (
+  <div class="popover" use:clickOutside={() => open.set(false)}>
+    <textarea use:autofocus use:autosize bind:value={note}></textarea>
+  </div>
+)}
+```
+
+- `use:name` refers to `name` in scope: an import, a function declared in the `<script>`, a prop or a state holding a function.
+- Without a value (`use:autosize`), the directive receives `undefined`.
+- An element can have several directives. They run in the order they're written.
+- Directives work on DOM elements only; on a component they're a compile error. The name must be a JavaScript identifier (`use:clickOutside`, not `use:click-outside`), and the value an expression (`use:tooltip={'Save'}`, not `use:tooltip="Save"`).
+
+## Reactive values
+
+The value is tracked like any expression in markup. When a state it reads changes, the cleanup runs and the directive runs again with the new value. Above, the tooltip follows `unread`.
+
+- Reads **inside** the directive aren't tracked: only the value expression (and the directive itself, when it's a prop or a state) re-runs it.
+- For a value that changes often, a directive can accept a getter instead, so it isn't set up again each time: `use:tooltip={() => `${unread} unread`}` passes a function that never changes, and the directive calls it when the tooltip opens.
+- A value that reads an [async derived](reactivity.md#async-derived) waits inside `<Loading>` like the rest of the markup.
+
+## More examples
+
+**Click outside**, to close menus and popovers:
+
+```ts
+export const clickOutside: Directive<HTMLElement, () => void> = (el, onOutside) => {
+  const handler = (e: PointerEvent) => !el.contains(e.target as Node) && onOutside()
+  document.addEventListener('pointerdown', handler, true)
+  return () => document.removeEventListener('pointerdown', handler, true)
+}
+```
+
+**Autosize and autofocus:**
+
+```ts
+export const autosize: Directive<HTMLTextAreaElement> = (el) => {
+  const fit = () => {
+    el.style.height = 'auto'
+    el.style.height = `${el.scrollHeight}px`
+  }
+  fit()
+  el.addEventListener('input', fit)
+  return () => el.removeEventListener('input', fit)
+}
+
+export const autofocus: Directive = (el) => el.focus()
+```
+
+**In view**, for infinite scroll, lazy images and scroll animations:
+
+```ts
+export const inView: Directive<Element, (visible: boolean) => void> = (el, onChange) => {
+  const io = new IntersectionObserver(([entry]) => onChange(entry!.isIntersecting), { rootMargin: '200px' })
+  io.observe(el)
+  return () => io.disconnect()
+}
+```
+
+```html Feed.kn
+<ul>{posts.map((p) => <li key={p.id}>{p.title}</li>)}</ul>
+<div use:inView={(visible) => visible && loadMore()}>Loading…</div>
+```
+
+**Long press:**
+
+```ts
+export const longpress: Directive<HTMLElement, () => void> = (el, onPress) => {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const down = () => (timer = setTimeout(onPress, 500))
+  const up = () => clearTimeout(timer)
+  el.addEventListener('pointerdown', down)
+  el.addEventListener('pointerup', up)
+  el.addEventListener('pointerleave', up)
+  return () => {
+    up()
+    el.removeEventListener('pointerdown', down)
+    el.removeEventListener('pointerup', up)
+    el.removeEventListener('pointerleave', up)
+  }
+}
+```
+
+**A local directive** that reads the component's states:
+
+```html Card.kn
+<script lang="ts">
+  const accent = state('#f97316')
+  const outline = (el: HTMLElement, on: boolean) => {
+    if (!on) return
+    el.style.outline = `2px solid ${accent.peek()}`
+    return () => (el.style.outline = '')
+  }
+  const selected = state(false)
+</script>
+
+<section use:outline={selected} onClick={() => selected.set(!selected)}>…</section>
+```
+
+## Directives vs. ref and init
+
+A [ref](templates.md#element-refs) plus `init` does the same job for one element in one component:
+
+```html
+<script lang="ts">
+  const input = ref<HTMLInputElement>()
+  init(() => input.current?.focus())
+</script>
+
+<input ref={input} />
+```
+
+Use a directive when the behavior is reused. It works on any element in any component, several of them combine on one element, its value is reactive, and it cleans up after itself, with no ref or lifecycle code in the components that use it.
+
+## Type checking
+
+In the editor and in `keeno-check`, each `use:` is checked against the directive:
+
+- **The value** must match the directive's value type. `use:tooltip={{ txt: 'Save' }}` is an error when `tooltip` expects `{ text: string }`.
+- **The element** must match its element type. `use:autosize` on an `<input>` is an error because `autosize` expects a `<textarea>`. A directive typed for `HTMLElement` (the default) works on any element.
+- **A required value** can't be left out: `use:tooltip` alone is an error when `tooltip` needs a value.
+
+Go to definition and hover work on the directive's name.
+
+## Server rendering
+
+Directives don't run during [server rendering](ssr.md), because they need a live DOM. They run when the page hydrates in the browser.
+
+## Errors
+
+An error thrown by a directive, or while it re-runs, goes to the closest [`<ErrorBoundary>`](built-ins.md#errorboundary). Using something that isn't a function (`use:tooltip` where `tooltip` is a string) throws `use:tooltip needs a function`.
+
+## Publishing directives
+
+A directive is a plain function, so a package can export it with no component wrapper and no setup:
+
+```ts
+// @acme/tooltip
+import type { Directive } from '@inflector/keeno'
+
+export interface TooltipOptions {
+  text: string
+  placement?: 'top' | 'bottom'
+}
+
+export const tooltip: Directive<HTMLElement, TooltipOptions> = (el, options) => {
+  // …
+}
+```
+
+Users import it and write `use:tooltip={{ text: 'Save' }}` on their own markup, combined with any other directives. Keep setup cheap, since a value change runs it again, and always return a cleanup that removes every listener, observer and node the directive added.
 
 ---
 
@@ -846,7 +1075,7 @@ Any component inside it reads the value with `inject(context)`:
 
 # Built-in components
 
-`@inflector/keeno` exports a few components for things plain markup can't express: catching errors, waiting for promises, loading code on demand, rendering elsewhere in the page, moving live content around without re-creating it, and animating elements in and out. Import them like any component.
+`@inflector/keeno` exports a few components for things plain markup can't express: catching errors, waiting for async data and promises, loading code on demand, rendering elsewhere in the page, moving live content around without re-creating it, and animating elements in and out. Import them like any component.
 
 ## ErrorBoundary
 
@@ -1578,7 +1807,7 @@ Please report security issues privately through [GitHub security advisories](htt
 
 ## Vite plugin
 
-`@inflector/vite-plugin-keeno` compiles `.kn` files, serves their CSS, strips TypeScript (with Oxc on Vite 8, and esbuild on Vite 5 to 7) and chains source maps. It supports Vite 5, 6, 7 and 8. Options: `keeno({ hmr?: boolean, tailwind?: boolean | { reference?: string }, devtools?: boolean })`. `tailwind` defaults to on when `@tailwindcss/vite` is in the plugins (see [Styles](styles.md#tailwind-css)).
+`@inflector/vite-plugin-keeno` compiles `.kn` files, serves their CSS, strips TypeScript (with Oxc on Vite 8, and esbuild on Vite 5 to 7) and chains source maps. It supports Vite 5, 6, 7 and 8. Options: `keeno({ hmr?: boolean, tailwind?: boolean | { reference?: string }, devtools?: boolean, useFileRouter?: boolean, pages?: string })` (`KeenoPluginOptions`). `useFileRouter` (default `true`) and `pages` (default `./src/pages`) configure [file-based routing](file-routing.md). `tailwind` defaults to on when `@tailwindcss/vite` is in the plugins (see [Styles](styles.md#tailwind-css)).
 
 During `vite dev` the plugin also turns on development mode: warnings such as duplicate keys in a list, and the dev tools panel (below). Production builds have neither.
 
@@ -1595,7 +1824,7 @@ In dev, editing a `.kn` file swaps the component in place without a page reload:
 During `vite dev` every page gets an in-page dev tools panel. Open it with the **◆ Keeno** button in the bottom-left corner, or with <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd>.
 
 - **Components:** the live component tree. Search it by name or file, and move through it with the arrow keys. Hover a row to outline the component on the page, and double-click a row to scroll the component into view. Rows flash when a component re-renders, and `×N` counts its updates.
-- **Inspector:** the selected component's props, plus the states and deriveds declared in its `<script>`, under their variable names. Badges mark `derived`, `persist`, `?url` and `pending` (a debounced write is waiting).
+- **Inspector:** the selected component's props, plus the states and deriveds declared in its `<script>`, under their variable names. Badges mark `derived`, `persist`, `?url` and `pending` (a debounced write is waiting, or an async derived is loading). An async derived shows its last value, or its error.
   - Click a string, number or `null` to edit it, and click a boolean's checkbox to flip it.
   - Use the pencil button to edit any state as JSON.
   - States with `history` get undo and redo buttons.
@@ -1605,7 +1834,7 @@ During `vite dev` every page gets an in-page dev tools panel. Open it with the *
 - **Highlight updates** (lightning button): outlines components on the page as they re-render.
 - **Timeline:** every state write, newest first. It shows the component, the state and what changed; for arrays and objects that is the changed path, for example `todos [1].done false → true`. Writes that came from the URL, another tab or undo/redo get a badge. Errors appear here too. You can filter, pause and clear it, and set a state back to its value before a write.
 - **Perf:** counts of components, signals, flushes and component updates; flush times (last, average, slowest) with a chart of the recent ones; and the components that update most.
-- **Stores:** states created outside components (in a shared module, for example) are listed under ◆ Stores at the top of the tree. Only stores created after the first `mount()` are tracked.
+- **Stores:** states and deriveds created outside components (in a shared module, for example) are listed under ◆ Stores at the top of the tree. Only those created after the first `mount()` are tracked. Objects made with `store()` aren't listed yet; log `snapshot(todos)` to inspect one.
 
 The panel is itself a Keeno app, rendered in a shadow root so that it doesn't pick up the app's styles. The dev tools leave it out: it is not in the tree, and its own updates are not counted or logged. It remembers whether it was open, the side it is docked to (dock button), its width and the active tab. It doesn't load in browsers driven by test tools (`navigator.webdriver`), so end-to-end tests don't see it. Turn it off with `keeno({ devtools: false })`. Outside Vite, add `import '@inflector/keeno/devtools'` to your dev entry point.
 
@@ -1663,7 +1892,7 @@ bun run --cwd examples/todo check
 
 ## Testing
 
-Use `bun test` with happy-dom registered in a preload (`bunfig.toml`: `[test] preload = ["./test-setup.ts"]`). Mount components with `mount()`, then await a microtask (or call `flush()`) before asserting DOM changes. To test `.kn` files directly, register a Bun plugin that runs `compile()` from `@inflector/keeno-compiler` (see `packages/compiler/test/e2e.test.ts`).
+Use `bun test` with happy-dom registered in a preload (`bunfig.toml`: `[test] preload = ["./test-setup.ts"]`). Mount components with `mount()`, then await a microtask (or call `flush()`) before asserting DOM changes. For async deriveds, resolve the promise your test controls, then wait a tick (`await new Promise((r) => setTimeout(r, 0))`). Directives run in the mount phase, so they have run when `mount()` returns. To test `.kn` files directly, register a Bun plugin that runs `compile()` from `@inflector/keeno-compiler` (see `packages/compiler/test/e2e.test.ts`).
 
 ## Compiler
 
@@ -1750,6 +1979,14 @@ type Component<P = any> = (props: P) => unknown
 type Children = () => unknown                    // the `children` prop: renders the nested markup
 ```
 
+## Directives
+
+```ts
+type Directive<E extends Element = HTMLElement, V = undefined> = (el: E, value: V) => void | (() => void)
+```
+
+`use:name={value}` on a DOM element: runs after insertion, re-runs (after the cleanup) when the value or the directive changes, cleans up on removal. See [Directives](directives.md).
+
 ## Context
 
 ```ts
@@ -1818,6 +2055,49 @@ preloadRoute(routes: RouteDefinition[], url: string): Promise<void>             
 
 See [Routing](routing.md) and [File-based routing](file-routing.md).
 
+## Types
+
+Exported for annotating your own code. Each is described with the API it belongs to above.
+
+```ts
+// @inflector/keeno
+type Equals<T> = (a: T, b: T) => boolean
+type UpdateListener<T> = (old: T, next: T) => void             // x.onUpdate(fn)
+interface DerivedOptions<T> { equals?: Equals<T>; key?: string; ssr?: boolean }  // key/ssr: async deriveds and SSR
+interface AsyncContext { readonly signal: AbortSignal }         // what an async derived's function receives
+interface StateOptions<T> { /* see above */ }
+interface UrlOptions { param: string; replace?: boolean }      // state(v, { url: { … } })
+type Dep = Signal<any> | (() => unknown)                       // update(fn, deps)
+interface MountedApp { destroy(): void }                       // returned by mount() / hydrate()
+type Component<P = any> = (props: P) => unknown
+type Children = () => unknown
+type Directive<E extends Element = HTMLElement, V = undefined> = (el: E, value: V) => void | (() => void)
+interface ReconcileOptions { key?: string }                    // reconcile(target, next, options)
+class NotReady { readonly derived: Derived<any> }              // thrown by reading an async derived without a value
+// Props of the built-in components:
+ErrorBoundaryProps, LoadingProps, AwaitProps<T>, DynamicProps<P>, PortalProps, TransitionProps
+interface LazyOptions { pending?: () => unknown }               // lazy(load, options)
+type LazyComponent<P> = Component<P> & { preload(): Promise<Component<P>> }
+interface ComponentInfo { name: string; props: Record<string, unknown>; children: ComponentInfo[] }  // __KEENO_DEVTOOLS__.tree()
+
+// @inflector/keeno/server
+interface RenderOptions { timeout?: number }                    // renderToString / renderToStream
+
+// @inflector/keeno-router
+type Params = Record<string, string>
+interface RouteProps { params: Params }                        // props of a route's component
+interface LayoutProps extends RouteProps { children: Children }
+interface ErrorPageProps extends RouteProps { status: number; error: unknown; reset: () => void }
+interface Route { path; params; query: URLSearchParams; hash; matched: RouteDefinition | null }  // useRoute()
+class HttpError extends Error { readonly status: number }      // httpError(status)
+interface NavigateOptions { replace?; state?; scroll?; transition? }
+RouterProps, LinkProps, RouteDefinition, PageModule
+
+// @inflector/vite-plugin-keeno
+interface KeenoPluginOptions { hmr?; tailwind?: boolean | TailwindOptions; devtools?; useFileRouter?; pages? }
+interface TailwindOptions { reference?: string }
+```
+
 ## Development mode
 
 `globalThis.__KEENO_DEV__ = true` turns on development warnings (duplicate list keys, for example) and the `__KEENO_DEVTOOLS__` hook that the dev tools panel (`@inflector/keeno/devtools`, see [Tooling](tooling.md#dev-tools-panel)) is built on. `@inflector/vite-plugin-keeno` sets it during `vite dev` and loads the panel. Production builds leave it off.
@@ -1831,6 +2111,7 @@ See [Routing](routing.md) and [File-based routing](file-routing.md).
 | `x.foo` | `x.get().foo` |
 | `update(fn, [x, y])` | deps passed as the states themselves |
 | `bind:value={x}` | the state itself |
+| `use:x={v}`, `use:x` | `use(el, () => x, () => v)`: after insertion, re-run on change |
 | `bind:value={a.b.c}` | `bindPath(() => a.b, () => 'c')`: a state at that path, or a store property |
 | `ref={x}` | `setRef(el, x)`: `x.current` is the element |
 | `const { a } = props()`, then `a` | `$$props.a` (a getter) |
@@ -1844,6 +2125,7 @@ See [Routing](routing.md) and [File-based routing](file-routing.md).
 Compile errors:
 - reassigning a state, derived or destructured prop
 - `bind:` on a prop or a derived
+- `use:` on a component, a `use:` name that isn't an identifier, or a string value
 - `export` in `<script>`
 - rest props
 - two `<script>` or `<style>` blocks

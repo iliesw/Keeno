@@ -58,6 +58,19 @@
         "5311"
       ],
       "port": 5311
+    },
+    {
+      "name": "docs-prod",
+      "runtimeExecutable": "bun",
+      "runtimeArgs": [
+        "--cwd",
+        "site",
+        "server.ts",
+        "--prod",
+        "--port",
+        "5340"
+      ],
+      "port": 5340
     }
   ]
 }

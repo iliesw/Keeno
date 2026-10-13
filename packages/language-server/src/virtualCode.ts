@@ -138,6 +138,8 @@ export function generateScript(ts: typeof TS, source: string, parts = safeSplit(
   }
   const declared = declaredNames(ts, sf)
   const missing = KEENO_APIS.filter((n) => !declared.has(n))
+  const directives = directiveEdits(ts, source, parts.ranges)
+  if (directives.length) missing.push('__kn_use')
   if (missing.length) b.add(`import { ${missing.join(', ')} } from '@inflector/keeno/kn';\n`)
 
   const propsType = parts.lang === 'ts' ? propsTypeText(ts, sf) : undefined
@@ -151,15 +153,28 @@ export function generateScript(ts: typeof TS, source: string, parts = safeSplit(
   b.map(offset + pos, script.slice(pos))
 
   b.add(propsType ? `\nreturn [undefined as unknown as (${propsType}), (<>\n` : '\nreturn (<>\n')
+  // Markup, with `use:` directives spliced in (see directiveEdits).
+  let next = 0
+  const copy = (from: number, to: number) => {
+    let pos = from
+    while (next < directives.length && directives[next]!.at <= to) {
+      const edit = directives[next++]!
+      if (edit.at < from) continue
+      b.map(pos, source.slice(pos, edit.at))
+      edit.emit(b)
+      pos = edit.at
+    }
+    b.map(pos, source.slice(pos, to))
+  }
   let p = 0
   for (const [start, end] of parts.ranges) {
     if (start > p) {
-      b.map(p, source.slice(p, start))
+      copy(p, start)
       b.add(' ')
     }
     p = Math.max(p, end)
   }
-  b.map(p, source.slice(p))
+  copy(p, source.length)
   if (propsType) {
     b.add('\n</>)] as const;\n}\n')
     b.add(
@@ -169,6 +184,49 @@ export function generateScript(ts: typeof TS, source: string, parts = safeSplit(
   } else b.add('\n</>);\n}\n')
 
   return { text: b.text, mappings: b.mappings, lang: parts.lang }
+}
+
+interface DirectiveEdit {
+  /** Offset in the .kn source where generated text goes. */
+  at: number
+  emit(b: Builder): void
+}
+
+/**
+ * `use:tooltip={v}` is checked as `use:tooltip={__kn_use(tooltip, v)}` and `use:autofocus` as
+ * `use:autofocus={__kn_use(autofocus)}`: the directive name becomes a real (mapped) reference, the
+ * value is checked against the directive, and `KnUse` checks the element type.
+ */
+function directiveEdits(ts: typeof TS, source: string, ranges: [number, number][]): DirectiveEdit[] {
+  if (!source.includes('use:')) return []
+  // The markup with the <script>/<style> blocks and comments blanked out, so offsets stay the same.
+  let markup = source
+  for (const [start, end] of ranges) markup = markup.slice(0, start) + ' '.repeat(end - start) + markup.slice(end)
+  const sf = ts.createSourceFile('markup.tsx', `<>${markup}</>`, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
+  const shift = 2 // the leading `<>`
+  const edits: DirectiveEdit[] = []
+  const visit = (node: TS.Node) => {
+    if (ts.isJsxAttribute(node) && ts.isJsxNamespacedName(node.name) && node.name.namespace.text === 'use') {
+      const id = node.name.name
+      const nameStart = id.getStart(sf) - shift
+      const call = (b: Builder) => {
+        b.add('__kn_use(')
+        b.map(nameStart, id.text)
+      }
+      const init = node.initializer
+      if (!init) {
+        edits.push({ at: node.end - shift, emit: (b) => (b.add('={'), call(b), b.add(')}')) })
+      } else if (ts.isJsxExpression(init) && init.expression) {
+        edits.push({ at: init.expression.getStart(sf) - shift, emit: (b) => (call(b), b.add(', ')) })
+        edits.push({ at: init.expression.end - shift, emit: (b) => b.add(')') })
+      } else if (ts.isJsxExpression(init)) {
+        edits.push({ at: init.getStart(sf) + 1 - shift, emit: (b) => (call(b), b.add(')')) })
+      }
+    }
+    ts.forEachChild(node, visit)
+  }
+  visit(sf)
+  return edits.sort((a, b) => a.at - b.at)
 }
 
 function textSnapshot(text: string): TS.IScriptSnapshot {
