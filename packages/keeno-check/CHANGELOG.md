@@ -1,5 +1,17 @@
 # @inflector/keeno-check
 
+## 0.2.0
+
+### Minor Changes
+
+- add reusable directives for DOM behaviors with use: syntax
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @inflector/keeno-compiler@0.6.0
+  - @inflector/keeno-language-server@0.4.0
+
 ## 0.1.5
 
 ### Patch Changes
