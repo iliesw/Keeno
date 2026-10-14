@@ -89,6 +89,33 @@ Pages load on demand: each one is its own chunk, fetched the first time it is sh
 
 Link between pages with `<Link>` and `navigate()`, as described in [Routing](routing.md#navigation).
 
+### Page data
+
+A `.load.ts` file next to a page loads its data. It exports a `load` function, and the page receives what it returns as `data`:
+
+```ts users/[id].load.ts
+import { httpError, type LoadContext } from '@inflector/keeno-router'
+
+export async function load({ params, signal }: LoadContext) {
+  const res = await fetch(`/api/users/${params.id}`, { signal })
+  if (res.status === 404) throw httpError(404)
+  return res.json() as Promise<{ name: string }>
+}
+```
+
+```html users/[id].kn
+<script lang="ts">
+  import { Loading } from '@inflector/keeno'
+  const { data } = props<{ data: { name: string } }>()
+</script>
+
+<Loading fallback={() => <p>Loading…</p>}>
+  <h1>{data.name}</h1>
+</Loading>
+```
+
+The loader is its own chunk, fetched in parallel with the page's code. See [Loading data](routing.md#loading-data) for how `data` behaves, and for `action()` and prefetching.
+
 ## Layouts
 
 A `_layout.kn` receives `params` and `children`, and renders `{children}` where the page goes:

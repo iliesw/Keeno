@@ -1,11 +1,11 @@
 // Vite plugin: compiles .kn files, serves their scoped CSS as a virtual module, wires HMR.
-import { compile } from '@inflector/keeno-compiler'
-import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { compile, hash, transformServerFunctions } from '@inflector/keeno-compiler'
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import * as vite from 'vite'
 import type { Plugin, ResolvedConfig, ViteDevServer } from 'vite'
-import { createHandler, page, splitTemplate, stylesheetLinks, withHead, type ServerEntry } from './server'
+import { SERVER_FN_PATH, createHandler, page, sendResponse, splitTemplate, stylesheetLinks, toRequest, withHead, type ServerEntry } from './server'
 
 /**
  * Strip TypeScript from the compiled module. Vite 8 bundles Oxc and only finds esbuild when it is
@@ -95,6 +95,8 @@ export function pagesModule(dir: string, strategy: RenderStrategy = 'spa', ssr =
   const pages = [
     `export const routes = pageRoutes({`,
     `  ...${glob([`${dir}/**/*.kn`, ...shared.map((p) => '!' + p)])},`,
+    // A page's data loader (`[id].load.ts`): its own chunk, loaded alongside the page's.
+    `  ...${glob([`${dir}/**/*.load.{ts,js}`])},`,
     `  ...${glob(shared, true)},`,
     `}, ${JSON.stringify(dir)})`,
     `/** Renders the page for the current URL. Takes the other props of <Router> (base, url, fallback). */`,
@@ -138,29 +140,84 @@ export function pagesModule(dir: string, strategy: RenderStrategy = 'spa', ssr =
   ].join('\n')
 }
 
-/** `virtual:keeno-server`: `render(url, { stream })` for the dev server, `ssr` builds and prerendering. */
-export function serverModule(): string {
+/**
+ * `virtual:keeno-server`: the server bundle. `callServerFunction(request)` answers server
+ * function calls; except with `'spa'`, `render(url, { stream, request })` renders pages (dev
+ * server, `ssr` builds, prerendering).
+ */
+export function serverModule(strategy: RenderStrategy = 'ssr'): string {
+  const fns = `export { callServerFunction } from '${FNS_ID}'`
+  if (strategy === 'spa') return fns + '\n'
   return [
-    `import { renderToStream, renderToString } from '@inflector/keeno/server'`,
+    `import { renderToStream, renderToString, withRequest } from '@inflector/keeno/server'`,
     `import { preloadRoute } from '@inflector/keeno-router'`,
     `import Pages, { routes } from '${PAGES_ID}'`,
+    fns,
     `export { routes }`,
-    `export async function render(url, options = {}) {`,
-    `  await preloadRoute(routes, url)`,
-    `  const context = {}`,
-    `  if (!options.stream) {`,
-    `    const html = await renderToString(Pages, { url }, { context })`,
-    `    return { html, head: context.head ?? '', status: context.status ?? 200 }`,
-    `  }`,
+    `export function render(url, options = {}) {`,
+    `  const request = options.request ?? new Request(new URL(url, 'http://localhost'))`,
+    `  return withRequest(request, async () => {`,
+    `    await preloadRoute(routes, url)`,
+    `    const context = {}`,
+    `    if (!options.stream) {`,
+    `      const html = await renderToString(Pages, { url }, { context })`,
+    `      return { html, head: context.head ?? '', status: context.status ?? 200 }`,
+    `    }`,
     // The head and status are known once the first chunk is out.
-    `  const source = renderToStream(Pages, { url }, { context }).getReader()`,
-    `  const first = await source.read()`,
-    `  const stream = new ReadableStream({`,
-    `    start(c) { if (first.done) c.close(); else c.enqueue(first.value) },`,
-    `    async pull(c) { const { value, done } = await source.read(); if (done) c.close(); else c.enqueue(value) },`,
-    `    cancel() { return source.cancel() },`,
+    `    const source = renderToStream(Pages, { url }, { context }).getReader()`,
+    `    const first = await source.read()`,
+    `    const stream = new ReadableStream({`,
+    `      start(c) { if (first.done) c.close(); else c.enqueue(first.value) },`,
+    `      async pull(c) { const { value, done } = await source.read(); if (done) c.close(); else c.enqueue(value) },`,
+    `      cancel() { return source.cancel() },`,
+    `    })`,
+    `    return { stream, head: context.head ?? '', status: context.status ?? 200 }`,
     `  })`,
-    `  return { stream, head: context.head ?? '', status: context.status ?? 200 }`,
+    `}`,
+    ``,
+  ].join('\n')
+}
+
+/** The server functions of the app: `callServerFunction(request)`. */
+export const FNS_ID = 'virtual:keeno-server-fns'
+const RESOLVED_FNS_ID = '\0' + FNS_ID
+
+/** Files that may hold `server(…)` functions. */
+const SOURCE_FILE = /\.(kn|[cm]?[jt]sx?)$/
+const HAS_SERVER_CALL = /\bserver\s*\(/
+
+/** The project's source files that call `server(…)`, relative to `root`. */
+export function serverFunctionFiles(root: string): string[] {
+  const found: string[] = []
+  const walk = (dir: string) => {
+    let entries
+    try {
+      entries = readdirSync(dir, { withFileTypes: true })
+    } catch {
+      return
+    }
+    for (const e of entries) {
+      if (e.name.startsWith('.') || e.name === 'node_modules' || e.name === 'dist') continue
+      const full = path.join(dir, e.name)
+      if (e.isDirectory()) walk(full)
+      else if (SOURCE_FILE.test(e.name) && !e.name.endsWith('.d.ts') && HAS_SERVER_CALL.test(readFileSync(full, 'utf8'))) {
+        found.push(path.relative(root, full).replace(/\\/g, '/'))
+      }
+    }
+  }
+  walk(root)
+  return found.sort()
+}
+
+/** `virtual:keeno-server-fns`: each module's server functions by id, loaded when called. */
+export function serverFunctionsModule(files: string[], options: { base: string; dev: boolean }): string {
+  return [
+    `import { handleServerFunction } from '@inflector/keeno/server'`,
+    `const modules = {`,
+    ...files.map((f) => `  ${JSON.stringify(hash(f))}: () => import(${JSON.stringify('/' + f)}),`),
+    `}`,
+    `export function callServerFunction(request) {`,
+    `  return handleServerFunction(request, modules, ${JSON.stringify(options)})`,
     `}`,
     ``,
   ].join('\n')
@@ -215,6 +272,11 @@ export default function keeno(options: KeenoPluginOptions = {}): Plugin {
 
   /** File path relative to the project root, used for the scope hash (stable across machines). */
   const relative = (file: string) => path.relative(config.root, file).replace(/\\/g, '/')
+  /** Whether the app has server functions, so its build needs a server bundle (found in `config`). */
+  let hasServerFunctions = false
+  const needsServer = () => strategy === 'ssr' || hasServerFunctions
+  /** In the browser build, a module with server function stubs: where they send their requests. */
+  const baseGlobal = () => `\nglobalThis.__KEENO_BASE__ = ${JSON.stringify(config.base)}\n`
 
   return {
     name: 'vite-plugin-keeno',
@@ -235,7 +297,11 @@ export default function keeno(options: KeenoPluginOptions = {}): Plugin {
         }
         return pagesModule(dir ? '/' + dir : '', strategy, !!opts?.ssr)
       }
-      if (id === RESOLVED_SERVER_ID) return serverModule()
+      if (id === RESOLVED_SERVER_ID) return serverModule(strategy)
+      if (id === RESOLVED_FNS_ID) {
+        const dev = config.command === 'serve' && !config.isProduction
+        return serverFunctionsModule(serverFunctionFiles(config.root), { base: config.base, dev })
+      }
       const { file, query } = parseId(id)
       if (!file.endsWith('.kn') || !isStyleQuery(query)) return
       // Compile from disk so the CSS is never stale relative to the component during HMR.
@@ -251,13 +317,14 @@ export default function keeno(options: KeenoPluginOptions = {}): Plugin {
     config(user, env) {
       // One runtime, even when the router comes from the plugin's own dependencies.
       const out: vite.UserConfig = { resolve: { dedupe: ['@inflector/keeno'] } }
-      // `ssr` builds put the browser files in dist/client (dist/server is the server's).
       const buildOrPreview = env.command === 'build' || (env as { isPreview?: boolean }).isPreview
-      if (strategy === 'ssr' && buildOrPreview && !user.build?.ssr && !user.build?.outDir) {
+      if (buildOrPreview) hasServerFunctions = serverFunctionFiles(path.resolve(user.root ?? process.cwd())).length > 0
+      // Builds with a server bundle put the browser files in dist/client (dist/server is the server's).
+      if (needsServer() && buildOrPreview && !user.build?.ssr && !user.build?.outDir) {
         out.build = { outDir: 'dist/client' }
       }
       // Keep the runtime in the server bundle: it must be the same copy as the components'.
-      if (rendersOnServer) out.ssr = { noExternal: ['@inflector/keeno', '@inflector/keeno-router'] }
+      out.ssr = { noExternal: ['@inflector/keeno', '@inflector/keeno-router'] }
       return out
     },
 
@@ -265,7 +332,8 @@ export default function keeno(options: KeenoPluginOptions = {}): Plugin {
       if (id === PAGES_ID && options.useFileRouter !== false) return RESOLVED_PAGES_ID
       // As a build entry, Vite passes it resolved against the root, like a file.
       const server = id === SERVER_ID || id.replace(/\\/g, '/').endsWith('/' + SERVER_ID)
-      if (server && options.useFileRouter !== false) return RESOLVED_SERVER_ID
+      if (server && (options.useFileRouter !== false || strategy === 'spa')) return RESOLVED_SERVER_ID
+      if (id === FNS_ID) return RESOLVED_FNS_ID
       if (id !== ROUTER) return
       // The app's own copy if it installed one, else the plugin's.
       const resolveOpts = { ...opts, skipSelf: true }
@@ -274,14 +342,28 @@ export default function keeno(options: KeenoPluginOptions = {}): Plugin {
 
     async transform(code, id, opts) {
       const { file, query } = parseId(id)
-      if (!file.endsWith('.kn') || query) return
+      if (query) return
+      if (!file.endsWith('.kn')) {
+        // `server(…)` in a .ts/.js module: stubs in the browser, the functions on the server.
+        if (!SOURCE_FILE.test(file) || file.includes('/node_modules/') || !HAS_SERVER_CALL.test(code)) return
+        const rel = relative(file)
+        const out = transformServerFunctions(code, { filename: rel, id: hash(rel), ssr: !!opts?.ssr })
+        if (!out) return
+        return { code: opts?.ssr ? out.code : out.code + baseGlobal(), map: out.map }
+      }
 
       const dev = config.command === 'serve' && !config.isProduction
       // Server modules are loaded again for each change, so they don't need the hot wrapper.
       const hmr = options.hmr !== false && dev && !opts?.ssr
       let result
       try {
-        result = compile(code, { filename: relative(file), hmrId: hmr ? relative(file) : undefined, dev, islands: strategy === 'islands' })
+        result = compile(code, {
+          filename: relative(file),
+          hmrId: hmr ? relative(file) : undefined,
+          dev,
+          islands: strategy === 'islands',
+          ssr: !!opts?.ssr,
+        })
       } catch (err: any) {
         if (err.loc) err.loc = { file, ...err.loc }
         err.id = file
@@ -292,6 +374,7 @@ export default function keeno(options: KeenoPluginOptions = {}): Plugin {
       if (result.css) js = `import ${JSON.stringify(`${file}?${STYLE_QUERY}`)};\n${js}`
       // Self-accept: re-executing the module swaps the implementation behind the stable wrapper.
       if (hmr) js += '\nif (import.meta.hot) import.meta.hot.accept()\n'
+      if (result.serverFunctions && !opts?.ssr) js += baseGlobal()
       // `vite dev` turns on the runtime's development warnings and dev tools hook.
       if (config.command === 'serve') js += '\nglobalThis.__KEENO_DEV__ = true\n'
       // The panel only talks to the runtime through `__KEENO_DEVTOOLS__`, so it can load from anywhere.
@@ -301,6 +384,29 @@ export default function keeno(options: KeenoPluginOptions = {}): Plugin {
     },
 
     configureServer(server) {
+      // Server function calls, with every strategy.
+      server.middlewares.use(async (req, res, next) => {
+        if (!req.url?.split('?')[0].startsWith(config.base + SERVER_FN_PATH)) return next()
+        try {
+          const fns = (await server.ssrLoadModule(FNS_ID)) as Pick<ServerEntry, 'callServerFunction'>
+          const response = await fns.callServerFunction(await toRequest(req))
+          if (!response) return next()
+          await sendResponse(response, res)
+        } catch (err: any) {
+          server.ssrFixStacktrace(err)
+          next(err)
+        }
+      })
+      // A file may gain or lose server functions: list them again on the next call.
+      const relist = (file: string) => {
+        if (!SOURCE_FILE.test(file)) return
+        const mod = server.moduleGraph.getModuleById(RESOLVED_FNS_ID)
+        if (mod) server.moduleGraph.invalidateModule(mod)
+      }
+      server.watcher.on('add', relist)
+      server.watcher.on('unlink', relist)
+      server.watcher.on('change', relist)
+
       if (!rendersOnServer) return
       // Before Vite's own HTML handling: page requests are rendered, everything else passes through.
       server.middlewares.use(async (req, res, next) => {
@@ -311,7 +417,7 @@ export default function keeno(options: KeenoPluginOptions = {}): Plugin {
           const template = await server.transformIndexHtml(url, html, req.originalUrl)
           const entry = (await server.ssrLoadModule(SERVER_ID)) as ServerEntry
           const stream = strategy === 'ssr'
-          const result = await entry.render(url, { stream })
+          const result = await entry.render!(url, { stream, request: await toRequest(req) })
           const head = result.head + devStylesheets(server)
           res.statusCode = result.status
           res.setHeader('content-type', 'text/html; charset=utf-8')
@@ -333,21 +439,25 @@ export default function keeno(options: KeenoPluginOptions = {}): Plugin {
     },
 
     configurePreviewServer(server) {
-      if (strategy !== 'ssr') return
       const dist = path.resolve(config.root, config.build.outDir, '..')
+      if (!existsSync(path.join(dist, 'server', 'entry-server.js'))) return
       const handler = createHandler({ dist, base: config.base })
+      const fns = config.base + SERVER_FN_PATH
       server.middlewares.use((req, res, next) => {
-        if (!isPageRequest(req.method, req.url, req.headers.accept)) return next()
+        const call = req.url?.split('?')[0].startsWith(fns)
+        if (!call && (strategy !== 'ssr' || !isPageRequest(req.method, req.url, req.headers.accept))) return next()
         void handler(req, res, next)
       })
     },
 
     async closeBundle() {
       // After the browser build: build the server bundle, then (ssg, islands) render the pages.
-      if (!rendersOnServer || config.command !== 'build' || config.build.ssr) return
+      if (!(rendersOnServer || needsServer()) || config.command !== 'build' || config.build.ssr) return
       const clientDir = path.resolve(config.root, config.build.outDir)
-      const serverDir =
-        strategy === 'ssr' ? path.join(clientDir, '..', 'server') : path.join(config.root, 'node_modules', '.keeno', 'prerender')
+      // Kept next to dist/client when it serves requests (`ssr`, server functions); else only prerenders.
+      const serverDir = needsServer()
+        ? path.join(clientDir, '..', 'server')
+        : path.join(config.root, 'node_modules', '.keeno', 'prerender')
       await vite.build({
         configFile: config.configFile,
         root: config.root,
@@ -360,13 +470,13 @@ export default function keeno(options: KeenoPluginOptions = {}): Plugin {
           rollupOptions: { output: { entryFileNames: 'entry-server.js' } },
         },
       })
-      if (strategy === 'ssr') return
+      if (strategy === 'ssr' || strategy === 'spa') return
       const entry = (await import(pathToFileURL(path.join(serverDir, 'entry-server.js')).href)) as ServerEntry
-      const paths = new Set(staticPaths(entry.routes))
+      const paths = new Set(staticPaths(entry.routes ?? []))
       const extra = typeof options.prerender === 'function' ? await options.prerender() : options.prerender ?? []
       for (const p of extra) paths.add(p)
       const count = await prerender(entry, clientDir, [...paths], strategy === 'islands', config.base)
-      rmSync(serverDir, { recursive: true, force: true })
+      if (!needsServer()) rmSync(serverDir, { recursive: true, force: true })
       config.logger.info(`[keeno] rendered ${count} page${count === 1 ? '' : 's'} to ${path.relative(config.root, clientDir)}`)
     },
   }
@@ -417,12 +527,12 @@ async function prerender(entry: ServerEntry, clientDir: string, paths: string[],
     count++
   }
   for (const p of paths) {
-    const { html, head, status } = await entry.render(p)
+    const { html, head, status } = await entry.render!(p)
     if (status === 404) continue
     write(p === '/' ? 'index.html' : path.join(p.replace(/^\/+|\/+$/g, ''), 'index.html'), page(prepared, html!, head, islands))
   }
   // The not-found page, when the app has one.
-  const missing = await entry.render('/__keeno_not_found__')
+  const missing = await entry.render!('/__keeno_not_found__')
   if (missing.status === 404 && missing.html) write('404.html', page(prepared, missing.html, missing.head, islands))
   return count
 }

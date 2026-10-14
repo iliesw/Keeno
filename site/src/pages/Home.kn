@@ -64,10 +64,10 @@
       title: 'Tooling',
       text: 'A Vite plugin with HMR, in-page dev tools with state time travel and a dependency graph, a VS Code extension with full TypeScript IntelliSense in .kn files, and keeno-check for CI.',
       points: ['Vite plugin + HMR', 'Dev tools with time travel', 'VS Code extension', 'keeno-check type checker'],
-      wide: true,
       href: '/docs/tooling',
     },
-    { icon: 'route', title: 'Router', text: 'A tiny History API router with params, lazy routes, active links and server rendering.', points: [], href: '/docs/routing' },
+    { icon: 'route', title: 'Router & data', text: 'A small History API router with route loaders, a query cache, actions that revalidate, and links that prefetch on hover.', points: [], href: '/docs/routing#loading-data' },
+    { icon: 'layers', title: 'Server functions', text: 'Wrap an async function in server() and call it from the browser like any function: typed, with no API route to write.', points: [], href: '/docs/server-functions' },
   ]
 
 </script>

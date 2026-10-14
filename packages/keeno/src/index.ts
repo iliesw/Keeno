@@ -45,3 +45,4 @@ export { reparentable, keyedReparentable, type Reparentable, type KeyedReparenta
 export { moveNode, type Directive } from './dom'
 export { Ref, ref, isRef, type RefTarget } from './ref'
 export { store, snapshot, reconcile, isStore, type ReconcileOptions } from './store'
+export { server, ServerFunctionError } from './server-fn'

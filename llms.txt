@@ -32,6 +32,7 @@ Rules that differ from React, Svelte and Vue, which models get wrong most often:
 - [Built-in components](docs/built-ins.md): ErrorBoundary, Loading, Await, lazy, Dynamic, Portal, reparentable, Transition
 - [Routing](docs/routing.md): @inflector/keeno-router: Router, Link, navigate, useRoute, View Transitions
 - [File-based routing](docs/file-routing.md): src/pages routes with the Vite plugin: layouts, 404/500 pages, httpError, virtual:keeno-pages
+- [Server functions](docs/server-functions.md): `server(async (…) => …)` runs on the server, called from the browser; the one rule, `.ts` files, errors, `getRequest()`, deploying with `createHandler()`
 - [Server rendering](docs/ssr.md): renderToString (waits for async deriveds and sends their values), renderToStream (streams `<Loading>` boundaries), hydrate, Vite SSR setup
 - [Security](docs/security.md): what is escaped, innerHTML, javascript: URLs, CSP
 - [Tooling](docs/tooling.md): Vite plugin, HMR, dev mode, VS Code extension, keeno-check, testing with `bun test`

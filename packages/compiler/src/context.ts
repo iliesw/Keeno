@@ -10,7 +10,7 @@ export const generate: typeof _generate = (_generate as any).default ?? _generat
 /** Module the runtime APIs are imported from. */
 export const RUNTIME = '@inflector/keeno'
 /** Names injected from `@inflector/keeno` when used without an import. */
-export const KEENO_APIS = ['state', 'derived', 'store', 'props', 'init', 'update', 'destroy', 'ref'] as const
+export const KEENO_APIS = ['state', 'derived', 'store', 'props', 'init', 'update', 'destroy', 'ref', 'server'] as const
 /** Members of a state (or derived) that are not unwrapped. */
 export const RESERVED_MEMBERS = new Set(['set', 'onUpdate', 'get', 'peek', 'undo', 'redo', 'canUndo', 'canRedo', 'refresh'])
 /** Callee name of the placeholder that pass 1 emits for keyed `.map()` calls. */

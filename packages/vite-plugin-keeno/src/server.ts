@@ -1,6 +1,6 @@
-// `@inflector/vite-plugin-keeno/server`: serve a `renderStrategy: 'ssr'` build in production.
-// No Vite at runtime: this reads `dist/client` (the built assets and the index.html template) and
-// renders pages with the server bundle in `dist/server`.
+// `@inflector/vite-plugin-keeno/server`: serve a build in production.
+// No Vite at runtime: this reads `dist/client` (the built assets and the index.html template),
+// renders pages (`ssr`) and answers server function calls with the server bundle in `dist/server`.
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import path from 'node:path'
@@ -8,8 +8,49 @@ import { pathToFileURL } from 'node:url'
 
 /** What `virtual:keeno-server` exports. */
 export interface ServerEntry {
-  render(url: string, options?: { stream?: boolean }): Promise<RenderResult>
-  routes: { path: string }[]
+  /** Render a page (not with `renderStrategy: 'spa'`). `request` is what `getRequest()` returns meanwhile. */
+  render?(url: string, options?: { stream?: boolean; request?: Request }): Promise<RenderResult>
+  routes?: { path: string }[]
+  /** Answer a call to a server function, or null when `request` isn't one. */
+  callServerFunction(request: Request): Promise<Response | null>
+}
+
+/** Where server functions are called, below the base (as in `@inflector/keeno`). */
+export const SERVER_FN_PATH = '_keeno/fn/'
+
+/** A Node request as a fetch `Request` (its body read in full). */
+export async function toRequest(req: IncomingMessage): Promise<Request> {
+  const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`)
+  const headers = new Headers()
+  for (const [name, value] of Object.entries(req.headers)) {
+    if (Array.isArray(value)) for (const v of value) headers.append(name, v)
+    else if (value !== undefined) headers.set(name, value)
+  }
+  const method = req.method ?? 'GET'
+  if (method === 'GET' || method === 'HEAD') return new Request(url, { method, headers })
+  const chunks: Buffer[] = []
+  for await (const chunk of req) chunks.push(chunk as Buffer)
+  return new Request(url, { method, headers, body: Buffer.concat(chunks) })
+}
+
+/** Copy a fetch `Response` onto a Node response. */
+export async function sendResponse(response: Response, res: ServerResponse): Promise<void> {
+  const headers: Record<string, string | string[]> = {}
+  response.headers.forEach((value, name) => {
+    if (name === 'set-cookie') return
+    headers[name] = value
+  })
+  const cookies = (response.headers as Headers & { getSetCookie?: () => string[] }).getSetCookie?.() ?? []
+  if (cookies.length) headers['set-cookie'] = cookies
+  res.writeHead(response.status, headers)
+  if (!response.body) return void res.end()
+  const reader = response.body.getReader()
+  while (true) {
+    const { value, done } = await reader.read()
+    if (done) break
+    res.write(value)
+  }
+  res.end()
 }
 
 export interface RenderResult {
@@ -114,8 +155,9 @@ export interface KeenoHandler {
 }
 
 /**
- * Serve a `renderStrategy: 'ssr'` build: static files from `dist/client`, and every other GET
- * rendered (and streamed) by the server bundle.
+ * Serve a build: static files from `dist/client`, server function calls, and pages: rendered (and
+ * streamed) by the server bundle with `renderStrategy: 'ssr'`, else the prerendered HTML (`ssg`,
+ * `islands`) or `index.html` (`spa`).
  *
  * ```ts
  * import { createServer } from 'node:http'
@@ -131,8 +173,10 @@ export function createHandler(options: HandlerOptions = {}): KeenoHandler {
   const template = readFileSync(path.join(clientDir, 'index.html'), 'utf8')
   const links = stylesheetLinks(clientDir, template, base)
   const prepared = links ? template.replace(/<\/head>/i, `${links}\n</head>`) : template
-  let entry: Promise<ServerEntry> | undefined
-  const load = () => (entry ??= import(pathToFileURL(path.join(dist, 'server', 'entry-server.js')).href))
+  let entry: Promise<Partial<ServerEntry>> | undefined
+  const entryFile = path.join(dist, 'server', 'entry-server.js')
+  // A build without server functions or server rendering has no server bundle.
+  const load = () => (entry ??= existsSync(entryFile) ? import(pathToFileURL(entryFile).href) : Promise.resolve({}))
 
   /** A file in dist/client for this path, if there is one (never index.html: that's the template). */
   const file = (pathname: string): string | null => {
@@ -149,8 +193,27 @@ export function createHandler(options: HandlerOptions = {}): KeenoHandler {
     return existsSync(full) && statSync(full).isFile() ? full : null
   }
 
-  const respond = async (url: string, method: string): Promise<Response | null> => {
-    const { pathname } = new URL(url, 'http://localhost')
+  /** A page without server rendering: its prerendered HTML, else 404.html, else the app shell. */
+  const staticPage = (pathname: string, method: string): Response => {
+    const html = (full: string, status = 200) =>
+      new Response(method === 'HEAD' ? null : readFileSync(full), { status, headers: { 'content-type': TYPES['.html'] } })
+    const rel = pathname.startsWith(base) ? pathname.slice(base.length).replace(/\/+$/, '') : null
+    if (rel) {
+      const full = path.join(clientDir, rel, 'index.html')
+      if (full.startsWith(clientDir + path.sep) && existsSync(full)) return html(full)
+    }
+    const missing = path.join(clientDir, '404.html')
+    if (rel && existsSync(missing)) return html(missing, 404)
+    return html(path.join(clientDir, 'index.html'))
+  }
+
+  const respond = async (request: Request): Promise<Response | null> => {
+    const { url, method } = request
+    const { pathname } = new URL(url)
+    if (pathname.startsWith(base + SERVER_FN_PATH)) {
+      const answer = await (await load()).callServerFunction?.(request)
+      if (answer) return answer
+    }
     const found = file(pathname)
     if (found) {
       const type = TYPES[path.extname(found).toLowerCase()] ?? 'application/octet-stream'
@@ -160,7 +223,8 @@ export function createHandler(options: HandlerOptions = {}): KeenoHandler {
     }
     if (method !== 'GET' && method !== 'HEAD') return null
     const { render } = await load()
-    const { stream, head, status } = await render(url, { stream: true })
+    if (!render) return staticPage(pathname, method)
+    const { stream, head, status } = await render(url, { stream: true, request })
     const [before, after] = splitTemplate(prepared)
     const encoder = new TextEncoder()
     const reader = stream!.getReader()
@@ -184,17 +248,9 @@ export function createHandler(options: HandlerOptions = {}): KeenoHandler {
 
   const handler = (async (req, res, next) => {
     try {
-      const response = await respond(req.url ?? '/', req.method ?? 'GET')
+      const response = await respond(await toRequest(req))
       if (!response) return next ? next() : void res.writeHead(405).end()
-      res.writeHead(response.status, Object.fromEntries(response.headers))
-      if (!response.body) return void res.end()
-      const reader = response.body.getReader()
-      while (true) {
-        const { value, done } = await reader.read()
-        if (done) break
-        res.write(value)
-      }
-      res.end()
+      await sendResponse(response, res)
     } catch (err) {
       if (next) return next(err)
       console.error(err)
@@ -202,6 +258,6 @@ export function createHandler(options: HandlerOptions = {}): KeenoHandler {
       res.end()
     }
   }) as KeenoHandler
-  handler.fetch = async (request) => (await respond(request.url, request.method)) ?? new Response(null, { status: 405 })
+  handler.fetch = async (request) => (await respond(request)) ?? new Response(null, { status: 405 })
   return handler
 }
