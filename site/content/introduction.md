@@ -25,14 +25,15 @@ Keeno is a compiled, signal-based frontend framework. Components are `.kn` files
 
 ## Features
 
-- **Fine-grained reactivity:** `state()`, `derived()`, batched DOM updates, and `persist`, `url`, `history`, `debounce` and `validate` options on states.
+- **Fine-grained reactivity:** `state()`, `derived()`, batched DOM updates, and `persist`, `url`, `history`, `debounce`, `validate` and optimistic [`save`](state-options.md#save) options on states.
 - **Async data:** [`derived(async () => …)`](reactivity.md#async-derived) with `<Loading>` boundaries, stale-while-revalidate refetching, `refresh()` and `pending()`.
 - **Deep stores:** [`store()`](reactivity.md#store) for nested data you mutate directly (`todos.items.push(…)`), tracked per property, with `snapshot()` and `reconcile()`.
 - **Templates:** conditionals, keyed lists, two-way `bind:value`, class arrays, spread props, and `use:` [directives](directives.md) for reusable DOM behaviors.
 - **Scoped CSS** per component, with a `:global()` escape hatch, and first-class [Tailwind CSS](styles.md#tailwind-css).
-- **Built-in components:** error boundaries, `<Loading>` for async data, `<Await>` for promises, `lazy()` code splitting, portals, state-preserving reparenting, enter/leave transitions and `<Dynamic>`. See [Built-in components](built-ins.md).
+- **Built-in components:** error boundaries, `<Loading>` for async data, `<Await>` for promises, `lazy()` code splitting, portals, [`<Head>`](built-ins.md#head) for the title and meta tags, [`<Virtual>`](built-ins.md#virtual) for long lists, state-preserving reparenting, enter/leave transitions and `<Dynamic>`. See [Built-in components](built-ins.md).
 - **Context**, [server rendering](ssr.md) that waits for async data and can stream, `hydrate`, and a [router](routing.md) with [View Transitions](routing.md#view-transitions).
-- **Tooling:** a Vite plugin with HMR, a VS Code extension with full TypeScript IntelliSense in `.kn` files, and `keeno-check` for type-checking in CI.
+- **Render strategies:** one Vite plugin option, [`renderStrategy`](ssr.md#render-strategies), switches file-routed apps between `spa`, streamed `ssr`, static `ssg` and `islands`, where only components marked `client="load" | "idle" | "visible"` ship JavaScript.
+- **Tooling:** a Vite plugin with HMR, a VS Code extension with full TypeScript IntelliSense in `.kn` files, `keeno-check` for type-checking in CI, and an in-page [dev tools](tooling.md#dev-tools-panel) panel with a component inspector, state time travel and a dependency graph.
 
 ## Packages
 

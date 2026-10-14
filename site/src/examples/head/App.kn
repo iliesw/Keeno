@@ -1,0 +1,42 @@
+<script lang="ts">
+  import { Head } from '@inflector/keeno'
+
+  // <Head> puts tags in the document head while it is mounted, and the previous ones come back
+  // when it unmounts. Tick the box and watch your browser tab.
+  const live = state(false)
+  const unread = state(3)
+  const page = state<'Inbox' | 'Archive'>('Inbox')
+  const title = derived(() => `${unread > 0 ? `(${unread}) ` : ''}${page} · Mail`)
+</script>
+
+{live && (
+  <Head>
+    <title>{title}</title>
+    <meta name="description" content={`${unread} unread messages in ${page}`} />
+  </Head>
+)}
+
+<div class="mail">
+  <label class="live"><input type="checkbox" bind:checked={live} /> Set this tab's title</label>
+  <p class="preview">
+    Title: <code>{title}</code>
+  </p>
+  <div class="row">
+    {(['Inbox', 'Archive'] as const).map((p) => (
+      <button key={p} class={[page === p && 'active']} onClick={() => page.set(p)}>{p}</button>
+    ))}
+  </div>
+  <div class="row">
+    <button onClick={() => unread.set(unread + 1)}>New message</button>
+    <button disabled={unread === 0} onClick={() => unread.set(0)}>Mark all read</button>
+  </div>
+</div>
+
+<style>
+  .mail { display: grid; gap: 0.75rem; }
+  .live { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.9rem; }
+  .preview { margin: 0; }
+  code { font-family: var(--font-mono); font-size: 0.85rem; }
+  .row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+  .active { border-color: var(--fg); }
+</style>

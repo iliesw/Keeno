@@ -107,8 +107,11 @@ export function Virtual<T>(props: VirtualProps<T>): unknown {
       const n = o.length - 1
       if (!n) return [0, 0] as const
       const over = props.overscan ?? 4
-      const first = rowAt(o, scrollTop.get())
-      const last = rowAt(o, scrollTop.get() + viewport.get())
+      // When the list gets shorter the browser clamps the scroll position, maybe without a
+      // scroll event: clamp the last measured one the same way.
+      const top = Math.max(0, Math.min(scrollTop.get(), o[n] - viewport.get()))
+      const first = rowAt(o, top)
+      const last = rowAt(o, top + viewport.get())
       return [Math.max(0, first - over), Math.min(n, last + 1 + over)] as const
     },
     { equals: (a, b) => a[0] === b[0] && a[1] === b[1] },
@@ -181,7 +184,8 @@ export function Virtual<T>(props: VirtualProps<T>): unknown {
       const top = o[Math.max(0, Math.min(index, o.length - 1))] ?? 0
       if (typeof container.scrollTo === 'function') container.scrollTo({ top, behavior })
       else container.scrollTop = top
-      scrollTop.set(top)
+      // A smooth scroll moves over several frames: its scroll events update the rows as it goes.
+      if (behavior !== 'smooth') scrollTop.set(top)
     },
     element: container,
   }

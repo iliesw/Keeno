@@ -83,6 +83,17 @@ describe('<Virtual>', () => {
     expect(first).toBeTruthy()
   })
 
+  test('a list that gets shorter while scrolled far down shows its last rows', async () => {
+    const list = state(range(1000))
+    const v = setup(() => list.get())
+    await v.scroll(5000)
+    expect(v.texts()[0]).toBe('row 500')
+    list.set(range(20))
+    flush()
+    // 20 rows of 10px in a 50px viewport: the browser clamps the scroll to 150px (rows 15-19).
+    expect(v.texts()).toEqual(['row 15', 'row 16', 'row 17', 'row 18', 'row 19'])
+  })
+
   test('tracks a store array mutated in place', () => {
     const s = store({ items: ['a'] })
     const v = setup(() => s.items)
