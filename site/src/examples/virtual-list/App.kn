@@ -1,0 +1,46 @@
+<script lang="ts">
+  import { Virtual, type VirtualHandle } from '@inflector/keeno'
+
+  // 100 000 rows, but only the ~15 in view exist in the DOM.
+  const all = Array.from({ length: 100_000 }, (_, i) => ({ id: i + 1, name: `Customer ${(i + 1).toString().padStart(6, '0')}`, total: ((i * 7919) % 100_000) / 100 }))
+  const query = state('')
+  const rows = derived(() => (query ? all.filter((r) => r.name.includes(query)) : all))
+  const jump = state(50_000)
+  let list: VirtualHandle | null = null
+</script>
+
+<div class="bar">
+  <input type="search" placeholder="Filter by number…" bind:value={query} />
+  <span class="count">{rows.length.toLocaleString()} rows</span>
+</div>
+<div class="bar">
+  <input type="number" min="1" bind:value={jump} />
+  <button onClick={() => list?.scrollTo(jump - 1, 'smooth')}>Jump to row</button>
+</div>
+
+<Virtual each={rows} itemHeight={36} key={(r) => r.id} ref={(h) => (list = h)} class="list">
+  {(row) => (
+    <div class="row">
+      <span class="id">#{row.id}</span>
+      <span class="name">{row.name}</span>
+      <span class="total">${row.total.toFixed(2)}</span>
+    </div>
+  )}
+</Virtual>
+
+<style>
+  .bar { display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem; }
+  .bar input { flex: 1; min-width: 0; }
+  .count { font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted); white-space: nowrap; }
+  .list { height: 320px; border: 1px solid var(--border); border-radius: 0.6rem; }
+  .row {
+    display: grid;
+    grid-template-columns: 5.5rem 1fr auto;
+    align-items: center;
+    height: 100%;
+    padding: 0 0.8rem;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.9rem;
+  }
+  .id, .total { font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted); }
+</style>

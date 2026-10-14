@@ -1,0 +1,43 @@
+<script lang="ts">
+  import { pending } from '@inflector/keeno'
+  import { db, savePosts, type Post } from './api'
+
+  const { fail } = props<{ fail: boolean }>()
+
+  // The like shows at once; `save` sends it. If it rejects, the list goes back to what the
+  // server has, and the error goes to the <ErrorBoundary> around this component.
+  const posts = state<Post[]>(db.map((p) => ({ ...p })), {
+    save: (next, _prev, { signal }) => savePosts(next, fail, signal),
+  })
+
+  const toggle = (id: number) =>
+    posts.set(posts.map((p) => (p.id === id ? { ...p, liked: !p.liked, likes: p.likes + (p.liked ? -1 : 1) } : p)))
+</script>
+
+<ul>
+  {posts.map((p) => (
+    <li key={p.id}>
+      <span class="title">{p.title}</span>
+      <button class={['like', p.liked && 'on']} onClick={() => toggle(p.id)}>
+        {p.liked ? '♥' : '♡'} {p.likes}
+      </button>
+    </li>
+  ))}
+</ul>
+<p class="status">{pending(() => posts) ? 'Saving…' : 'All changes saved'}</p>
+
+<style>
+  ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; }
+  li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.6rem 0.8rem;
+    border: 1px solid var(--border);
+    border-radius: 0.6rem;
+  }
+  .like { min-width: 4.5rem; font-variant-numeric: tabular-nums; }
+  .like.on { color: #e11d48; border-color: color-mix(in srgb, #e11d48 40%, var(--border)); }
+  .status { margin: 0.75rem 0 0; font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted); }
+</style>

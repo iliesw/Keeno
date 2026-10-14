@@ -286,6 +286,34 @@ export const examples: Example[] = [
     category: 'Built-ins',
   },
   {
+    slug: 'optimistic',
+    title: 'Optimistic likes',
+    description: 'Likes show at once and save in the background with the save option; a failed save rolls back and reports to an error boundary.',
+    concepts: [
+      { label: 'save', href: '/docs/state-options#save' },
+      { label: 'pending()', href: '/docs/state-options#save' },
+      { label: '<ErrorBoundary>', href: '/docs/built-ins#errorboundary' },
+    ],
+    category: 'State',
+  },
+  {
+    slug: 'virtual-list',
+    title: 'Virtual list',
+    description: '100 000 rows that scroll smoothly: <Virtual> only renders the rows in view, with filtering and jump-to-row.',
+    concepts: [
+      { label: '<Virtual>', href: '/docs/built-ins#virtual' },
+      { label: 'scrollTo()', href: '/docs/built-ins#virtual' },
+    ],
+    category: 'Built-ins',
+  },
+  {
+    slug: 'head',
+    title: 'Document head',
+    description: 'A reactive tab title and meta description from inside a component, restored when it unmounts.',
+    concepts: [{ label: '<Head>', href: '/docs/built-ins#head' }],
+    category: 'Built-ins',
+  },
+  {
     slug: 'directives',
     title: 'Directives',
     description: 'Reusable DOM behaviors with use: — a reactive tooltip, click-outside, autosize, autofocus and an in-view observer.',

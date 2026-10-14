@@ -1,0 +1,33 @@
+<script lang="ts">
+  import { ErrorBoundary } from '@inflector/keeno'
+  import Posts from './Posts.kn'
+
+  const fail = state(false)
+</script>
+
+<label class="toggle"><input type="checkbox" bind:checked={fail} /> Make saves fail</label>
+
+<ErrorBoundary
+  fallback={(error, reset) => (
+    <div class="error">
+      <p>⚠️ {(error as Error).message}. The list was rolled back.</p>
+      <button onClick={reset}>OK</button>
+    </div>
+  )}
+>
+  <Posts fail={fail} />
+</ErrorBoundary>
+
+<style>
+  .toggle { display: inline-flex; align-items: center; gap: 0.4rem; margin-bottom: 1rem; font-size: 0.9rem; }
+  .error {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.8rem 1rem;
+    border: 1px solid color-mix(in srgb, #e11d48 40%, var(--border));
+    border-radius: 0.6rem;
+  }
+  .error p { margin: 0; }
+</style>

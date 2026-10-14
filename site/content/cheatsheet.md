@@ -50,6 +50,8 @@ state('', { url: { param: 'q', replace: true }, debounce: 300 })
 state(50, { validate: (v) => Math.min(100, Math.max(0, v)) })
 state({}, { equals: deepEqual })              // structural comparison
 state(0, { throttle: 100 })
+state(todos, { save: (next, prev, { signal }) => api.put(next, { signal }) })
+// optimistic: shows at once, rolls back if save rejects; pending(() => todos) while saving
 ```
 
 More in [State options](state-options.md).
@@ -146,6 +148,8 @@ More in [Context](context.md).
 | `<Portal target="#modals">` | Rendering somewhere else in the page |
 | `<Transition name="fade">` | Animating elements in and out |
 | `reparentable(() => <Player />)` | Moving live content without re-creating it |
+| `<Head><title>{t}</title></Head>` | The document title and meta tags (deepest wins) |
+| `<Virtual each={rows} itemHeight={32}>{(row) => …}</Virtual>` | Long lists: only the rows in view render |
 
 All are exported from `@inflector/keeno`. More in [Built-in components](built-ins.md).
 
@@ -173,6 +177,8 @@ import Pages from 'virtual:keeno-pages'
 mount(Pages, document.getElementById('app')!)
 ```
 
+Or let the plugin render them: `keeno({ renderStrategy: 'ssr' | 'ssg' | 'islands' })` with `start()` from `virtual:keeno-pages` in `src/main.ts`. With `islands`, `<Counter client="visible" />` is the only part that loads JavaScript.
+
 More in [Routing](routing.md) and [File-based routing](file-routing.md).
 
 ## Mounting and server rendering
@@ -194,7 +200,7 @@ More in [Server rendering](ssr.md).
 | Tool | What it gives you |
 |---|---|
 | `@inflector/vite-plugin-keeno` | `.kn` compilation, HMR, scoped CSS, Tailwind, dev tools |
-| Dev tools panel | `Alt+Shift+D` to open, `Alt+Shift+C` to pick a component |
+| Dev tools panel | `Alt+Shift+D` to open, `Alt+Shift+C` to pick a component; time travel in Timeline, dependency Graph tab |
 | VS Code extension | Highlighting and TypeScript IntelliSense in `.kn` files |
 | `keeno-check` | Type-check every `.kn` and `.ts` file in CI |
 
