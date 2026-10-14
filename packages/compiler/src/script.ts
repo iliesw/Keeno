@@ -163,7 +163,9 @@ function transformMaps(path: NodePath<t.Node>, ctx: CompileContext) {
       if ('typeAnnotation' in c) c.typeAnnotation = null
       return c
     }) as t.Identifier[]
-    keyFn = t.arrowFunctionExpression(params, keyExpr)
+    // Clone: the row parameters are rewritten below (`p` → `_item.p`), and that must not reach
+    // the key function, which keeps the original parameters.
+    keyFn = t.arrowFunctionExpression(params, t.cloneNode(keyExpr, true))
     const el = body as t.JSXElement
     el.openingElement.attributes = el.openingElement.attributes.filter((a) => a !== keyAttr)
   } else {

@@ -35,3 +35,11 @@ describe('events', () => {
     expect(js).toContain('"dblclick"')
   })
 })
+
+describe('keyed map', () => {
+  test('a destructured row parameter used in a nested key keeps its own binding', () => {
+    const { js } = compile('<script>\n  const list = state([])\n</script>\n<ul>{list.map(({ p, index }) => <li key={p.ref}>{p.name}{index}</li>)}</ul>', { filename: 'A.kn' })
+    expect(js).toMatch(/\(\{\s*p,\s*index\s*\}\) => p\.ref/)
+    expect(js).not.toMatch(/=> _item\d*\.p\.ref/)
+  })
+})
