@@ -12,7 +12,7 @@
 
 ### Minor Changes
 
-- add reusable directives for DOM behaviors with use: syntax
+- [#17](https://github.com/iliesw/Keeno/pull/17) Type-checks `use:` directives: the value against the directive's value type and the element against its element type (a `<textarea>` directive on `<input>` is an error). Hover and go to definition work on the directive name.
 
 ### Patch Changes
 

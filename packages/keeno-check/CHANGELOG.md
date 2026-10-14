@@ -13,7 +13,7 @@
 
 ### Minor Changes
 
-- add reusable directives for DOM behaviors with use: syntax
+- [#17](https://github.com/iliesw/Keeno/pull/17) Reports `use:` directive type errors (wrong value, wrong element type, missing value) with `file:line:col`.
 
 ### Patch Changes
 

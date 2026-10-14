@@ -10,7 +10,7 @@
 
 ### Minor Changes
 
-- add reusable directives for DOM behaviors with use: syntax
+- [#17](https://github.com/iliesw/Keeno/pull/17) `use:` directives: reusable DOM behaviors written as plain functions (`Directive<Element, Value>`, `(el, value) => cleanup`) and used as `use:name={value}` on any element. They run after insertion, run again (after their cleanup) when the value changes, clean up on removal, don't run during server rendering, and send errors to `<ErrorBoundary>`. The dev tools now show a loading async derived with a `pending` badge instead of an error, without starting a run.
 
 ## 0.5.0
 

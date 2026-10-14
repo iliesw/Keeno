@@ -12,7 +12,7 @@
 
 ### Minor Changes
 
-- add reusable directives for DOM behaviors with use: syntax
+- [#17](https://github.com/iliesw/Keeno/pull/17) Requires `@inflector/keeno` 0.6 (peer dependency `>=0.6.0 <1.0.0`).
 
 ### Patch Changes
 
