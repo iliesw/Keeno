@@ -1,0 +1,187 @@
+<script lang="ts">
+  // The Router tab: where each browser <Router> is, its routes, and the navigations so far.
+  import IconButton from './IconButton.kn'
+  import Section from './Section.kn'
+  import Value from './Value.kn'
+  import { formatTime, useActions, type DevRouter } from '../shared'
+
+  const { routers } = props<{ routers: DevRouter[] }>()
+  const actions = useActions()
+
+  /** Which router is shown, when the page has several. */
+  const index = state(0)
+  /** What is typed in the "go to" field. */
+  const target = state('')
+
+  const router = derived(() => routers[Math.min(index, routers.length - 1)] ?? null)
+  const loc = derived(() => router?.location ?? null)
+  const params = derived(() => (loc ? Object.entries(loc.params).map((e) => ({ key: e[0], value: e[1] })) : []))
+  const query = derived(() => (loc ? [...new URLSearchParams(loc.search)].map((e, i) => ({ key: `${i}:${e[0]}`, name: e[0], value: e[1] })) : []))
+  const history = derived(() => (router ? router.history.slice().reverse() : []))
+  const routes = derived(() =>
+    (router?.routes ?? []).map((r, i) => ({ ...r, key: `${i}:${r.path}`, active: r.path === loc?.matched, dynamic: /[:*]/.test(r.path) })),
+  )
+
+  function go(to: string) {
+    const path = to.trim()
+    if (!path || !router) return
+    actions.api.navigate(router.id, path)
+    actions.refresh()
+  }
+
+  /** A route without params is navigated to; one with params is put in the field to fill in. */
+  function pickRoute(path: string, dynamic: boolean) {
+    if (dynamic) target.set(path)
+    else go(path)
+  }
+
+  const full = (l: { path: string; search: string; hash: string }) => l.path + l.search + l.hash
+</script>
+
+<div class="view">
+  {router && (
+    <div class="toolbar">
+      {routers.length > 1 && (
+        <select class="pick" value={String(index)} onChange={(e) => index.set(Number((e.currentTarget as HTMLSelectElement).value))}>
+          {routers.map((r, i) => (
+            <option key={r.id} value={String(i)}>
+              {r.base || '/'}
+            </option>
+          ))}
+        </select>
+      )}
+      <input
+        class="search"
+        type="text"
+        placeholder="Go to /path?query#hash"
+        spellcheck="false"
+        value={target}
+        onInput={(e) => target.set((e.currentTarget as HTMLInputElement).value)}
+        onKeyDown={(e) => e.key === 'Enter' && go(target)}
+      />
+      <IconButton icon="go" title="Navigate" disabled={!target.trim()} onClick={() => go(target)} />
+    </div>
+  )}
+  {router ? (
+    <div class="router">
+      <div class="here">
+        <div class="here-path" title={full(loc!)}>
+          {router.base && <span class="muted">{router.base}</span>}
+          {loc!.path}
+          {loc!.search && <span class="v-str">{loc!.search}</span>}
+          {loc!.hash && <span class="v-num">{loc!.hash}</span>}
+        </div>
+        <div class="meta">
+          {loc!.matched ? (
+            <span>
+              matched <span class="pattern">{loc!.matched}</span>
+            </span>
+          ) : (
+            <span class="v-err">no route matches</span>
+          )}
+        </div>
+      </div>
+      <Section title="Params" count={params.length}>
+        {params.map((p) => (
+          <div key={p.key} class="kv">
+            <span class="key">{p.key}</span>
+            <span class="colon">:</span>
+            <span class="val">
+              <Value value={p.value} />
+            </span>
+          </div>
+        ))}
+        {params.length === 0 && <div class="muted small pad">None</div>}
+      </Section>
+      <Section title="Query" count={query.length}>
+        {query.map((q) => (
+          <div key={q.key} class="kv">
+            <span class="key">{q.name}</span>
+            <span class="colon">:</span>
+            <span class="val">
+              <Value value={q.value} />
+            </span>
+          </div>
+        ))}
+        {query.length === 0 && <div class="muted small pad">None</div>}
+      </Section>
+      <Section title="Routes" count={routes.length}>
+        {routes.map((r) => (
+          <div
+            key={r.key}
+            class={['route', r.active && 'active']}
+            title={r.dynamic ? 'Fill in the params to navigate' : `Go to ${r.path}`}
+            onClick={() => pickRoute(r.path, r.dynamic)}
+          >
+            <span class="pattern">{r.path}</span>
+            <span class="route-comp">
+              {r.layouts.map((l) => (
+                <span key={l} class="muted">
+                  {l} ›{' '}
+                </span>
+              ))}
+              <span class="tag">
+                {'<'}
+                <span class="name">{r.component}</span>
+                {'>'}
+              </span>
+            </span>
+            {r.errors.map((s) => (
+              <span key={s} class="badge" title={`Has a ${s} page`}>
+                {s}
+              </span>
+            ))}
+          </div>
+        ))}
+      </Section>
+      <Section title="History" count={history.length}>
+        {history.map((n) => (
+          <div key={n.seq} class="nav" title={`Go to ${full(n)}`} onClick={() => go(full(n))}>
+            <span class="muted time">{formatTime(n.time)}</span>
+            <span class="nav-path">{full(n)}</span>
+            <span class="pattern muted">{n.matched ?? '—'}</span>
+          </div>
+        ))}
+      </Section>
+    </div>
+  ) : (
+    <div class="empty">
+      No router on the page. Render a <code>{'<Router>'}</code> from <code>@inflector/keeno-router</code> to see its routes here.
+    </div>
+  )}
+</div>
+
+<style>
+  .router { flex: 1; overflow: auto; padding: 0 10px 10px; }
+  .pick {
+    height: 30px;
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0 6px;
+    font: inherit;
+  }
+  .here { padding: 12px 0 10px; }
+  .here-path { font-family: var(--mono); font-size: 14px; word-break: break-all; }
+  .pattern { font-family: var(--mono); font-size: 12px; color: var(--tag); }
+  .route,
+  .nav {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 3px 6px;
+    margin: 0 -6px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+  .route:hover,
+  .nav:hover { background: var(--hover); }
+  .route.active { background: var(--accent-dim); box-shadow: inset 2px 0 0 var(--text); }
+  .route-comp { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; }
+  .nav-path { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .time { flex: none; font-variant-numeric: tabular-nums; }
+  code { font-family: var(--mono); font-size: 12px; color: var(--text); }
+</style>
