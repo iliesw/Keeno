@@ -4,7 +4,7 @@
 
 ### Minor Changes
 
-- add reusable directives for DOM behaviors with use: syntax
+- [#17](https://github.com/iliesw/Keeno/pull/17) Compiles `use:name={value}` (and valueless `use:name`) to tracked directive calls. The directive name resolves like any identifier (imports, locals, props, states), and `use:` on a component, a non-identifier name or a string value is a compile error.
 
 ## 0.5.0
 
