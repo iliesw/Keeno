@@ -1,6 +1,6 @@
 {
   "name": "@inflector/keeno",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "Compiled, signal-based UI runtime for Keeno (.kn) components",
   "license": "MIT",
   "repository": {

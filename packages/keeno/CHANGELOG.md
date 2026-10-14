@@ -1,5 +1,11 @@
 # @inflector/keeno
 
+## 0.7.1
+
+### Patch Changes
+
+- [#28](https://github.com/iliesw/Keeno/pull/28) [`b82855f`](https://github.com/iliesw/Keeno/commit/b82855fecedb073a05fe5e4ff40ac9e2f4ef6e0d) Thanks [@iliesw](https://github.com/iliesw)! - `<Virtual>`: a list that gets shorter while scrolled far down now shows its last rows instead of a blank box (the scroll position is clamped like the browser does), and `scrollTo(index, 'smooth')` follows the smooth scroll instead of jumping the rows ahead of it.
+
 ## 0.7.0
 
 ### Minor Changes
