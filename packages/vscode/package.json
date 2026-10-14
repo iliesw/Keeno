@@ -11,7 +11,7 @@
     "url": "git+https://github.com/iliesw/Keeno.git",
     "directory": "packages/vscode"
   },
-  "homepage": "https://github.com/iliesw/Keeno/tree/main/packages/vscode#readme",
+  "homepage": "https://keeno.inflector.io",
   "bugs": {
     "url": "https://github.com/iliesw/Keeno/issues"
   },

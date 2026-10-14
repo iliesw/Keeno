@@ -8,7 +8,7 @@
     "url": "git+https://github.com/iliesw/Keeno.git",
     "directory": "packages/language-server"
   },
-  "homepage": "https://github.com/iliesw/Keeno/tree/main/packages/language-server#readme",
+  "homepage": "https://keeno.inflector.io",
   "bugs": {
     "url": "https://github.com/iliesw/Keeno/issues"
   },
