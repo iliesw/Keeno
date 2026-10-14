@@ -1,5 +1,18 @@
 # @inflector/keeno-router
 
+## 0.5.0
+
+### Minor Changes
+
+- [#23](https://github.com/iliesw/Keeno/pull/23) [`4989bf8`](https://github.com/iliesw/Keeno/commit/4989bf86e9f021be3eb9ac22af838b35b4de2564) Thanks [@iliesw](https://github.com/iliesw)! - Add `<Head>`, a built-in that puts `<title>`, `<meta>` and `<link>` tags in the document head from any component: the deepest one wins, tags come back on unmount, and server renders collect them into `context.head`. Server renders also report the router's error-page status in `context.status`. The compiler now handles `{expressions}` inside `<title>` and `<textarea>`, whose content the HTML parser reads as text.
+
+- [#21](https://github.com/iliesw/Keeno/pull/21) [`1204bf3`](https://github.com/iliesw/Keeno/commit/1204bf39252f85c939f033440fc989ad8aaee56e) Thanks [@iliesw](https://github.com/iliesw)! - Add a Router tab to the dev tools: the current path, params, query and matched route, the route table (with layouts and error pages), and the navigation history. Click a route or a history entry to navigate, or type a path in the "go to" field.
+
+### Patch Changes
+
+- Updated dependencies [[`cfdaf42`](https://github.com/iliesw/Keeno/commit/cfdaf42a15a36b4ce4c4b2d18cea6f5810659738), [`4989bf8`](https://github.com/iliesw/Keeno/commit/4989bf86e9f021be3eb9ac22af838b35b4de2564), [`d29c991`](https://github.com/iliesw/Keeno/commit/d29c9910cbb496b3130dc8ace71ff5959ec62e4c), [`1204bf3`](https://github.com/iliesw/Keeno/commit/1204bf39252f85c939f033440fc989ad8aaee56e), [`d73ab43`](https://github.com/iliesw/Keeno/commit/d73ab432baff30434f7a992f4fe2b16939dc303e), [`b5808ea`](https://github.com/iliesw/Keeno/commit/b5808ead7ebb59e64e9c85f5ca869c6131924731)]:
+  - @inflector/keeno@0.7.0
+
 ## 0.4.1
 
 ### Patch Changes
