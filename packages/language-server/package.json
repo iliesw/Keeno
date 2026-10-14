@@ -1,6 +1,6 @@
 {
   "name": "@inflector/keeno-language-server",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Volar-based language server for Keeno (.kn) components",
   "license": "MIT",
   "repository": {
