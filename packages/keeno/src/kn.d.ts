@@ -69,7 +69,13 @@ type Bindable = { set(value: any): void; peek(): any } | string | number | boole
  * `children` as a function, but the parent writes it as nested markup (any number of nodes), so
  * it accepts any content there. Optional and required props keep their modifiers.
  */
-export type KnComponentProps<P> = { [K in keyof P]: K extends 'children' ? unknown : P[K] }
+export type KnComponentProps<P> = { [K in keyof P]: K extends 'children' ? KnChildren<P[K]> : P[K] }
+
+/**
+ * What a parent may write as children: any content, or for a render function child such as
+ * `<Virtual>`'s `{(item) => …}`, that function (so its parameters are typed).
+ */
+type KnChildren<C> = NonNullable<C> extends () => infer R ? (R extends (first: any, ...rest: any[]) => any ? R : unknown) : unknown
 
 // ---------------------------------------------------------------------------
 // JSX: intrinsic elements and their attributes
