@@ -1,6 +1,6 @@
 // Writable state and its options: equals, validate, history, persist, url, debounce / throttle.
 import { devHook } from './dev'
-import { Signal, getOwner, onCleanup, type Equals } from './signal'
+import { Cell, Signal, getOwner, handleError, notePendingRead, onCleanup, type AsyncContext, type Equals, type Owner } from './signal'
 
 export interface UrlOptions {
   /** Query parameter name. */
@@ -24,10 +24,17 @@ export interface StateOptions<T> {
   debounce?: number
   /** Apply at most one write per this many ms (first and last write win). */
   throttle?: number
+  /**
+   * Send each change to a server. Writes apply at once (optimistic); if the returned promise
+   * rejects, the state goes back to the last saved value and the error goes to the nearest
+   * `<ErrorBoundary>`. A newer write aborts an older save (`ctx.signal`). Resolving with a value
+   * other than `undefined` replaces the state with it. `pending(() => s)` is true while saving.
+   */
+  save?: (next: T, prev: T, ctx: AsyncContext) => unknown
 }
 
 /** Where a write came from; decides which side effects run. */
-type Source = 'local' | 'remote' | 'url' | 'history'
+type Source = 'local' | 'remote' | 'url' | 'history' | 'rollback'
 
 interface History<T> {
   limit: number
@@ -44,11 +51,19 @@ export class State<T> extends Signal<T> {
   /** @internal */ _url?: { param: string; replace: boolean; default: T }
   /** @internal */ _schedule?: (value: T) => void
   /** @internal */ _pending = false
+  /** @internal */ _save?: Saver<T>
+  /** @internal True while a `save` is in flight (only created with the `save` option). */
+  _loading: Cell<boolean> | null = null
 
   constructor(value: T, options: StateOptions<T> = {}) {
     super(options.equals)
     this._validate = options.validate
     this._value = this._validate ? this._validate(value, value) : value
+    if (options.save) {
+      this._save = { fn: options.save, confirmed: this._value, version: 0, ctrl: null, owner: getOwner() }
+      this._loading = new Cell(false)
+      if (getOwner()) onCleanup(() => this._save!.ctrl?.abort())
+    }
     if (options.history) {
       this._history = { limit: options.history, past: [], future: [], version: new State(0) }
     }
@@ -59,6 +74,11 @@ export class State<T> extends Signal<T> {
     if (options.throttle != null) this._schedule = throttled(this, options.throttle)
     if (options.persist) setupPersist(this, options.persist)
     if (options.url) setupUrl(this, typeof options.url === 'string' ? { param: options.url } : options.url)
+  }
+
+  override get(): T {
+    if (this._loading) notePendingRead(this)
+    return super.get()
   }
 
   /** Write the value. Ignored if equal to the current value (see `equals`). */
@@ -84,12 +104,16 @@ export class State<T> extends Signal<T> {
     this._notify(old, value)
     if (this._persistKey && source !== 'remote') savePersisted(this)
     if (this._url && source !== 'url') scheduleUrlWrite(this)
+    if (this._save) {
+      if (source === 'local' || source === 'history') runSave(this, old)
+      else if (source === 'remote') this._save.confirmed = value
+    }
     return true
   }
 
-  /** @internal True while a debounced/throttled write is waiting. */
+  /** @internal True while a debounced/throttled write is waiting or a save is in flight. */
   _isPending() {
-    return this._pending
+    return this._pending || !!this._loading?.peek()
   }
 
   /** Go back to the previous value (needs the `history` option). */
@@ -142,6 +166,48 @@ export class State<T> extends Signal<T> {
     h.version.get()
     return h.future.length > 0
   }
+}
+
+interface Saver<T> {
+  fn: (next: T, prev: T, ctx: AsyncContext) => unknown
+  /** The last value the server accepted: where a failed save rolls back to. */
+  confirmed: T
+  version: number
+  ctrl: AbortController | null
+  /** Errors from failed saves go to this owner's error boundary. */
+  owner: Owner | null
+}
+
+function runSave<T>(s: State<T>, prev: T) {
+  const sv = s._save!
+  sv.ctrl?.abort()
+  const ctrl = (sv.ctrl = new AbortController())
+  const version = ++sv.version
+  const fail = (err: unknown) => {
+    if (version !== sv.version) return
+    sv.ctrl = null
+    s._loading!.set(false)
+    s._write(sv.confirmed, 'rollback')
+    handleError(err, sv.owner)
+  }
+  let result: unknown
+  try {
+    result = sv.fn(s._value, prev, { signal: ctrl.signal })
+  } catch (err) {
+    fail(err)
+    return
+  }
+  const done = (value: unknown) => {
+    if (version !== sv.version) return
+    sv.ctrl = null
+    s._loading!.set(false)
+    if (value !== undefined) s._write(value as T, 'remote')
+    sv.confirmed = s._value
+  }
+  if (result && typeof (result as PromiseLike<unknown>).then === 'function') {
+    s._loading!.set(true)
+    ;(result as PromiseLike<unknown>).then(done, fail)
+  } else done(result)
 }
 
 export function state<T>(value: T, options?: StateOptions<T>): State<T>

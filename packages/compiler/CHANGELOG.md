@@ -1,5 +1,11 @@
 # @inflector/keeno-compiler
 
+## 0.6.2
+
+### Patch Changes
+
+- [`20ef0ff`](https://github.com/iliesw/Keeno/commit/20ef0fffaa0c7ce90ef65c6cec98aae1fe48b7ba) Thanks [@iliesw](https://github.com/iliesw)! - Fix keyed `.map()` with a destructured row parameter used in a nested key (`({ p }) => <li key={p.ref}>`): the key function no longer references an undefined `_item`.
+
 ## 0.6.1
 
 ### Patch Changes

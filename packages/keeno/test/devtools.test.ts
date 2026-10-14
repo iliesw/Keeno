@@ -192,7 +192,7 @@ describe('dev tools panel', () => {
     await new Promise((r) => setTimeout(r, 250))
     ;(root.querySelector('.fab') as HTMLElement).click()
     await frame()
-    ;(root.querySelectorAll('.tab')[2] as HTMLElement).click()
+    ;(root.querySelectorAll('.tab')[3] as HTMLElement).click()
     await frame()
     expect(root.querySelector('.cards')).not.toBeNull()
     await frame()

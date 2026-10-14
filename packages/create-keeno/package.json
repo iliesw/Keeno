@@ -1,6 +1,6 @@
 {
   "name": "create-keeno",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "description": "Scaffold a new Keeno project: npm create keeno",
   "license": "MIT",
   "repository": {

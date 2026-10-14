@@ -1,0 +1,19 @@
+<script lang="ts">
+  import { Virtual, type VirtualHandle } from '@inflector/keeno'
+
+  const rows = state(Array.from({ length: 10_000 }, (_, i) => ({ id: i, label: `Row ${i}` })))
+  let list: VirtualHandle | null = null
+  const clicks = state(0)
+</script>
+
+<button class="jump" onClick={() => list?.scrollTo(5000)}>Jump</button>
+<button class="prepend" onClick={() => rows.set([{ id: -1, label: 'New' }, ...rows])}>Prepend</button>
+<p class="clicks">{clicks}</p>
+<Virtual each={rows} itemHeight={24} key={(r) => r.id} ref={(h) => (list = h)} class="list">
+  {(row) => <button class="row" onClick={() => clicks.set(clicks + 1)}>{row.label}</button>}
+</Virtual>
+
+<style>
+  .list { height: 240px; border: 1px solid #ccc }
+  .row { display: block; width: 100%; height: 24px }
+</style>

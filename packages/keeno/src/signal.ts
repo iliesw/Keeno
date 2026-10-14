@@ -244,7 +244,7 @@ export interface AsyncContext {
 }
 
 /** A minimal writable signal, for internal flags (State lives in state.ts, which imports this file). */
-class Cell<T> extends Signal<T> {
+export class Cell<T> extends Signal<T> {
   constructor(value: T) {
     super()
     this._value = value
@@ -261,8 +261,18 @@ function isThenable(v: unknown): v is PromiseLike<unknown> {
   return (typeof v === 'object' || typeof v === 'function') && v !== null && typeof (v as any).then === 'function'
 }
 
-/** Async deriveds read by the running `pending()` call. */
-let pendingReads: Derived<any>[] | null = null
+/** Something `pending()` can report on: an async derived, or a state with a `save` in flight. */
+interface Loadable {
+  _loading: Cell<boolean> | null
+}
+
+/** Async deriveds and saving states read by the running `pending()` call. */
+let pendingReads: Loadable[] | null = null
+
+/** @internal Report a read to the running `pending()` call, if any. */
+export function notePendingRead(s: Loadable) {
+  if (pendingReads) pendingReads.push(s)
+}
 
 /**
  * Server rendering and hydration: where async deriveds report themselves (to be awaited and
@@ -577,11 +587,12 @@ export function derived(fn: (ctx: AsyncContext) => unknown, options?: DerivedOpt
 
 /**
  * True while an async derived read by `fn` is loading, including a re-run that keeps showing the
- * previous value: `{pending(() => user) && <small>refreshing…</small>}`. Reactive.
+ * previous value, or while a state read by `fn` has a `save` in flight:
+ * `{pending(() => user) && <small>refreshing…</small>}`. Reactive.
  */
 export function pending(fn: () => unknown): boolean {
   const prev = pendingReads
-  const reads: Derived<any>[] = (pendingReads = [])
+  const reads: Loadable[] = (pendingReads = [])
   let notReady = false
   try {
     fn()
@@ -592,7 +603,7 @@ export function pending(fn: () => unknown): boolean {
     pendingReads = prev
   }
   let loading = notReady
-  for (const d of reads) if (d._loading!.get()) loading = true
+  for (const d of reads) if (d._loading?.get()) loading = true
   return loading
 }
 
