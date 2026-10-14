@@ -6,7 +6,13 @@
   import { expandable, parseInput, preview, useActions, valueClass, type DevSignal } from '../shared'
 
   const { signal } = props<{ signal: DevSignal }>()
-  const { api } = useActions()
+  const { api, select } = useActions()
+  // What it reads and what reads it (refreshed with the row).
+  const deps = derived(() => api.deps(signal.id))
+  const chips = derived(() => [
+    ...(deps?.sources ?? []).map((n) => ({ ...n, dir: 'reads' })),
+    ...(deps?.observers ?? []).map((n) => ({ ...n, dir: 'read by' })),
+  ])
 
   const mode = state<'view' | 'inline' | 'json'>('view')
   const draft = state('')
@@ -134,6 +140,21 @@
       {editable && <IconButton icon="edit" small title="Edit as JSON" onClick={startJson} />}
     </span>
   </div>
+  {chips.length > 0 && (
+    <div class="deps">
+      {chips.map((c) => (
+        <button
+          key={`${c.dir}:${c.id}`}
+          class={['dep', c.kind, c.dir === 'reads' ? 'in' : 'out']}
+          title={`${c.dir} ${c.label}${c.componentName && c.kind !== 'component' ? ` (${c.componentName})` : ''}`}
+          disabled={c.component === null}
+          onClick={() => c.component !== null && select(c.component, true)}
+        >
+          {c.dir === 'reads' ? '←' : '→'} {c.label}
+        </button>
+      ))}
+    </div>
+  )}
   {mode === 'json' && (
     <div class="json-edit">
       <textarea
@@ -195,4 +216,9 @@
   }
   .json-actions { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
   .edit-err { color: var(--err); font-size: 11px; }
+  .deps { display: flex; flex-wrap: wrap; gap: 4px; padding: 0 0 4px 12px; }
+  .dep { font-size: 10px; line-height: 16px; padding: 0 6px; border-radius: 999px; border: 1px solid var(--border); background: none; color: var(--muted); }
+  .dep:not(:disabled):hover { color: var(--text); border-color: var(--border-strong); cursor: pointer; }
+  .dep.derived { color: var(--tag); }
+  .dep.component { color: var(--bool); }
 </style>

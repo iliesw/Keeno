@@ -26,8 +26,8 @@ export interface StateOptions<T> {
   throttle?: number
 }
 
-/** Where a write came from; decides which side effects run. */
-type Source = 'local' | 'remote' | 'url' | 'history'
+/** Where a write came from; decides which side effects run. `devtools`: time travel (no side effects). */
+type Source = 'local' | 'remote' | 'url' | 'history' | 'devtools'
 
 interface History<T> {
   limit: number
@@ -82,8 +82,8 @@ export class State<T> extends Signal<T> {
     this._value = value
     devHook?.write(this, old, value, source)
     this._notify(old, value)
-    if (this._persistKey && source !== 'remote') savePersisted(this)
-    if (this._url && source !== 'url') scheduleUrlWrite(this)
+    if (this._persistKey && source !== 'remote' && source !== 'devtools') savePersisted(this)
+    if (this._url && source !== 'url' && source !== 'devtools') scheduleUrlWrite(this)
     return true
   }
 

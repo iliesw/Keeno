@@ -8,6 +8,7 @@
   import Perf from './Perf.kn'
   import RouterTab from './Router.kn'
   import Timeline from './Timeline.kn'
+  import Graph from './Graph.kn'
   import {
     ActionsContext,
     DEFAULT_PREFS,
@@ -28,6 +29,7 @@
   const TABS: { id: Tab; label: string }[] = [
     { id: 'components', label: 'Components' },
     { id: 'timeline', label: 'Timeline' },
+    { id: 'graph', label: 'Graph' },
     { id: 'router', label: 'Router' },
     { id: 'perf', label: 'Perf' },
   ]
@@ -122,6 +124,21 @@
   const routers = derived(() => {
     tick
     return prefs.open && prefs.tab === 'router' ? api.routers() : []
+  })
+  const travel = derived(() => {
+    tick
+    return api.traveling()
+  })
+  const graph = derived(() => {
+    tick
+    if (!prefs.open || prefs.tab !== 'graph' || selected === null) return null
+    return api.graph(selected === STORES ? null : selected)
+  })
+  const graphTitle = derived(() => {
+    if (selected === STORES) return 'Stores'
+    // `names.get` would be the derived's own get(): read the map first.
+    const map = names
+    return selected === null ? '' : map.get(selected) ?? ''
   })
   const width = derived(() => liveWidth ?? prefs.width)
 
@@ -453,8 +470,11 @@
           onQuery={(q) => timelineQuery.set(q)}
           onPause={pause}
           onClear={clear}
+          travel={travel}
+          onTravel={(seq) => api.travel(seq)}
         />
       )}
+      {prefs.tab === 'graph' && <Graph graph={graph} title={graphTitle} pulses={pulses} />}
       {prefs.tab === 'router' && <RouterTab routers={routers} />}
       {prefs.tab === 'perf' && <Perf stats={stats} />}
     </div>

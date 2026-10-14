@@ -123,6 +123,44 @@ describe('dev tools backend', () => {
     expect(devtools().nodes(id)).toEqual([second])
   })
 
+  test('time travel replays the logged writes, without logging or history', () => {
+    const target = render(Page)
+    const text = () => target.querySelector('button')!.textContent
+    const [a] = find('Counter')
+    const count = devtools().details(a.id).states[0]
+    devtools().clearLog()
+    for (const v of [1, 2, 3]) devtools().set(count.id, v)
+    flush()
+    const [first, second] = devtools().log()
+    devtools().travel(first.seq)
+    expect(text()).toBe('1 / 2')
+    expect(devtools().traveling()).toBe(first.seq)
+    devtools().travel(0)
+    expect(text()).toBe('0 / 0')
+    devtools().travel(second.seq)
+    expect(text()).toBe('2 / 4')
+    devtools().travel(null)
+    expect(text()).toBe('3 / 6')
+    expect(devtools().traveling()).toBe(null)
+    expect(devtools().log()).toHaveLength(3)
+  })
+
+  test('the dependency graph: state -> derived -> component', () => {
+    render(Page)
+    const [a] = find('Counter')
+    const [count, double] = devtools().details(a.id).states
+    const { nodes, edges } = devtools().graph(a.id)
+    const label = (id: string) => nodes.find((n: any) => n.id === id)?.label
+    const named = edges.map(([from, to]: [string, string]) => `${label(from)}>${label(to)}`)
+    expect(named).toContain('count>double')
+    expect(named).toContain('double>Counter')
+    expect(nodes.find((n: any) => n.label === 'Counter')).toMatchObject({ kind: 'component', own: true })
+    const deps = devtools().deps(double.id)
+    expect(deps.sources.map((n: any) => n.label)).toEqual(['count'])
+    expect(deps.observers.map((n: any) => n.kind)).toEqual(['component'])
+    expect(devtools().deps(count.id).observers.map((n: any) => n.label)).toEqual(['Counter', 'double'])
+  })
+
   test('lists stores created outside components', () => {
     const theme = label(state('dark'), 'theme')
     expect(devtools().stores().some((s: any) => s.name === 'theme' && s.value === 'dark')).toBe(true)
@@ -192,7 +230,7 @@ describe('dev tools panel', () => {
     await new Promise((r) => setTimeout(r, 250))
     ;(root.querySelector('.fab') as HTMLElement).click()
     await frame()
-    ;(root.querySelectorAll('.tab')[3] as HTMLElement).click()
+    ;(root.querySelectorAll('.tab')[4] as HTMLElement).click()
     await frame()
     expect(root.querySelector('.cards')).not.toBeNull()
     await frame()
