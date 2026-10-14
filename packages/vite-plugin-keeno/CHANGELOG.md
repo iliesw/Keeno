@@ -1,5 +1,13 @@
 # @inflector/vite-plugin-keeno
 
+## 0.7.1
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @inflector/keeno-compiler@0.7.1
+  - @inflector/keeno-router@0.5.0
+
 ## 0.7.0
 
 ### Minor Changes

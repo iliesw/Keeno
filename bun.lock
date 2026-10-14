@@ -42,7 +42,7 @@
     },
     "packages/compiler": {
       "name": "@inflector/keeno-compiler",
-      "version": "0.7.0",
+      "version": "0.7.1",
       "dependencies": {
         "@babel/generator": "^7.26.2",
         "@babel/parser": "^7.26.2",
@@ -59,7 +59,7 @@
     },
     "packages/create-keeno": {
       "name": "create-keeno",
-      "version": "0.7.0",
+      "version": "0.7.1",
       "bin": {
         "create-keeno": "./dist/cli.js",
       },
@@ -72,7 +72,7 @@
     },
     "packages/keeno": {
       "name": "@inflector/keeno",
-      "version": "0.7.0",
+      "version": "0.7.1",
       "devDependencies": {
         "linkedom": "^0.18.13",
       },
@@ -85,7 +85,7 @@
     },
     "packages/keeno-check": {
       "name": "@inflector/keeno-check",
-      "version": "0.2.3",
+      "version": "0.2.4",
       "bin": {
         "keeno-check": "./dist/cli.js",
       },
@@ -101,7 +101,7 @@
     },
     "packages/language-server": {
       "name": "@inflector/keeno-language-server",
-      "version": "0.4.3",
+      "version": "0.4.4",
       "dependencies": {
         "@inflector/keeno-compiler": "workspace:*",
         "@volar/language-core": "~2.4.28",
@@ -124,12 +124,12 @@
         "@inflector/keeno": "workspace:*",
       },
       "peerDependencies": {
-        "@inflector/keeno": ">=0.7.0 <1.0.0",
+        "@inflector/keeno": ">=0.7.1 <1.0.0",
       },
     },
     "packages/vite-plugin-keeno": {
       "name": "@inflector/vite-plugin-keeno",
-      "version": "0.7.0",
+      "version": "0.7.1",
       "dependencies": {
         "@inflector/keeno-compiler": "workspace:*",
         "@inflector/keeno-router": "workspace:*",
