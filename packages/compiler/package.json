@@ -1,6 +1,6 @@
 {
   "name": "@inflector/keeno-compiler",
-  "version": "0.6.2",
+  "version": "0.7.0",
   "description": "Compiler for Keeno (.kn) single-file components",
   "license": "MIT",
   "repository": {

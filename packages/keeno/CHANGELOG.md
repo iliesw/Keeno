@@ -1,5 +1,21 @@
 # @inflector/keeno
 
+## 0.7.0
+
+### Minor Changes
+
+- [#26](https://github.com/iliesw/Keeno/pull/26) [`cfdaf42`](https://github.com/iliesw/Keeno/commit/cfdaf42a15a36b4ce4c4b2d18cea6f5810659738) Thanks [@iliesw](https://github.com/iliesw)! - Dev tools: time travel through the recorded state writes (a slider in the Timeline, and `travel(seq)` in the console API), dependency chips under each state in the Inspector, and a Graph tab with the selected component's dependency graph (`deps(id)` and `graph(componentId)` in the API).
+
+- [#23](https://github.com/iliesw/Keeno/pull/23) [`4989bf8`](https://github.com/iliesw/Keeno/commit/4989bf86e9f021be3eb9ac22af838b35b4de2564) Thanks [@iliesw](https://github.com/iliesw)! - Add `<Head>`, a built-in that puts `<title>`, `<meta>` and `<link>` tags in the document head from any component: the deepest one wins, tags come back on unmount, and server renders collect them into `context.head`. Server renders also report the router's error-page status in `context.status`. The compiler now handles `{expressions}` inside `<title>` and `<textarea>`, whose content the HTML parser reads as text.
+
+- [#25](https://github.com/iliesw/Keeno/pull/25) [`d29c991`](https://github.com/iliesw/Keeno/commit/d29c9910cbb496b3130dc8ace71ff5959ec62e4c) Thanks [@iliesw](https://github.com/iliesw)! - Add `renderStrategy` to the Vite plugin: `'spa'` (default), `'ssr'` (rendered and streamed per request in dev, `dist/client` + `dist/server` builds served by `createHandler()` from `@inflector/vite-plugin-keeno/server` or `vite preview`), `'ssg'` (every page rendered to HTML at build time, plus `prerender` paths) and `'islands'` (static HTML where only components written with `client="load" | "idle" | "visible"` load JavaScript, each hydrated on its own). Start apps with `start()` from `virtual:keeno-pages`. `create-keeno --render <strategy>` scaffolds each one.
+
+- [#21](https://github.com/iliesw/Keeno/pull/21) [`1204bf3`](https://github.com/iliesw/Keeno/commit/1204bf39252f85c939f033440fc989ad8aaee56e) Thanks [@iliesw](https://github.com/iliesw)! - Add a Router tab to the dev tools: the current path, params, query and matched route, the route table (with layouts and error pages), and the navigation history. Click a route or a history entry to navigate, or type a path in the "go to" field.
+
+- [#22](https://github.com/iliesw/Keeno/pull/22) [`d73ab43`](https://github.com/iliesw/Keeno/commit/d73ab432baff30434f7a992f4fe2b16939dc303e) Thanks [@iliesw](https://github.com/iliesw)! - Add the `save` state option for optimistic updates: writes apply at once, are sent with `save(next, prev, { signal })`, roll back if it rejects, and report through `pending()`.
+
+- [#24](https://github.com/iliesw/Keeno/pull/24) [`b5808ea`](https://github.com/iliesw/Keeno/commit/b5808ead7ebb59e64e9c85f5ca869c6131924731) Thanks [@iliesw](https://github.com/iliesw)! - Add `<Virtual>`, a built-in list that only renders the rows in view: `<Virtual each={rows} itemHeight={24}>{(row, i) => <Row row={row} />}</Virtual>`. Fixed or per-item heights, keyed rows that survive scrolling, store arrays, `scrollTo(index)` through `ref`, and server rendering of the first screen. In `.kn` files, a component whose children are a render function now types that function's parameters.
+
 ## 0.6.2
 
 No changes in this release.
