@@ -178,6 +178,9 @@ declare global {
     type IntrinsicElements = {
       [K in keyof HTMLElementTagNameMap]: KnAttributes<HTMLElementTagNameMap[K]>
     } & {
+      /** `property`: Open Graph and other RDFa metadata (`<meta property="og:title" content="…">`). */
+      meta: { property?: any }
+    } & {
       [K in Exclude<keyof SVGElementTagNameMap, keyof HTMLElementTagNameMap>]: KnAttributes<SVGElementTagNameMap[K]> & {
         [attr: string]: any
       }

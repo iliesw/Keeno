@@ -1,6 +1,6 @@
 # Built-in components
 
-`@inflector/keeno` exports a few components for things plain markup can't express: catching errors, waiting for async data and promises, loading code on demand, rendering elsewhere in the page, moving live content around without re-creating it, and animating elements in and out. Import them like any component.
+`@inflector/keeno` exports a few components for things plain markup can't express: catching errors, waiting for async data and promises, loading code on demand, rendering elsewhere in the page, setting the document's title and meta tags, moving live content around without re-creating it, and animating elements in and out. Import them like any component.
 
 ## ErrorBoundary
 
@@ -134,6 +134,30 @@ Use `Chart` like any other component. `Chart.preload()` starts loading earlier, 
 - The children stay part of this component: its scoped styles, context, error boundaries and `destroy` all apply, and their nodes are removed when the portal is destroyed.
 - With `renderToString`, portal content is appended after the app's HTML, each portal in a `<div data-keeno-portal="…">` (the selector, if `target` was one). `hydrate` replaces it and renders the portal at its target.
 - DOM events bubble through the real DOM, that is through the target and not through the portal's position in the tree.
+
+## Head
+
+`<Head>` puts `<title>`, `<meta>`, `<link>` and `<base>` tags in the document's `<head>`, from any component:
+
+```html Post.kn
+<script lang="ts">
+  import { Head } from '@inflector/keeno'
+  const { post } = props<{ post: Post }>()
+</script>
+
+<Head>
+  <title>{post.title} · Blog</title>
+  <meta name="description" content={post.summary} />
+  <meta property="og:title" content={post.title} />
+</Head>
+<article>…</article>
+```
+
+- **Reactive:** text and attributes update like any template.
+- **Deepest wins:** tags that name the same thing (the `title`, a `meta` per `name` or `property`, the canonical `link`, `base`) come from the most recently created `<Head>`, so a page overrides its layout. When the page unmounts, the layout's tags come back. Other tags, such as stylesheet links, add up.
+- **Static tags:** a `<title>` already in `index.html` is a default. It is replaced while a `<Head>` sets one, and restored after.
+- **Conditionals:** put them around the `<Head>` (`{draft && <Head>…</Head>}`) or inside it.
+- **Server rendering:** the tags are collected into `context.head` instead (see [Server rendering](ssr.md#head-and-status)). On hydration the client replaces them with its own.
 
 ## reparentable
 

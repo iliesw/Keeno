@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 import { init, mount, type MountedApp } from '@inflector/keeno'
 import { renderToString } from '@inflector/keeno/server'
 import { createComponent } from '@inflector/keeno/internal'
-import { Link, Router, href, isActive, link, matchPath, navigate, useRoute, type RouteDefinition } from '../src/index'
+import { HttpError, Link, Router, href, isActive, link, matchPath, navigate, useRoute, type RouteDefinition } from '../src/index'
 
 const tick = () => new Promise((r) => setTimeout(r, 0))
 
@@ -186,6 +186,25 @@ describe('regressions', () => {
       }),
     )
     expect(html).toContain('href="/app/b"')
+  })
+
+  test('server renders report the status of an error page or a missing route', async () => {
+    const context: { status?: number } = {}
+    const routes = [
+      {
+        path: '/boom',
+        component: () => {
+          throw new HttpError(404)
+        },
+        errors: { 404: () => 'not found' },
+      },
+    ]
+    const html = await renderToString(() => createComponent(Router, { routes, url: '/boom' }), {}, { context })
+    expect(html).toContain('not found')
+    expect(context.status).toBe(404)
+    const missing: { status?: number } = {}
+    await renderToString(() => createComponent(Router, { routes, url: '/nope', fallback: () => 'none' }), {}, { context: missing })
+    expect(missing.status).toBe(404)
   })
 
   test('URLs outside the base match nothing', async () => {

@@ -6,6 +6,10 @@ import { CompileContext, MAP_PLACEHOLDER, codeFrameError, thunk, traverse } from
 const VOID_TAGS = new Set([
   'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'source', 'track', 'wbr',
 ])
+/** Elements whose content the HTML parser reads as text, so comment markers can't go in them. */
+const RAW_TEXT_TAGS = new Set(['title', 'textarea'])
+/** Text for a template literal quasi: backslashes, backticks and `${` are escaped. */
+const escapeQuasi = (s: string) => s.replace(/\\|`|\$\{/g, (m) => '\\' + m)
 const ATTR_ALIASES: Record<string, string> = { className: 'class', htmlFor: 'for' }
 
 /** The DOM event type for an `onX` attribute (kept in sync with `eventType` in the runtime). */
@@ -410,6 +414,25 @@ export class TemplateCompiler {
       const children = normalizeChildren(node.children)
       if (VOID_TAGS.has(tag)) {
         if (children.length) throw this.error(`<${tag}> cannot have children`)
+        return
+      }
+      // <title> and <textarea> hold raw text: a `<!---->` marker in them would be parsed as text, so
+      // text mixed with `{…}` becomes one text binding.
+      if (!svg && RAW_TEXT_TAGS.has(tag) && children.some((c) => c.kind !== 'text')) {
+        const quasis: t.TemplateElement[] = []
+        const exprs: t.Expression[] = []
+        let text = ''
+        for (const child of children) {
+          if (child.kind === 'text') text += child.value
+          else if (child.kind === 'expr') {
+            quasis.push(t.templateElement({ raw: escapeQuasi(text), cooked: text }))
+            exprs.push(t.logicalExpression('??', child.expr, t.stringLiteral('')))
+            text = ''
+          } else throw this.errorAt(child.node, `<${tag}> can only contain text`)
+        }
+        quasis.push(t.templateElement({ raw: escapeQuasi(text), cooked: text }, true))
+        call('insert', [ref(path), thunk(t.templateLiteral(quasis, exprs))])
+        html += `</${tag}>`
         return
       }
       let index = 0

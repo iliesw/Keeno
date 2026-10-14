@@ -1,6 +1,7 @@
 <script lang="ts">
   import Icon from '../components/Icon.kn'
   import Navbar from '../components/Navbar.kn'
+  import Meta from '../components/Meta.kn'
   import { categories, examples, findExample, playgroundFiles } from '../examples'
   import type { Editor } from '../playground/editor'
   import type { Compiler } from '../playground/compiler'
@@ -234,7 +235,6 @@
   // Setup (browser only: the editor and the compiler are loaded on demand)
 
   init(() => {
-    document.title = 'Playground · Keeno'
     let disposed = false
     dark.set(document.documentElement.classList.contains('dark'))
     const themeObserver = new MutationObserver(() => dark.set(document.documentElement.classList.contains('dark')))
@@ -308,6 +308,7 @@
   const levelIcon: Record<string, string> = { error: '✕', warn: '!', info: 'i', log: '›', debug: '·' }
 </script>
 
+<Meta title="Playground · Keeno" description="Write Keeno components in the browser: the real compiler runs as you type, with a live preview, the compiled output and a console." />
 <Navbar />
 <div class={['pg', dragging && 'pg-dragging']}>
   <!-- Toolbar -->

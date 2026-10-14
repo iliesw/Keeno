@@ -1,0 +1,20 @@
+<script lang="ts">
+  import { Head } from '@inflector/keeno'
+  import { DESCRIPTION, SITE } from '../meta'
+
+  // The page title and description, plus the matching Open Graph and Twitter tags.
+  const { title, description } = props<{ title: string; description?: string }>()
+  const text = derived(() => description ?? DESCRIPTION)
+</script>
+
+<Head>
+  <title>{title}</title>
+  <meta name="description" content={text} />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content={SITE} />
+  <meta property="og:title" content={title} />
+  <meta property="og:description" content={text} />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content={title} />
+  <meta name="twitter:description" content={text} />
+</Head>

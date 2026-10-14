@@ -96,6 +96,22 @@ Bun.serve({
 - Focus, text selection and text typed into inputs before `hydrate` runs are lost. Keep the time between first paint and hydration short: load the client script with `<script type="module">` in `<head>`.
 - If the client render throws, the server markup stays and the error is rethrown.
 
+## Head and status
+
+Pass a `context` object to collect the [`<Head>`](built-ins.md#head) tags and the response status:
+
+```ts
+export async function render(url: string) {
+  const context: RenderContext = {}
+  const html = await renderToString(App, { url }, { context })
+  return { html, head: context.head, status: context.status ?? 200 }
+}
+```
+
+- `context.head` is the HTML of the `<Head>` tags. Put it inside your template's `<head>`.
+- `context.status` is set when the router renders an error page (the page's status, for example `404` from `throw new HttpError(404)`) or when no route matches (`404`).
+- With `renderToStream`, both are filled in when the first chunk arrives. Read them before sending the response headers.
+
 ## With Vite
 
 Set up Vite's SSR mode as the [Vite SSR guide](https://vite.dev/guide/ssr) describes. `@inflector/vite-plugin-keeno` needs no extra options.

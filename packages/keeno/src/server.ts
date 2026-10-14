@@ -4,6 +4,7 @@
 // sends the page right away and streams each <Loading> boundary's content once it is ready.
 import { createComponent, type Component } from './component'
 import { PORTAL_OUTLET } from './control'
+import { SERVER_RESPONSE, serverHead, type ServerResponse } from './head'
 import { insert, setDocument } from './dom'
 import { Owner, flush, installAsyncRegistry, runWithOwner, type Derived, type LoadingBoundary } from './signal'
 
@@ -58,6 +59,17 @@ export interface RenderOptions {
    * loading then renders its `<Loading>` fallback, and the browser fetches it again.
    */
   timeout?: number
+  /**
+   * Filled in by the render: `head`, the HTML of the `<Head>` tags (put it in the page's
+   * `<head>`), and `status`, set when a router error page rendered (404, 500, ...). With
+   * `renderToStream` they are ready when the first chunk arrives.
+   */
+  context?: RenderContext
+}
+
+export interface RenderContext {
+  head?: string
+  status?: number
 }
 
 /** One server render: its root owner, async deriveds and boundaries. */
@@ -70,11 +82,13 @@ class Render {
   /** Async deriveds whose value was already sent (streaming). */
   sent = new Set<Derived<any>>()
   removeRegistry: () => void
+  response: ServerResponse = { heads: [] }
 
   constructor(doc: Document, Comp: Component<any>, props: Record<string, any>, streaming: boolean) {
     this.container = doc.createElement('div')
     this.portals = doc.createElement('div')
     ;(this.root.context ??= new Map()).set(PORTAL_OUTLET, this.portals)
+    this.root.context.set(SERVER_RESPONSE, this.response)
     let nextBoundary = 0
     this.removeRegistry = installAsyncRegistry(this.root, {
       next: 0,
@@ -127,6 +141,13 @@ class Render {
     return any ? `<script type="application/json" data-keeno-data>${escapeJson(JSON.stringify(data))}</script>` : ''
   }
 
+  /** Copy the head HTML and status into the caller's context. */
+  fill(context: RenderContext | undefined) {
+    if (!context) return
+    context.head = serverHead(this.response)
+    if (this.response.status != null) context.status = this.response.status
+  }
+
   dispose() {
     this.removeRegistry()
     this.root.dispose()
@@ -157,6 +178,7 @@ export async function renderToString<P extends Record<string, any>>(
   try {
     render = new Render(doc, Comp, props, false)
     await render.settle(Date.now() + (options.timeout ?? 10_000))
+    render.fill(options.context)
     return render.container.innerHTML + render.portals.innerHTML + render.dataScript()
   } finally {
     render?.dispose()
@@ -202,6 +224,7 @@ export function renderToStream<P extends Record<string, any>>(
         const r = render
         // Boundaries showing their fallback in the HTML sent so far.
         const open = new Set(r.boundaries.filter((b) => b.waiting() > 0))
+        r.fill(options.context)
         controller.enqueue(r.container.innerHTML + r.portals.innerHTML + r.dataScript() + (open.size ? SWAP_SCRIPT : ''))
         const sendReady = () => {
           for (const b of r.boundaries) {
