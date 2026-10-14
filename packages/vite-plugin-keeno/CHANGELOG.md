@@ -1,5 +1,13 @@
 # @inflector/vite-plugin-keeno
 
+## 0.6.2
+
+### Patch Changes
+
+- Updated dependencies [[`20ef0ff`](https://github.com/iliesw/Keeno/commit/20ef0fffaa0c7ce90ef65c6cec98aae1fe48b7ba)]:
+  - @inflector/keeno-compiler@0.6.2
+  - @inflector/keeno-router@0.4.1
+
 ## 0.6.1
 
 ### Patch Changes
