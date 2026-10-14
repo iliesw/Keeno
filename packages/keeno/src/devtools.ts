@@ -3,7 +3,7 @@
 // in-page panel (`@inflector/keeno/devtools`). Nothing here runs unless `mount()` installs it.
 import { setDevHook, type DevHook } from './dev'
 import { ComponentOwner } from './lifecycle'
-import { Computation, Derived, Owner, Signal, getOwner, untrack } from './signal'
+import { Computation, Derived, Owner, Signal, flush, getOwner, untrack } from './signal'
 import { State } from './state'
 
 export interface DevComponent {
@@ -113,8 +113,28 @@ export interface DevRouter {
   history: DevNavigation[]
 }
 
+/** A node of the dependency graph: a state, a derived, or the computations of a component. */
+export interface DevGraphNode {
+  /** A signal's id, or `c<component id>` for a component's renders and effects. */
+  id: string
+  label: string
+  kind: 'state' | 'derived' | 'component' | 'store'
+  /** The component the signal belongs to (null: a store-level signal). */
+  component: number | null
+  componentName: string | null
+  /** The node is the selected component's own. */
+  own: boolean
+}
+
+/** What one signal reads and what reads it. */
+export interface DevDeps {
+  sources: DevGraphNode[]
+  observers: DevGraphNode[]
+}
+
 export type DevMessage =
   | { type: 'flush'; ms: number; rendered: number[] }
+  | { type: 'travel'; seq: number | null }
   | { type: 'write' | 'error'; event: DevEvent }
   | { type: 'tree' }
   | { type: 'route' }
@@ -221,7 +241,8 @@ export function installDevtools(roots: Set<Owner>, legacy: Record<string, unknow
     },
     write(s, old, next, source) {
       const sig = s as Signal<any>
-      if (!tracked.has(sig)) return
+      // Time travel replays the log: those writes aren't new events.
+      if (!tracked.has(sig) || source === 'devtools') return
       external = true
       const owner = ownerOfSignal.get(sig) ?? null
       record({
@@ -402,6 +423,96 @@ export function installDevtools(roots: Set<Owner>, legacy: Record<string, unknow
     return out.filter((n) => n.isConnected)
   }
 
+  /** Signals declared outside components that are still alive. */
+  const liveStores = (): Signal<any>[] => {
+    const live: Signal<any>[] = []
+    for (let i = stores.length - 1; i >= 0; i--) {
+      const s = stores[i]!.deref()
+      if (!s || (s instanceof Derived && s.disposed)) stores.splice(i, 1)
+      else live.unshift(s)
+    }
+    return live
+  }
+
+  // Time travel: the seq of the last write applied, or null while the app is live.
+  let cursor: number | null = null
+  const writes = () => log.filter((e): e is Extract<DevEvent, { type: 'write' }> => e.type === 'write')
+  const replay = (value: (e: Extract<DevEvent, { type: 'write' }>) => unknown, list: Extract<DevEvent, { type: 'write' }>[]) => {
+    for (const e of list) {
+      const s = signal(e.signal)
+      if (s instanceof State) s._write(value(e), 'devtools')
+    }
+    flush()
+  }
+  const travel = (to: number | null) => {
+    const all = writes()
+    const last = all.length ? all[all.length - 1].seq : 0
+    const from = cursor ?? last
+    const target = to === null ? last : Math.max(0, Math.min(to, last))
+    if (target < from) replay((e) => e.old, all.filter((e) => e.seq > target && e.seq <= from).reverse())
+    else if (target > from) replay((e) => e.next, all.filter((e) => e.seq > from && e.seq <= target))
+    cursor = to === null || target === last ? null : target
+    emit({ type: 'travel', seq: cursor })
+  }
+
+  /** A graph node for `x`: a signal, or a computation (shown as its component). */
+  const graphNode = (x: unknown, own: ComponentOwner | null): DevGraphNode | null => {
+    if (x instanceof Computation) {
+      const o = classify(x.parent)
+      if (!o) return null
+      return { id: `c${idOf(o)}`, label: nameOf(o), kind: 'component', component: idOf(o), componentName: nameOf(o), own: o === own }
+    }
+    if (!(x instanceof Signal)) return null
+    if (!tracked.has(x)) {
+      // A store property, or a signal the dev tools don't follow.
+      if (x instanceof State || x instanceof Derived) return null
+      return { id: String(idOf(x)), label: 'store', kind: 'store', component: null, componentName: null, own: false }
+    }
+    const o = ownerOfSignal.get(x) ?? null
+    const d = describe(x)
+    return { id: String(d.id), label: d.name, kind: d.kind, component: o ? idOf(o) : null, componentName: o ? nameOf(o) : null, own: !!own && o === own }
+  }
+  const deps = (id: number): DevDeps | null => {
+    const s = signal(id)
+    if (!s) return null
+    const own = ownerOfSignal.get(s) ?? null
+    const list = (xs: Iterable<unknown>) => {
+      const out = new Map<string, DevGraphNode>()
+      for (const x of xs) {
+        const n = graphNode(x, own)
+        if (n && !out.has(n.id)) out.set(n.id, n)
+      }
+      return [...out.values()]
+    }
+    return { sources: list(s instanceof Derived ? s.sources : []), observers: list(s._observers ?? []) }
+  }
+  /** The signals of a component (or the stores), with what they read and what reads them. */
+  const graph = (id: number | null) => {
+    const own = id === null ? null : component(id)
+    const mine = own ? (signalsOf.get(own) ?? []).filter((s) => !(s instanceof Derived && s.disposed)) : liveStores()
+    const nodes = new Map<string, DevGraphNode>()
+    const edges = new Set<string>()
+    const add = (x: unknown) => {
+      const n = graphNode(x, own)
+      if (n && !nodes.has(n.id)) nodes.set(n.id, n)
+      return n
+    }
+    for (const s of mine) {
+      const n = add(s)
+      if (!n) continue
+      if (!own) n.own = true
+      if (s instanceof Derived) for (const src of s.sources) {
+        const m = add(src)
+        if (m) edges.add(`${m.id}>${n.id}`)
+      }
+      for (const o of s._observers ?? []) {
+        const m = add(o)
+        if (m) edges.add(`${n.id}>${m.id}`)
+      }
+    }
+    return { nodes: [...nodes.values()], edges: [...edges].map((e) => e.split('>') as [string, string]) }
+  }
+
   const routers = new Map<number, { source: DevRouterSource; history: DevNavigation[] }>()
   let nextRouter = 1
   let navSeq = 0
@@ -475,13 +586,7 @@ export function installDevtools(roots: Set<Owner>, legacy: Record<string, unknow
     },
     /** States and deriveds declared outside components (stores). */
     stores(): DevSignal[] {
-      const live: DevSignal[] = []
-      for (let i = stores.length - 1; i >= 0; i--) {
-        const s = stores[i]!.deref()
-        if (!s || (s instanceof Derived && s.disposed)) stores.splice(i, 1)
-        else live.unshift(describe(s))
-      }
-      return live
+      return liveStores().map(describe)
     },
     set(id: number, value: unknown): boolean {
       const s = signal(id)
@@ -493,6 +598,18 @@ export function installDevtools(roots: Set<Owner>, legacy: Record<string, unknow
       const s = signal(id)
       if (s instanceof State) s.undo()
     },
+    /**
+     * Show the app as it was right after write `seq` (from `log()`), by replaying the logged
+     * writes backwards or forwards; `null` goes back to the latest values. Replayed writes skip
+     * history, persistence and URL sync, and aren't logged.
+     */
+    travel,
+    /** The write the app is showing while time travelling, or null when live. */
+    traveling: () => cursor,
+    /** What signal `id` reads and what reads it. */
+    deps,
+    /** The dependency graph around a component's signals (`null`: the stores). */
+    graph,
     redo(id: number) {
       const s = signal(id)
       if (s instanceof State) s.redo()

@@ -2016,11 +2016,14 @@ During `vite dev` every page gets an in-page dev tools panel. Open it with the *
   - Click a string, number or `null` to edit it, and click a boolean's checkbox to flip it.
   - Use the pencil button to edit any state as JSON.
   - States with `history` get undo and redo buttons.
+  - Under each state, chips show what it reads (←) and what reads it (→): deriveds, and the components whose renders or effects use it. Click a chip to select that component.
   - The file link opens the component in your editor, through Vite's `/__open-in-editor`.
   - The selected component is in `$keeno` in the console, so `$keeno.states.count.set(5)` works there.
 - **Picker** (crosshair button, or <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>C</kbd>): hover the page to see which component renders each element, then click to select it. <kbd>Esc</kbd> cancels.
 - **Highlight updates** (lightning button): outlines components on the page as they re-render.
 - **Timeline:** every state write, newest first. It shows the component, the state and what changed; for arrays and objects that is the changed path, for example `todos [1].done false → true`. Writes that came from the URL, another tab or undo/redo get a badge. Errors appear here too. You can filter, pause and clear it, and set a state back to its value before a write.
+  - **Time travel:** the slider above the list moves the whole app back and forth through the recorded writes. While you are back in time, the bar turns amber; **Back to live** replays the rest. Replayed writes don't add history, aren't persisted or put in the URL, and aren't logged.
+- **Graph:** the dependency graph of the selected component (or of the stores): its states and deriveds, what they read on the left and what reads them on the right, ending with the components that render them. Hover a node to trace its edges, and click a node of another component to select it.
 - **Perf:** counts of components, signals, flushes and component updates; flush times (last, average, slowest) with a chart of the recent ones; and the components that update most.
 - **Stores:** states and deriveds created outside components (in a shared module, for example) are listed under ◆ Stores at the top of the tree. Only those created after the first `mount()` are tracked. Objects made with `store()` aren't listed yet; log `snapshot(todos)` to inspect one.
 
@@ -2032,7 +2035,7 @@ In development mode, the browser console has a `__KEENO_DEVTOOLS__` object (the 
 
 - `__KEENO_DEVTOOLS__.print()` prints the mounted component tree as collapsible groups, with each component's current props.
 - `__KEENO_DEVTOOLS__.tree()` returns the same tree as data: `{ name, props, children }[]`.
-- `components()` returns it with ids, files and update counts. `details(id)` returns a component's props and states, and `set(stateId, value)` writes a state. `log()` returns the state timeline, `stats()` the performance counters, and `subscribe(fn)` reports every flush and write.
+- `components()` returns it with ids, files and update counts. `details(id)` returns a component's props and states, and `set(stateId, value)` writes a state. `log()` returns the state timeline, `stats()` the performance counters, and `subscribe(fn)` reports every flush and write. `travel(seq)` shows the app as it was after a logged write (`travel(null)` goes back to live), `deps(id)` lists what a signal reads and what reads it, and `graph(componentId)` returns a component's dependency graph as `{ nodes, edges }`.
 
 Outside Vite, turn on development mode with `globalThis.__KEENO_DEV__ = true` before mounting.
 

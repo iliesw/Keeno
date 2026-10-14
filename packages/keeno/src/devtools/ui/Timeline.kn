@@ -1,17 +1,34 @@
 <script lang="ts">
-  // The Timeline tab: state writes and errors, newest first.
+  // The Timeline tab: state writes and errors, newest first, and time travel over the writes.
   import IconButton from './IconButton.kn'
   import TimelineEvent from './TimelineEvent.kn'
   import { preview, type DevEvent } from '../shared'
 
-  const { events, paused, query, onQuery, onPause, onClear } = props<{
+  const { events, paused, query, travel, onQuery, onPause, onClear, onTravel } = props<{
     events: DevEvent[]
     paused: boolean
     query: string
+    /** The write the app shows while time travelling, or null when live. */
+    travel: number | null
     onQuery: (q: string) => void
     onPause: () => void
     onClear: () => void
+    onTravel: (seq: number | null) => void
   }>()
+
+  /** The writes, oldest first: the steps of the time travel slider. */
+  const steps = derived(() =>
+    events
+      .filter((e) => e.type === 'write')
+      .map((e) => e.seq)
+      .reverse(),
+  )
+  /** How many writes are applied: steps.length when live. */
+  const position = derived(() => (travel === null ? steps.length : steps.indexOf(travel) + 1))
+  const goTo = (i: number) => {
+    const n = Math.max(0, Math.min(steps.length, i))
+    onTravel(n === steps.length ? null : n === 0 ? 0 : steps[n - 1])
+  }
 
   const shown = derived(() => {
     const q = query.trim().toLowerCase()
@@ -48,6 +65,27 @@
     </span>
     <IconButton icon="trash" title="Clear" onClick={() => onClear()} />
   </div>
+  {steps.length > 0 && (
+    <div class={['travel', travel !== null && 'detached']}>
+      <button class="btn step" title="Step back" disabled={position === 0} onClick={() => goTo(position - 1)}>‹</button>
+      <input
+        class="scrub"
+        type="range"
+        min="0"
+        max={steps.length}
+        value={position}
+        aria-label="Time travel"
+        onInput={(e) => goTo(Number((e.currentTarget as HTMLInputElement).value))}
+      />
+      <button class="btn step" title="Step forward" disabled={travel === null} onClick={() => goTo(position + 1)}>›</button>
+      <span class="small muted where">{travel === null ? 'live' : `${position} / ${steps.length}`}</span>
+      {travel !== null && (
+        <button class="btn live" onClick={() => onTravel(null)}>
+          Back to live
+        </button>
+      )}
+    </div>
+  )}
   <div class="timeline">
     {shown.slice(0, 300).map((e) => <TimelineEvent key={e.seq} event={e} />)}
     {shown.length === 0 && (
@@ -58,4 +96,10 @@
 
 <style>
   .timeline { flex: 1; overflow: auto; }
+  .travel { display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-bottom: 1px solid var(--border); flex: none; }
+  .travel.detached { background: rgba(242, 162, 13, 0.08); }
+  .scrub { flex: 1; min-width: 0; accent-color: var(--num); }
+  .step { height: 22px; padding: 0 8px; }
+  .where { min-width: 48px; text-align: right; }
+  .live { height: 22px; padding: 0 8px; }
 </style>
