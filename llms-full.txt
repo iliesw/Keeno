@@ -439,6 +439,7 @@ See [State options](state-options.md) for persistence, URL sync, undo/redo, vali
 | `history` | `number` | Keeps this many past values for `undo()` and `redo()`. |
 | `debounce` | `number` (ms) | Applies a write only after writes stop for this long. |
 | `throttle` | `number` (ms) | Applies at most one write per interval: the first one now, the last one at the end. |
+| `save` | `(next, prev, { signal }) => unknown` | Sends each change to a server. Writes apply at once and roll back if the save fails. |
 
 ## equals
 
@@ -519,6 +520,29 @@ update(() => {
 - **throttle:** the first write applies immediately, and later writes in the window collapse into one at the end.
 - **Inputs:** with `bind:value` the input keeps what the user types while a write is pending.
 - **Unmount:** pending writes are dropped when the component unmounts.
+
+## save
+
+`save` makes a state optimistic: a write shows at once, then `save(next, prev, { signal })` sends it. If the returned promise rejects, the state goes back to the last saved value and the error goes to the nearest `<ErrorBoundary>`.
+
+```html TodoList.kn
+<script lang="ts">
+  const todos = state<Todo[]>(initial, {
+    save: (next, prev, { signal }) =>
+      fetch('/api/todos', { method: 'PUT', body: JSON.stringify(next), signal }).then((r) => {
+        if (!r.ok) throw new Error('Could not save')
+      }),
+  })
+</script>
+
+<button onClick={() => todos.set([...todos, { id: Date.now(), title: 'New' }])}>Add</button>
+{pending(() => todos) && <small>Saving…</small>}
+```
+
+- **Concurrency:** a newer write aborts the older save (pass `signal` to `fetch`). Only the latest save decides the outcome.
+- **Server response:** resolve with a value to replace the state with it, for example the saved record with its new id. Resolving with `undefined` keeps the state as it is.
+- **pending:** `pending(() => todos)` is true while a save is in flight, and `bind:value` doesn't overwrite what the user is typing during it.
+- **Other options:** `save` runs after `debounce`/`throttle`, and also for `undo()`/`redo()`. Values loaded from storage, the URL or another tab don't trigger it.
 
 ---
 

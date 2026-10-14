@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
-import { createComputation, Owner, runWithOwner } from '../src/signal'
+import { createComputation, Owner, pending, runWithOwner } from '../src/signal'
 import { deepEqual, State, state } from '../src/state'
 
 const tick = () => Promise.resolve()
@@ -252,5 +252,91 @@ describe('options compose', () => {
 
   test('State instances keep working with the plain constructor', () => {
     expect(new State(1).get()).toBe(1)
+  })
+})
+
+describe('save', () => {
+  const deferred = <T = unknown>() => {
+    let resolve!: (v: T) => void
+    let reject!: (e: unknown) => void
+    const promise = new Promise<T>((a, b) => ((resolve = a), (reject = b)))
+    return { promise, resolve, reject }
+  }
+
+  test('applies the write at once and calls save with next, prev', () => {
+    const calls: unknown[] = []
+    const s = state(1, { save: (next, prev) => void calls.push([next, prev]) })
+    s.set(2)
+    expect(s.get()).toBe(2)
+    expect(calls).toEqual([[2, 1]])
+  })
+
+  test('rolls back to the last saved value when save rejects', async () => {
+    const d = deferred()
+    const errors: unknown[] = []
+    const owner = new Owner(null)
+    owner.onError = (e) => void errors.push(e)
+    const s = runWithOwner(owner, () => state('a', { save: () => d.promise }))
+    s.set('b')
+    expect(s.get()).toBe('b')
+    d.reject(new Error('nope'))
+    await tick()
+    await tick()
+    expect(s.get()).toBe('a')
+    expect((errors[0] as Error).message).toBe('nope')
+  })
+
+  test('a newer write aborts the older save and wins', async () => {
+    const first = deferred()
+    const second = deferred()
+    const signals: AbortSignal[] = []
+    const pendingSaves = [first, second]
+    const s = state(0, {
+      save: (_n, _p, { signal }) => {
+        signals.push(signal)
+        return pendingSaves.shift()!.promise
+      },
+    })
+    s.set(1)
+    s.set(2)
+    expect(signals[0].aborted).toBe(true)
+    first.reject(new Error('stale'))
+    await tick()
+    expect(s.get()).toBe(2)
+    second.resolve(undefined)
+    await tick()
+    expect(s.get()).toBe(2)
+  })
+
+  test('resolving with a value replaces the state', async () => {
+    const s = state({ id: 0, title: 'x' }, { save: async (next) => ({ ...next, id: 42 }) })
+    s.set({ id: 0, title: 'y' })
+    await tick()
+    await tick()
+    expect(s.get()).toEqual({ id: 42, title: 'y' })
+  })
+
+  test('pending() is true while saving', async () => {
+    const d = deferred()
+    const s = state(0, { save: () => d.promise })
+    const seen: boolean[] = []
+    const owner = new Owner(null)
+    runWithOwner(owner, () => createComputation(() => void seen.push(pending(() => s.get()))))
+    s.set(1)
+    await tick()
+    d.resolve(undefined)
+    await tick()
+    await tick()
+    expect(seen).toEqual([false, true, false])
+    owner.dispose()
+  })
+
+  test('undo saves too; remote writes do not', () => {
+    const calls: unknown[] = []
+    const s = state(1, { history: 5, save: (next) => void calls.push(next) })
+    s.set(2)
+    s.undo()
+    s._write(9, 'remote')
+    expect(calls).toEqual([2, 1])
   })
 })
