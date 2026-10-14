@@ -604,3 +604,28 @@ describe('raw text elements', () => {
     expect(() => body('<title><b>x</b>{y}</title>', 'const y = 1')).toThrow('<title> can only contain text')
   })
 })
+
+describe('islands (client=)', () => {
+  const src = (tag: string) =>
+    `<script lang="ts">\nimport Counter from '../components/Counter.kn'\nimport { Chart } from '/src/lib/charts.kn'\n</script>\n${tag}`
+  const island = (tag: string) => compile(src(tag), { filename: 'src/pages/index.kn', islands: true }).js
+
+  test('compiles to island() with the strategy and the module of the component', () => {
+    expect(island('<Counter client="visible" start={1} />')).toContain(
+      '_$island(Counter, {\n    start: 1\n  }, "visible", "/src/components/Counter.kn")',
+    )
+    expect(island('<Chart client="idle" />')).toContain('_$island(Chart, {}, "idle", "/src/lib/charts.kn#Chart")')
+  })
+
+  test('without the islands option, client= is dropped', () => {
+    const out = compile(src('<Counter client="load" />'), { filename: 'src/pages/index.kn' }).js
+    expect(out).toContain('_$createComponent(Counter, {})')
+    expect(out).not.toContain('client')
+  })
+
+  test('errors: unknown strategy, component not imported from a .kn file', () => {
+    expect(() => island('<Counter client="soon" />')).toThrow('use "load", "idle" or "visible"')
+    const local = '<script lang="ts">const Local = () => null</script>\n<Local client="load" />'
+    expect(() => compile(local, { filename: 'src/A.kn', islands: true })).toThrow('client="…" needs a component imported from a .kn file')
+  })
+})

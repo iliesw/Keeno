@@ -18,6 +18,11 @@ export interface CompileOptions {
   hmrId?: string
   /** Development build: name states for the dev tools and record the source file on the component. */
   dev?: boolean
+  /**
+   * Islands build: `<Comp client="load" | "idle" | "visible" />` renders as an island the browser
+   * hydrates on its own. Otherwise the `client` attribute is ignored.
+   */
+  islands?: boolean
 }
 
 export interface CompileResult {
@@ -94,6 +99,7 @@ function compileParts(source: string, parts: SplitResult, options: CompileOption
   const css = parts.style ? scopeStyle(parts.style.content, scope, filename) : ''
   const ctx = new CompileContext(filename, parts.style ? scope : null)
   if (options.dev) ctx.labels = []
+  ctx.islands = !!options.islands
   const name = componentName(filename)
 
   const file = buildComponentAst(parts, ctx, name)

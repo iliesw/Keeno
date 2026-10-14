@@ -1,15 +1,18 @@
 #!/usr/bin/env node
-// create-keeno [dir] [--template router|minimal] [--tailwind | --no-tailwind] [--install] [--force] [--yes]
+// create-keeno [dir] [--template router|minimal] [--render spa|ssr|ssg|islands] [--tailwind | --no-tailwind] [--install] [--force] [--yes]
 // Scaffolds a new Keeno project. Asks for anything not given on the command line (unless --yes or no TTY).
 import { spawnSync } from 'node:child_process'
 import path from 'node:path'
 import { createInterface } from 'node:readline/promises'
-import { isEmptyDir, scaffold, TEMPLATES, toPackageName, type Template } from './scaffold'
+import { isEmptyDir, RENDER_STRATEGIES, scaffold, TEMPLATES, toPackageName, type RenderStrategy, type Template } from './scaffold'
 
 const HELP = `Usage: create-keeno [dir] [options]
 
   dir                 where to create the project (default: asked, or keeno-app)
   -t, --template      ${Object.entries(TEMPLATES)
+    .map(([k, d]) => `${k}: ${d}`)
+    .join('\n                      ')}
+  -r, --render        how the router template renders: ${Object.entries(RENDER_STRATEGIES)
     .map(([k, d]) => `${k}: ${d}`)
     .join('\n                      ')}
   --tailwind          add Tailwind CSS (--no-tailwind to skip)
@@ -39,6 +42,7 @@ if (args.includes('-h') || args.includes('--help')) {
 let dirArg: string | undefined
 let template: Template | undefined
 let tailwind: boolean | undefined
+let render: RenderStrategy | undefined
 let install: boolean | undefined
 let force = false
 let yes = false
@@ -48,6 +52,12 @@ for (let i = 0; i < args.length; i++) {
     const value = a.includes('=') ? a.slice(a.indexOf('=') + 1) : args[++i]
     if (!value || !(value in TEMPLATES)) fail(`unknown template ${value ?? '(none)'}; use ${Object.keys(TEMPLATES).join(' or ')}`, 2)
     template = value as Template
+  } else if (a === '-r' || a === '--render' || a.startsWith('--render=')) {
+    const value = a.includes('=') ? a.slice(a.indexOf('=') + 1) : args[++i]
+    if (!value || !(value in RENDER_STRATEGIES)) {
+      fail(`unknown render strategy ${value ?? '(none)'}; use ${Object.keys(RENDER_STRATEGIES).join(', ')}`, 2)
+    }
+    render = value as RenderStrategy
   } else if (a === '--tailwind') tailwind = true
   else if (a === '--no-tailwind') tailwind = false
   else if (a === '--install') install = true
@@ -113,12 +123,14 @@ if (!force && !isEmptyDir(target)) {
   if (!proceed) fail(`${dir} is not empty (use --force to write into it)`)
 }
 template ??= yes ? 'router' : await select('Template', TEMPLATES)
+if (template === 'router') render ??= yes ? 'spa' : await select('Rendering', RENDER_STRATEGIES)
+else if (render && render !== 'spa') fail('--render needs the router template', 2)
 tailwind ??= await confirm('Add Tailwind CSS?', false)
 const pm = packageManager()
 install ??= await confirm(`Install dependencies with ${pm}?`, interactive)
 rl?.close()
 
-const { files } = scaffold(target, { name: toPackageName(target), template, tailwind })
+const { files } = scaffold(target, { name: toPackageName(target), template, tailwind, render })
 process.stdout.write(`\n${dim(`Created ${files.length} files in`)} ${target}\n`)
 
 if (install) {

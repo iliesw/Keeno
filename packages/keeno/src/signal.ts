@@ -272,6 +272,8 @@ let pendingReads: Derived<any>[] | null = null
 export interface AsyncRegistry {
   /** Next id for an async derived without a `key`. */
   next: number
+  /** Put before generated ids, so separately hydrated parts (islands) don't share them. */
+  prefix?: string
   /** The value the server sent under `id`, if any (hydration). */
   peek(id: string): { value: unknown } | undefined
   /** Called when a derived turns out to be async (its `_ssrId` is set). */
@@ -415,7 +417,7 @@ export class Derived<T> extends Signal<T> implements Listener {
       this._loading = new Cell(false)
       const r = findRegistry(this._owner)
       if (r) {
-        this._ssrId = this._key ?? `k${r.next++}`
+        this._ssrId = this._key ?? `${r.prefix ?? ''}k${r.next++}`
         r.created(this)
       }
       // A value the server sent: start with it instead of waiting.
@@ -490,7 +492,7 @@ export class Derived<T> extends Signal<T> implements Listener {
     // what it reads, with an aborted signal so a `fetch` given it never reaches the network.
     const r = findRegistry(this._owner)
     let seeded: { value: unknown } | undefined
-    if (r && !this._async && !this._initialized) seeded = r.peek(this._key ?? `k${r.next}`)
+    if (r && !this._async && !this._initialized) seeded = r.peek(this._key ?? `${r.prefix ?? ''}k${r.next}`)
     let controller: AbortController | null = null
     let next: T
     try {
