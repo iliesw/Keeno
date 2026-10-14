@@ -4,6 +4,7 @@
   import Footer from '../components/Footer.kn'
   import Icon from '../components/Icon.kn'
   import Navbar from '../components/Navbar.kn'
+  import Meta from '../components/Meta.kn'
   import ExampleExplorer from '../components/ExampleExplorer.kn'
   import HeroCanvas from '../components/HeroCanvas.kn'
   import HeroShowcase from '../components/HeroShowcase.kn'
@@ -15,10 +16,6 @@
   import compiled from '../snippets/Counter.kn?compiled'
   import source from '../snippets/Counter.kn?highlight'
   import { VERSION } from '../version'
-
-  init(() => {
-    document.title = 'Keeno · The compiled, signal-based UI framework'
-  })
 
   const INSTALL = 'bun add @inflector/keeno'
   const copied = state(false)
@@ -75,6 +72,7 @@
 
 </script>
 
+<Meta title="Keeno · The compiled, signal-based UI framework" />
 <Navbar narrow />
 <div class="relative w-full overflow-x-hidden" onClick={onContentClick}>
   <!-- Hero -->

@@ -592,3 +592,15 @@ describe('compile errors', () => {
     expect(loc('<script>let a = state(1); a = 2</script>')).toEqual({ line: 1, column: 26 })
   })
 })
+
+describe('raw text elements', () => {
+  test('text mixed with expressions in <title> becomes one text binding (no comment marker)', () => {
+    const out = body('<title>{page} · Blog</title>', "const page = state('a')")
+    expect(out).toContain('_$template("<title></title>")')
+    expect(out).toContain('_$insert(_el$1, () => `${page.get() ?? ""} · Blog`)')
+  })
+
+  test('elements inside <title> are an error', () => {
+    expect(() => body('<title><b>x</b>{y}</title>', 'const y = 1')).toThrow('<title> can only contain text')
+  })
+})

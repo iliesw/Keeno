@@ -2,6 +2,7 @@
   import Aside from '../components/Aside.kn'
   import CopyPage from '../components/CopyPage.kn'
   import Icon from '../components/Icon.kn'
+  import Meta from '../components/Meta.kn'
   import Navbar from '../components/Navbar.kn'
   import Pager from '../components/Pager.kn'
   import Sidebar from '../components/Sidebar.kn'
@@ -9,6 +10,7 @@
   import { onContentClick } from '../content'
   import { findPage, getDoc, loadDoc, nav, pages, sourcePath, type DocModule } from '../docs'
   import { GITHUB } from '../icons'
+  import { SITE, firstParagraph } from '../meta'
 
   const { params } = props<{ params: { slug?: string } }>()
 
@@ -30,7 +32,6 @@
   function sync() {
     const s = slug.peek()
     const p = page.peek()
-    if (p) document.title = `${p.title} · Keeno`
     const cached = getDoc(s)
     if (cached) {
       doc.set(cached)
@@ -46,6 +47,7 @@
 
 {page ? (
   <div>
+    <Meta title={`${page.title} · ${SITE}`} description={firstParagraph(raw)} />
     <Navbar />
     <div class="mx-auto flex min-h-screen max-w-400 justify-between gap-2 px-0 pt-24 md:gap-12 md:px-8">
       <aside class="sticky top-24 hidden max-h-[calc(100svh-7rem)] self-start overflow-x-hidden overflow-y-auto pr-2 pl-2 [scrollbar-width:none] hover:[scrollbar-width:thin] min-[1080px]:block">

@@ -2,13 +2,10 @@
   import { Link } from '@inflector/keeno-router'
   import Icon from '../components/Icon.kn'
   import Navbar from '../components/Navbar.kn'
+  import Meta from '../components/Meta.kn'
   import { logo } from '../icons'
   import { searchOpen } from '../search'
   import { VERSION } from '../version'
-
-  init(() => {
-    document.title = 'Not found · Keeno'
-  })
 
   const links = [
     { label: 'Quick start', href: '/docs/getting-started', icon: 'sparkles' as const },
@@ -17,6 +14,7 @@
   ]
 </script>
 
+<Meta title="Not found · Keeno" />
 <Navbar />
 <div class="relative flex min-h-svh w-full items-center justify-center overflow-hidden px-6">
   <div class="hero-grid pointer-events-none absolute inset-0"></div>

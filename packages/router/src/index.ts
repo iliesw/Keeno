@@ -1,6 +1,6 @@
 // Client-side router for Keeno: <Router>, <Link>, the `link` click handler, navigate() and useRoute().
 import { ErrorBoundary, State, createContext, derived, destroy, flush, inject, lazy, provide, untrack, type Children, type Component } from '@inflector/keeno'
-import { attr, callerScope, createComponent, insert, on, template } from '@inflector/keeno/internal'
+import { attr, callerScope, createComponent, insert, on, serverResponse, template } from '@inflector/keeno/internal'
 
 export type Params = Record<string, string>
 
@@ -454,6 +454,8 @@ export function Router(props: RouterProps): unknown {
         const status = errorStatus(error)
         const ErrorPage = errors[status]
         if (!ErrorPage) throw error
+        const response = serverResponse()
+        if (response) response.status = status
         resetError = reset
         return createComponent(
           ErrorPage,
@@ -473,8 +475,12 @@ export function Router(props: RouterProps): unknown {
   if (url == null) connectDevtools(routerBase, () => props.routes, info)
 
   const found = derived(() => !!matched.get())
+  const response = serverResponse()
   return () => {
-    if (!found.get()) return props.fallback ? untrack(props.fallback) : null
+    if (!found.get()) {
+      if (response) response.status = 404
+      return props.fallback ? untrack(props.fallback) : null
+    }
     return levels[0]()
   }
 }

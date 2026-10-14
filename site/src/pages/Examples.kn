@@ -4,6 +4,7 @@
   import Icon from '../components/Icon.kn'
   import LiveDemo from '../components/LiveDemo.kn'
   import Navbar from '../components/Navbar.kn'
+  import Meta from '../components/Meta.kn'
   import { categories, exampleComponent, examples } from '../examples'
 
   const filter = state<string>('All', { url: { param: 'category', replace: true } })
@@ -34,12 +35,9 @@
       handle?.destroy()
     }
   })
-
-  init(() => {
-    document.title = 'Examples · Keeno'
-  })
 </script>
 
+<Meta title="Examples · Keeno" description={`${examples.length} small Keeno apps, running live: state, lists, forms, async data, transitions, portals and more.`} />
 <Navbar />
 <main class="mx-auto w-full max-w-400 px-6 pt-32 md:px-10">
   <section class="animate-fade-up flex flex-col items-start gap-4">

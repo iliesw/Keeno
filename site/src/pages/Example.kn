@@ -3,11 +3,13 @@
   import Footer from '../components/Footer.kn'
   import Icon from '../components/Icon.kn'
   import LiveDemo from '../components/LiveDemo.kn'
+  import Meta from '../components/Meta.kn'
   import Navbar from '../components/Navbar.kn'
   import NotFound from './NotFound.kn'
   import { onContentClick } from '../content'
   import { exampleComponent, examples, findExample, getExampleFiles, loadExampleFiles, type SourceFile } from '../examples'
   import { GITHUB } from '../icons'
+  import { SITE } from '../meta'
 
   const { params } = props<{ params: { slug: string } }>()
 
@@ -35,19 +37,14 @@
     active.set('App.kn')
     run.set(0)
     loadFiles()
-    const e = example.peek()
-    if (e) document.title = `${e.title} · Examples · Keeno`
   }, [slug])
-  init(() => {
-    const e = example.peek()
-    if (e) document.title = `${e.title} · Examples · Keeno`
-  })
 
   const icon = (name: string) => (name.endsWith('.kn') ? '/icons/kn.svg' : name.endsWith('.css') ? '/icons/css.svg' : '/icons/typescript.svg')
 </script>
 
 {example ? (
   <main class="mx-auto w-full max-w-400 px-6 pt-28 md:px-10">
+    <Meta title={`${example.title} · Examples · ${SITE}`} description={example.description} />
     <Navbar />
     <nav class="flex items-center gap-2 text-sm text-neutral-500" aria-label="Breadcrumb">
       <Link href="/examples" class="hover:text-neutral-900 dark:hover:text-white">Examples</Link>
