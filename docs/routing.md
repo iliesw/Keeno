@@ -62,6 +62,101 @@ A route component receives `params`:
 - Clicks with a modifier key, a middle click, `target="_blank"`, `download` and links to other sites are left to the browser.
 - Query parameters synced with `state(v, { url: 'tab' })` follow navigation, including back and forward.
 
+## Loading data
+
+Give a route a `load` function and its component receives what it returns as `data`:
+
+```ts
+const routes: RouteDefinition[] = [
+  {
+    path: '/users/:id',
+    component: lazy(() => import('./User.kn')),
+    load: async ({ params, signal }) => {
+      const res = await fetch(`/api/users/${params.id}`, { signal })
+      if (res.status === 404) throw httpError(404)
+      return res.json() as Promise<{ name: string; email: string }>
+    },
+  },
+]
+```
+
+```html User.kn
+<script lang="ts">
+  import { Loading } from '@inflector/keeno'
+  const { data } = props<{ data: { name: string; email: string } }>()
+</script>
+
+<Loading fallback={() => <p>Loading…</p>}>
+  <h1>{data.name}</h1>
+  <p>{data.email}</p>
+</Loading>
+```
+
+- `load` starts as soon as the route matches, in parallel with the code of a `lazy()` page, so there is no request waterfall.
+- It receives `params`, `query` (a `URLSearchParams`), `path` and a `signal` to pass to `fetch`.
+- `data` works like an [async derived](reactivity.md#async-derived): read it inside `<Loading>`, and `pending(() => data)` is true while it loads. When only the params or the query string change, the page is kept and shows the previous data until the new data arrives. A hash change doesn't load it again.
+- An error thrown by `load` is thrown where the page reads `data`. Throw `httpError(404)` to show the route's 404 page.
+- Server rendering waits for `load`, and hydration uses the data the server sent instead of loading it again.
+- `staleTime: 10_000` on the route reuses a result for 10 seconds when navigating back to the same URL. By default, each visit loads again.
+- To read a database directly instead of calling an API, use a [server function](server-functions.md): `load: ({ params }) => getUser(params.id)`.
+
+### Queries
+
+`query(key, fn)` is the cache that route data uses. Use it for data that isn't tied to a route, inside an async `derived`:
+
+```ts
+import { query } from '@inflector/keeno-router'
+
+const user = derived(({ signal }) => query(['users', userId], () => fetch(`/api/users/${userId}`, { signal }).then((r) => r.json())))
+```
+
+- Reads of the same key share a request while it is in flight. `{ staleTime: ms }` also reuses the result for that long. Failures aren't cached.
+- Call `query()` before any `await` in the derived. The derived then runs again when the key is invalidated.
+- `invalidate()` marks every key stale, `invalidate(['users'])` marks the keys that start with `'users'`, and `invalidate((key) => …)` marks the keys a function accepts. Route data uses keys starting with `'route'`.
+- On the server nothing is cached, so concurrent requests never share data.
+
+### Actions
+
+`action(fn)` wraps a mutation. Calling it runs `fn`, and when `fn` succeeds it invalidates the cache, so the route data and queries on screen load again:
+
+```html EditUser.kn
+<script lang="ts">
+  import { action } from '@inflector/keeno-router'
+  const { data, params } = props<{ data: { name: string }; params: { id: string } }>()
+
+  const save = action(async (form: FormData) => {
+    const res = await fetch(`/api/users/${params.id}`, { method: 'PUT', body: form })
+    if (!res.ok) throw new Error('Could not save')
+  })
+</script>
+
+<form onSubmit={save.submit}>
+  <input name="name" value={data.name} />
+  <button disabled={save.pending}>{save.pending ? 'Saving…' : 'Save'}</button>
+  {save.error && <p class="error">{(save.error as Error).message}</p>}
+</form>
+```
+
+- `save(…)` returns a promise of what `fn` returns. `save.pending`, `save.result` and `save.error` are reactive. `save.reset()` clears the result and the error.
+- `save.submit` is a form `onSubmit` handler: it prevents the page load and calls the action with the form's `FormData`. Its errors stay in `save.error`.
+- `action(fn, { invalidate: [['users']] })` only invalidates those keys, and `{ invalidate: false }` invalidates nothing.
+
+## Prefetching
+
+`<Link prefetch>` loads the code and the `load` data of the page a link points to before the click, so the page shows at once:
+
+```html
+<Link href="/users/1" prefetch>Ada</Link>             <!-- on hover or focus -->
+<Link href="/pricing" prefetch="viewport">Pricing</Link>  <!-- once visible -->
+<Link href="/dashboard" prefetch="eager">Dashboard</Link> <!-- right away -->
+```
+
+- `prefetch` (or `prefetch="hover"`) starts when the pointer rests on the link for 50 ms, when it gets keyboard focus, or on touch.
+- `<Router prefetch="hover">` sets the default for every `<Link>`. A link can opt out with `prefetch="none"`.
+- A prefetched result is used by the next navigation to that URL within 30 seconds, whatever the route's `staleTime`.
+- `prefetch('/users/1')` does the same from code, for your own anchors or to warm up the likely next page.
+- Nothing is prefetched when the browser asks to save data (`navigator.connection.saveData`).
+
 ## View transitions
 
 `<Router viewTransition>` animates navigations with the browser's [View Transitions API](https://developer.mozilla.org/docs/Web/API/View_Transition_API): links, `navigate()`, and back and forward. By default the browser cross-fades the old page into the new one. Browsers without the API navigate as usual.

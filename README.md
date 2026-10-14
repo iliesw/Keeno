@@ -55,6 +55,7 @@ npm, pnpm and yarn work too. Continue with [Getting started](docs/getting-starte
 - **Templates:** conditionals, keyed lists, two-way `bind:value`, class arrays, spread props, and `use:` [directives](docs/directives.md) for reusable DOM behaviors.
 - **Scoped CSS** per component, with a `:global()` escape hatch, and first-class [Tailwind CSS](docs/styles.md#tailwind-css) (utilities in markup, `@apply` in `<style>`).
 - **Built-in components:** error boundaries, `<Loading>` for async data, `<Await>` for promises, `lazy()` code splitting, portals, state-preserving reparenting (native `moveBefore`), enter/leave transitions and `<Dynamic>`. See [Built-in components](docs/built-ins.md).
+- **Server functions:** `server(async (id) => db.find(id))` runs on the server and is called from the browser like a normal function, typed, with no API route to write. See [Server functions](docs/server-functions.md).
 - **Context**, server rendering that waits for async data and can stream (`renderToString`, `renderToStream`, `hydrate`), and a router with View Transitions.
 - **Tooling:** a Vite plugin with HMR, a VS Code extension with full TypeScript IntelliSense in `.kn` files, and `keeno-check` for type-checking in CI.
 
@@ -73,7 +74,7 @@ npm, pnpm and yarn work too. Continue with [Getting started](docs/getting-starte
 
 ## Documentation
 
-[Getting started](docs/getting-started.md) · [Components](docs/components.md) · [Reactivity](docs/reactivity.md) · [State options](docs/state-options.md) · [Templates](docs/templates.md) · [Directives](docs/directives.md) · [Styles](docs/styles.md) · [Context](docs/context.md) · [Built-in components](docs/built-ins.md) · [Routing](docs/routing.md) · [Server rendering](docs/ssr.md) · [Security](docs/security.md) · [Tooling](docs/tooling.md) · [API reference](docs/api.md) · [Versioning and support](docs/stability.md)
+[Getting started](docs/getting-started.md) · [Components](docs/components.md) · [Reactivity](docs/reactivity.md) · [State options](docs/state-options.md) · [Templates](docs/templates.md) · [Directives](docs/directives.md) · [Styles](docs/styles.md) · [Context](docs/context.md) · [Built-in components](docs/built-ins.md) · [Routing](docs/routing.md) · [Server functions](docs/server-functions.md) · [Server rendering](docs/ssr.md) · [Security](docs/security.md) · [Tooling](docs/tooling.md) · [API reference](docs/api.md) · [Versioning and support](docs/stability.md)
 
 [`llms.txt`](llms.txt) and [`llms-full.txt`](llms-full.txt) summarize the docs for AI assistants.
 

@@ -1,6 +1,9 @@
 // Client-side router for Keeno: <Router>, <Link>, the `link` click handler, navigate() and useRoute().
-import { ErrorBoundary, State, createContext, derived, destroy, flush, inject, lazy, provide, untrack, type Children, type Component } from '@inflector/keeno'
+import { ErrorBoundary, State, createContext, derived, destroy, flush, init, inject, lazy, provide, untrack, type Children, type Component, type Derived } from '@inflector/keeno'
 import { attr, callerScope, createComponent, insert, on, serverResponse, template } from '@inflector/keeno/internal'
+import { prefetchQuery, query, trackQuery } from './data'
+
+export { action, invalidate, query, type Action, type ActionOptions, type QueryContext, type QueryKey, type QueryOptions } from './data'
 
 export type Params = Record<string, string>
 
@@ -9,6 +12,26 @@ export interface RouteProps {
   /** Path parameters (`/users/:id` → `{ id }`); updates in place when only they change. */
   params: Params
 }
+
+/** Props passed to the component of a route with a `load` function. */
+export interface PageProps<T = unknown> extends RouteProps {
+  /** What the route's `load` returned. Read it inside `<Loading>`: it waits for the first result. */
+  data: T
+}
+
+/** What a route's `load` function receives. */
+export interface LoadContext {
+  params: Params
+  /** The URL's query string. */
+  query: URLSearchParams
+  /** The path, without the router's `base`. */
+  path: string
+  /** Aborted when the data is no longer needed: pass it to `fetch`. */
+  signal: AbortSignal
+}
+
+/** A route's data loader. Throw `httpError(404)` from it to show the route's 404 page. */
+export type LoadFunction<T = unknown> = (ctx: LoadContext) => T | Promise<T>
 
 export interface RouteDefinition {
   /**
@@ -28,6 +51,14 @@ export interface RouteDefinition {
    * errors are 500). Each receives `ErrorPageProps` and renders inside the route's layouts.
    */
   errors?: Record<number, Component<any>>
+  /**
+   * Load the page's data, passed to it as `data`. It starts as soon as the route matches,
+   * alongside the page's code, and runs again when the params or the query string change, or
+   * when `action()` or `invalidate()` marks it stale. Server rendering waits for it.
+   */
+  load?: LoadFunction
+  /** How long, in ms, a result of `load` is reused when navigating back to the same URL (default 0). */
+  staleTime?: number
 }
 
 /** Props passed to a layout. */
@@ -368,6 +399,21 @@ export interface RouterProps {
    * where the browser supports it. A navigation can opt out with `transition: false`.
    */
   viewTransition?: boolean
+  /**
+   * When `<Link>`s load the code and data of the page they point to, before the click (default
+   * `'none'`). A link's own `prefetch` prop overrides it. See `LinkProps.prefetch`.
+   */
+  prefetch?: PrefetchMode | boolean
+}
+
+/** The browser's <Router>: what `prefetch()` matches URLs against. */
+let browserRouter: { routes: () => RouteDefinition[] } | null = null
+
+/** The cache key of a route's data. */
+const dataKey = (r: RouteDefinition, path: string, search: string) => ['route', r.path, path + search]
+
+function runLoad(r: RouteDefinition, params: Params, path: string, search: string, signal: AbortSignal): unknown {
+  return r.load!({ params, query: new URLSearchParams(search), path, signal })
 }
 
 /**
@@ -415,6 +461,50 @@ export function Router(props: RouterProps): unknown {
   }
   provide(RouteContext, route)
   provide(BaseContext, routerBase)
+  provide(PrefetchContext, prefetchMode(untrack(() => props.prefetch)) ?? 'none')
+  if (url == null) {
+    const self = { routes: () => props.routes }
+    browserRouter = self
+    destroy(() => {
+      if (browserRouter === self) browserRouter = null
+    })
+  }
+
+  // What a route's data depends on: hash changes don't load it again.
+  const loadKey = derived(
+    () => {
+      const i = info.get()
+      return { r: i.matched, path: i.path, search: i.l.search, params: i.params }
+    },
+    { equals: (a, b) => a.r === b.r && a.path === b.path && a.search === b.search },
+  )
+  /** The data of `r`, loading now. Kept while only its params or query change (stale-while-revalidate). */
+  const routeData = (r: RouteDefinition): Derived<unknown> => {
+    // The last load, reused when the derived re-runs for nothing it depends on (a hash change).
+    let last: { sig: string; result: unknown } | null = null
+    const d = derived(async ({ signal }) => {
+      const k = loadKey.get()
+      // Another route matched: this page is about to go away.
+      if (k.r !== r) return new Promise(() => {})
+      // A server render always loads; the browser caches route data (which prefetch fills).
+      if (url != null) return runLoad(r, k.params, k.path, k.search, signal)
+      const key = dataKey(r, k.path, k.search)
+      const sig = trackQuery(key)
+      if (last?.sig === sig) return last.result
+      // Hydrating: the server sent the value.
+      if (signal.aborted) return new Promise(() => {})
+      const result = query(key, ({ signal }) => runLoad(r, k.params, k.path, k.search, signal), { staleTime: r.staleTime })
+      last = { sig, result }
+      return result
+    })
+    // Start now, in parallel with the page's code.
+    try {
+      d.peek()
+    } catch {
+      // Not ready yet, or failed: the page sees it when it reads `data`.
+    }
+    return d
+  }
 
   /** Props for the components of a route: `params` stays a getter, so it follows navigation. */
   const withParams = <T extends object>(extra: T): T & RouteProps =>
@@ -445,7 +535,10 @@ export function Router(props: RouterProps): unknown {
     reset?.()
   })
   const renderPage = (r: RouteDefinition) => {
-    const page = () => createComponent(r.component, withParams({}))
+    const data = r.load ? routeData(r) : null
+    const pageProps = () =>
+      data ? Object.defineProperty(withParams({}), 'data', { get: () => data.get(), enumerable: true }) : withParams({})
+    const page = () => createComponent(r.component, pageProps())
     const errors = r.errors
     if (!errors || !Object.keys(errors).length) return page()
     return createComponent(ErrorBoundary, {
@@ -528,9 +621,24 @@ export function useRoute(): Route {
 // ---------------------------------------------------------------------------
 // Link
 
+/** When a `<Link>` prefetches its page: on hover or focus, once visible, right away, or never. */
+export type PrefetchMode = 'hover' | 'viewport' | 'eager' | 'none'
+
+const PrefetchContext = createContext<PrefetchMode | null>(null, 'route-prefetch')
+
+function prefetchMode(m: PrefetchMode | boolean | undefined): PrefetchMode | undefined {
+  return m === true ? 'hover' : m === false ? 'none' : m
+}
+
 export interface LinkProps {
   /** App path (`/users/1`) or relative URL. */
   href: string
+  /**
+   * Load the page's code and its `load` data before the click: `'hover'` (or `true`) when the
+   * pointer rests on the link or it gets focus, `'viewport'` once it is visible, `'eager'` right
+   * away. Default: the `prefetch` prop of `<Router>`, else `'none'`.
+   */
+  prefetch?: PrefetchMode | boolean
   /** Replace the current history entry. */
   replace?: boolean
   /** Animate the navigation with the View Transitions API (default: `<Router viewTransition>`). */
@@ -569,7 +677,79 @@ export function Link(props: LinkProps): unknown {
     navigate(props.href, { replace: props.replace, transition: props.transition })
   })
   insert(a, () => props.children?.())
+  const mode = prefetchMode(untrack(() => props.prefetch)) ?? inject(PrefetchContext) ?? 'none'
+  if (!serverResponse()) prefetchOn(a, () => props.href, mode)
   return a
+}
+
+/** How long the pointer rests on a link before it prefetches. */
+const HOVER_DELAY = 50
+
+/** Prefetch the page `getHref()` points to when `mode` says, once per URL. */
+function prefetchOn(a: HTMLAnchorElement, getHref: () => string, mode: PrefetchMode) {
+  if (mode === 'none' || !hasWindow || (navigator as { connection?: { saveData?: boolean } }).connection?.saveData) return
+  let last: string | null = null
+  const go = () => {
+    const to = untrack(getHref)
+    if (to === last) return
+    last = to
+    prefetch(to).catch(() => {})
+  }
+  if (mode === 'hover') {
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const cancel = () => clearTimeout(timer)
+    on(a, 'pointerenter', () => {
+      cancel()
+      timer = setTimeout(go, HOVER_DELAY)
+    })
+    on(a, 'pointerleave', cancel)
+    on(a, 'focus', go)
+    on(a, 'touchstart', go)
+    destroy(cancel)
+    return
+  }
+  init(() => {
+    if (mode === 'eager' || typeof IntersectionObserver !== 'function') {
+      const idle = (globalThis as { requestIdleCallback?: (fn: () => void) => number }).requestIdleCallback
+      if (idle) idle(go)
+      else setTimeout(go, 0)
+      return
+    }
+    const io = new IntersectionObserver((entries) => {
+      if (!entries.some((e) => e.isIntersecting)) return
+      io.disconnect()
+      go()
+    })
+    io.observe(a)
+    return () => io.disconnect()
+  })
+}
+
+/**
+ * Load the code of the page `to` points to (an app path or a URL) and its `load` data, so that
+ * navigating there shows it right away. A navigation within 30 seconds uses the data. Matches
+ * against the routes of the `<Router>` on screen; does nothing for URLs outside the app.
+ */
+export async function prefetch(to: string): Promise<void> {
+  const router = browserRouter
+  if (!hasWindow || !router) return
+  const url = new URL(href(to), location.href)
+  const b = base.peek()
+  if (url.origin !== location.origin || !underBase(url.pathname, b)) return
+  const path = stripBase(url.pathname, b)
+  let params: Params = {}
+  const route = router.routes().find((r) => {
+    const p = matchPath(r, path)
+    if (p) params = p
+    return !!p
+  })
+  if (!route) return
+  const preload = (c: Component<any>) => (c as { preload?: () => Promise<unknown> }).preload?.()
+  await Promise.all([
+    preload(route.component),
+    ...(route.layouts ?? []).map(preload),
+    route.load && prefetchQuery(dataKey(route, path, url.search), ({ signal }) => runLoad(route, params, path, url.search, signal)),
+  ])
 }
 
 // ---------------------------------------------------------------------------
@@ -577,6 +757,11 @@ export function Link(props: LinkProps): unknown {
 
 /** A page module: loaded (`{ default }`) or a loader (`() => import('./page.kn')`). */
 export type PageModule = { default: Component<any> } | (() => Promise<{ default: Component<any> }>)
+
+/** A page's data module (`[id].load.ts`, which exports `load`): loaded, or a loader. */
+export type LoadModule = { load: LoadFunction } | (() => Promise<{ load: LoadFunction }>)
+
+const LOAD_FILE = /\.load\.[cm]?[jt]s$/
 
 interface Dir {
   path: string[]
@@ -624,7 +809,7 @@ function notFound(): never {
  *   for errors with that status thrown by a page (`throw httpError(403)`; other errors are 500).
  * - Other files starting with `_` are left out, so pages can keep their own components next to them.
  */
-export function pageRoutes(files: Record<string, PageModule>, dir = ''): RouteDefinition[] {
+export function pageRoutes(files: Record<string, PageModule | LoadModule>, dir = ''): RouteDefinition[] {
   const prefix = dir.replace(/\/+$/, '') + '/'
   const dirs = new Map<string, Dir>()
   const getDir = (key: string): Dir => {
@@ -632,8 +817,16 @@ export function pageRoutes(files: Record<string, PageModule>, dir = ''): RouteDe
     if (!d) dirs.set(key, (d = { path: key ? key.split('/').map(fileSegment) : [], errors: {} }))
     return d
   }
-  const pages: { dir: string; path: string[]; component: Component<any> }[] = []
+  const pages: { dir: string; path: string[]; component: Component<any>; load?: LoadFunction }[] = []
   const component = (m: PageModule) => (typeof m === 'function' ? lazy(m) : m.default)
+
+  // `users/[id].load.ts` loads the data of `users/[id].kn`.
+  const loads = new Map<string, LoadFunction>()
+  for (const file of Object.keys(files)) {
+    if (!file.startsWith(prefix) || !LOAD_FILE.test(file)) continue
+    const mod = files[file] as LoadModule
+    loads.set(file.replace(LOAD_FILE, '.kn'), typeof mod === 'function' ? async (ctx) => (await mod()).load(ctx) : mod.load)
+  }
 
   for (const file of Object.keys(files).sort()) {
     if (!file.startsWith(prefix) || !file.endsWith('.kn')) continue
@@ -642,13 +835,14 @@ export function pageRoutes(files: Record<string, PageModule>, dir = ''): RouteDe
     if (parts.some((p) => p.startsWith('_'))) continue
     const key = parts.join('/')
     const d = getDir(key)
-    const mod = files[file]
+    const mod = files[file] as PageModule
+    const load = loads.get(file)
     const error = ERROR_FILE.exec(name)
     if (name === '_layout') d.layout = component(mod)
     else if (error) d.errors[+error[1]] = component(mod)
-    else if (name === '_all') pages.push({ dir: key, path: [...d.path, '*'], component: component(mod) })
-    else if (name === 'index') pages.push({ dir: key, path: d.path, component: component(mod) })
-    else if (!name.startsWith('_')) pages.push({ dir: key, path: [...d.path, fileSegment(name)], component: component(mod) })
+    else if (name === '_all') pages.push({ dir: key, path: [...d.path, '*'], component: component(mod), load })
+    else if (name === 'index') pages.push({ dir: key, path: d.path, component: component(mod), load })
+    else if (!name.startsWith('_')) pages.push({ dir: key, path: [...d.path, fileSegment(name)], component: component(mod), load })
   }
 
   /** The directories from the root down to `key`. */
@@ -667,6 +861,7 @@ export function pageRoutes(files: Record<string, PageModule>, dir = ''): RouteDe
   const routes: (RouteDefinition & { fallback?: boolean })[] = pages.map((p) => ({
     path: '/' + p.path.join('/'),
     component: p.component,
+    ...(p.load && { load: p.load }),
     ...scope(p.dir),
   }))
   // A directory's 404 page catches the paths below it that no page matches.

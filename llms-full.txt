@@ -32,6 +32,7 @@ Rules that differ from React, Svelte and Vue, which models get wrong most often:
 - [Built-in components](docs/built-ins.md): ErrorBoundary, Loading, Await, lazy, Dynamic, Portal, reparentable, Transition
 - [Routing](docs/routing.md): @inflector/keeno-router: Router, Link, navigate, useRoute, View Transitions
 - [File-based routing](docs/file-routing.md): src/pages routes with the Vite plugin: layouts, 404/500 pages, httpError, virtual:keeno-pages
+- [Server functions](docs/server-functions.md): `server(async (…) => …)` runs on the server, called from the browser; the one rule, `.ts` files, errors, `getRequest()`, deploying with `createHandler()`
 - [Server rendering](docs/ssr.md): renderToString (waits for async deriveds and sends their values), renderToStream (streams `<Loading>` boundaries), hydrate, Vite SSR setup
 - [Security](docs/security.md): what is escaped, innerHTML, javascript: URLs, CSP
 - [Tooling](docs/tooling.md): Vite plugin, HMR, dev mode, VS Code extension, keeno-check, testing with `bun test`
@@ -1470,6 +1471,101 @@ A route component receives `params`:
 - Clicks with a modifier key, a middle click, `target="_blank"`, `download` and links to other sites are left to the browser.
 - Query parameters synced with `state(v, { url: 'tab' })` follow navigation, including back and forward.
 
+## Loading data
+
+Give a route a `load` function and its component receives what it returns as `data`:
+
+```ts
+const routes: RouteDefinition[] = [
+  {
+    path: '/users/:id',
+    component: lazy(() => import('./User.kn')),
+    load: async ({ params, signal }) => {
+      const res = await fetch(`/api/users/${params.id}`, { signal })
+      if (res.status === 404) throw httpError(404)
+      return res.json() as Promise<{ name: string; email: string }>
+    },
+  },
+]
+```
+
+```html User.kn
+<script lang="ts">
+  import { Loading } from '@inflector/keeno'
+  const { data } = props<{ data: { name: string; email: string } }>()
+</script>
+
+<Loading fallback={() => <p>Loading…</p>}>
+  <h1>{data.name}</h1>
+  <p>{data.email}</p>
+</Loading>
+```
+
+- `load` starts as soon as the route matches, in parallel with the code of a `lazy()` page, so there is no request waterfall.
+- It receives `params`, `query` (a `URLSearchParams`), `path` and a `signal` to pass to `fetch`.
+- `data` works like an [async derived](reactivity.md#async-derived): read it inside `<Loading>`, and `pending(() => data)` is true while it loads. When only the params or the query string change, the page is kept and shows the previous data until the new data arrives. A hash change doesn't load it again.
+- An error thrown by `load` is thrown where the page reads `data`. Throw `httpError(404)` to show the route's 404 page.
+- Server rendering waits for `load`, and hydration uses the data the server sent instead of loading it again.
+- `staleTime: 10_000` on the route reuses a result for 10 seconds when navigating back to the same URL. By default, each visit loads again.
+- To read a database directly instead of calling an API, use a [server function](server-functions.md): `load: ({ params }) => getUser(params.id)`.
+
+### Queries
+
+`query(key, fn)` is the cache that route data uses. Use it for data that isn't tied to a route, inside an async `derived`:
+
+```ts
+import { query } from '@inflector/keeno-router'
+
+const user = derived(({ signal }) => query(['users', userId], () => fetch(`/api/users/${userId}`, { signal }).then((r) => r.json())))
+```
+
+- Reads of the same key share a request while it is in flight. `{ staleTime: ms }` also reuses the result for that long. Failures aren't cached.
+- Call `query()` before any `await` in the derived. The derived then runs again when the key is invalidated.
+- `invalidate()` marks every key stale, `invalidate(['users'])` marks the keys that start with `'users'`, and `invalidate((key) => …)` marks the keys a function accepts. Route data uses keys starting with `'route'`.
+- On the server nothing is cached, so concurrent requests never share data.
+
+### Actions
+
+`action(fn)` wraps a mutation. Calling it runs `fn`, and when `fn` succeeds it invalidates the cache, so the route data and queries on screen load again:
+
+```html EditUser.kn
+<script lang="ts">
+  import { action } from '@inflector/keeno-router'
+  const { data, params } = props<{ data: { name: string }; params: { id: string } }>()
+
+  const save = action(async (form: FormData) => {
+    const res = await fetch(`/api/users/${params.id}`, { method: 'PUT', body: form })
+    if (!res.ok) throw new Error('Could not save')
+  })
+</script>
+
+<form onSubmit={save.submit}>
+  <input name="name" value={data.name} />
+  <button disabled={save.pending}>{save.pending ? 'Saving…' : 'Save'}</button>
+  {save.error && <p class="error">{(save.error as Error).message}</p>}
+</form>
+```
+
+- `save(…)` returns a promise of what `fn` returns. `save.pending`, `save.result` and `save.error` are reactive. `save.reset()` clears the result and the error.
+- `save.submit` is a form `onSubmit` handler: it prevents the page load and calls the action with the form's `FormData`. Its errors stay in `save.error`.
+- `action(fn, { invalidate: [['users']] })` only invalidates those keys, and `{ invalidate: false }` invalidates nothing.
+
+## Prefetching
+
+`<Link prefetch>` loads the code and the `load` data of the page a link points to before the click, so the page shows at once:
+
+```html
+<Link href="/users/1" prefetch>Ada</Link>             <!-- on hover or focus -->
+<Link href="/pricing" prefetch="viewport">Pricing</Link>  <!-- once visible -->
+<Link href="/dashboard" prefetch="eager">Dashboard</Link> <!-- right away -->
+```
+
+- `prefetch` (or `prefetch="hover"`) starts when the pointer rests on the link for 50 ms, when it gets keyboard focus, or on touch.
+- `<Router prefetch="hover">` sets the default for every `<Link>`. A link can opt out with `prefetch="none"`.
+- A prefetched result is used by the next navigation to that URL within 30 seconds, whatever the route's `staleTime`.
+- `prefetch('/users/1')` does the same from code, for your own anchors or to warm up the likely next page.
+- Nothing is prefetched when the browser asks to save data (`navigator.connection.saveData`).
+
 ## View transitions
 
 `<Router viewTransition>` animates navigations with the browser's [View Transitions API](https://developer.mozilla.org/docs/Web/API/View_Transition_API): links, `navigate()`, and back and forward. By default the browser cross-fades the old page into the new one. Browsers without the API navigate as usual.
@@ -1612,6 +1708,33 @@ Pages load on demand: each one is its own chunk, fetched the first time it is sh
 
 Link between pages with `<Link>` and `navigate()`, as described in [Routing](routing.md#navigation).
 
+### Page data
+
+A `.load.ts` file next to a page loads its data. It exports a `load` function, and the page receives what it returns as `data`:
+
+```ts users/[id].load.ts
+import { httpError, type LoadContext } from '@inflector/keeno-router'
+
+export async function load({ params, signal }: LoadContext) {
+  const res = await fetch(`/api/users/${params.id}`, { signal })
+  if (res.status === 404) throw httpError(404)
+  return res.json() as Promise<{ name: string }>
+}
+```
+
+```html users/[id].kn
+<script lang="ts">
+  import { Loading } from '@inflector/keeno'
+  const { data } = props<{ data: { name: string } }>()
+</script>
+
+<Loading fallback={() => <p>Loading…</p>}>
+  <h1>{data.name}</h1>
+</Loading>
+```
+
+The loader is its own chunk, fetched in parallel with the page's code. See [Loading data](routing.md#loading-data) for how `data` behaves, and for `action()` and prefetching.
+
 ## Layouts
 
 A `_layout.kn` receives `params` and `children`, and renders `{children}` where the page goes:
@@ -1728,6 +1851,154 @@ const routes: RouteDefinition[] = [
   { path: '/', component: Home, layouts: [Shell], errors: { 404: NotFound, 500: Oops } },
 ]
 ```
+
+---
+
+<!-- file: docs/server-functions.md -->
+
+# Server functions
+
+Wrap an async function in `server(…)` and it runs on the server. Call it like any other function. In the browser the call becomes a request, and the result comes back with its types. You don't write an API route, a `fetch` or JSON parsing.
+
+```html Post.kn
+<script lang="ts">
+  import { navigate } from '@inflector/keeno-router'
+  import { db } from '../db'   // only used inside server(): never sent to the browser
+
+  const { params } = props<{ params: { id: string } }>()
+
+  const getPost = server(async (id: string) => {
+    return db.posts.find(id)
+  })
+
+  const like = server(async (id: string) => {
+    return db.posts.increment(id, 'likes')   // the new count
+  })
+
+  const remove = server(async (id: string) => {
+    await db.posts.delete(id)
+  })
+
+  const post = derived(() => getPost(params.id))
+  const likes = state(0)
+
+  async function onLike() {
+    likes.set(await like(params.id))
+  }
+
+  async function onDelete() {
+    await remove(params.id)
+    navigate('/posts')
+  }
+</script>
+
+<Loading fallback={() => <p>Loading…</p>}>
+  <h1>{post.title}</h1>
+  <p>{post.body}</p>
+  <button onClick={onLike}>♥ {likes || post.likes}</button>
+  <button onClick={onDelete}>Delete</button>
+</Loading>
+```
+
+`server` needs no import in a `.kn` file, like `state` and `derived`. It works with the Vite plugin, in `vite dev` and in a production build.
+
+## The one rule
+
+A server function runs on the server, apart from the component. It can use:
+
+- its arguments,
+- imports,
+- module-level code in a `.ts` file,
+- globals (`process.env`, `fetch`, …).
+
+It can't use the component's variables (its states, props or local functions). Pass what it needs as arguments. If it does use one, the compiler tells you:
+
+```
+server() can't use `count`: it runs on the server, so pass it as an argument
+```
+
+Everything that only server functions use, such as the `db` import above, is left out of the browser bundle. That keeps database clients, secrets and Node-only modules on the server.
+
+## In `.ts` files
+
+Import `server` from `@inflector/keeno` and export the functions. Share them between components, or use them in a page's [`load`](routing.md#loading-data):
+
+```ts src/lib/posts.ts
+import { server } from '@inflector/keeno'
+import { db } from './db'
+
+export const getPost = server(async (id: string) => db.posts.find(id))
+export const listPosts = server(async () => db.posts.all())
+```
+
+```ts src/pages/posts/[id].load.ts
+import { getPost } from '../../lib/posts'
+
+export const load = ({ params }) => getPost(params.id)
+```
+
+During server rendering, a server function is called directly, with no request.
+
+## Arguments and results
+
+These can be JSON values, plus `Date`, `Map`, `Set`, `BigInt`, `undefined`, `NaN`, `Infinity`, `RegExp` and `URL`, nested anywhere. A single `FormData` argument is sent as a form, files included, which suits [`action()`](routing.md#actions):
+
+```ts
+const save = action(server(async (form: FormData) => { … }))
+```
+
+```html
+<form onSubmit={save.submit}>…</form>
+```
+
+Class instances arrive as plain objects. Functions, symbols and objects with cycles can't be sent.
+
+## Errors
+
+An error thrown by a server function is thrown where it was called, as a `ServerFunctionError` with the HTTP `status`:
+
+- `throw httpError(404)` (from `@inflector/keeno-router`), or any error with a numeric `status`, keeps its status and message. Thrown from a page's `load`, it shows that status's error page.
+- Any other error is a 500. Its message is sent in development only. In production the browser gets `Internal Server Error` and the server logs the error.
+
+## The request
+
+`getRequest()` from `@inflector/keeno/server` returns the incoming `Request`, for cookies and headers. `setHeader()` adds a header to the response:
+
+```ts
+import { getRequest, setHeader } from '@inflector/keeno/server'
+
+const login = server(async (name: string, password: string) => {
+  const session = await auth.login(name, password)
+  setHeader('set-cookie', `session=${session.id}; HttpOnly; Secure; SameSite=Lax; Path=/`)
+})
+
+const me = server(async () => {
+  const cookie = getRequest().headers.get('cookie')
+  return auth.userFromCookie(cookie)
+})
+```
+
+`getRequest()` also works while a page renders on the server (`renderStrategy: 'ssr'`).
+
+## Security
+
+- Each call is a `POST` to `/_keeno/fn/<id>` (under the app's `base`). Only the functions written with `server()` can be called.
+- Calls need a header that only the app sends, and a request from another site (a different `Origin`) is refused. A form or script on another site can't call them.
+- Anyone can call your server functions with any arguments, as with any API endpoint. Check that the user is allowed to do what is asked, and validate the arguments.
+
+## Deploying
+
+When the app has server functions, `vite build` writes the browser files to `dist/client` and a server bundle to `dist/server`, whatever the [render strategy](ssr.md#render-strategies). Serve both with `createHandler()`:
+
+```ts server.ts
+import { createServer } from 'node:http'
+import { createHandler } from '@inflector/vite-plugin-keeno/server'
+
+createServer(createHandler()).listen(3000)
+// or: Bun.serve({ fetch: createHandler().fetch })
+```
+
+The handler serves static files and answers server function calls. For pages, it renders them (`ssr`), serves the prerendered HTML (`ssg`, `islands`), or serves `index.html` (`spa`). `vite preview` does the same.
 
 ---
 
@@ -2220,25 +2491,42 @@ See [Built-in components](built-ins.md).
 renderToString(Component, props?, { timeout? }): Promise<string>   // waits for async deriveds; needs linkedom
 renderToStream(Component, props?, { timeout? }): ReadableStream<string>  // streams <Loading> boundaries
 renderToStringWith(document: Document, Component, props?): string
+getRequest(): Request                           // in a server function or a server render
+setHeader(name: string, value: string): void    // a header on the server function's response
 ```
 
 See [Server rendering](ssr.md).
 
+## Server functions
+
+```ts
+server<F extends (...args) => Promise<any>>(fn: F): F   // runs on the server; auto-imported in .kn
+ServerFunctionError                                     // what a failed call throws: message, status
+```
+
+See [Server functions](server-functions.md).
+
 ## Router (`@inflector/keeno-router`)
 
 ```ts
-Router            // props: routes, base?, url?, fallback?, viewTransition?
-Link              // props: href, replace?, transition?, activeClass?, exact?, class?, children
+Router            // props: routes, base?, url?, fallback?, viewTransition?, prefetch?
+Link              // props: href, replace?, transition?, prefetch?, activeClass?, exact?, class?, children
 navigate(to: string, options?: { replace?: boolean; state?: unknown; scroll?: boolean; transition?: boolean }): void
 useRoute(): { path, params, query: URLSearchParams, hash, matched }
 link(event: MouseEvent): void                 // onClick handler for your own <a>
 href(path: string): string                    // path with the router's base
 isActive(path: string, exact?: boolean): boolean
 matchPath(pattern: string, path: string): Record<string, string> | null
-// RouteDefinition: { path, component, layouts?: Component[], errors?: Record<number, Component> }
+// RouteDefinition: { path, component, layouts?: Component[], errors?: Record<number, Component>, load?, staleTime? }
+// load(ctx: { params, query: URLSearchParams, path, signal }): T | Promise<T>   → the page's `data` prop (PageProps<T>)
+prefetch(to: string): Promise<void>           // load a page's code and data before navigating
+// PrefetchMode: 'hover' | 'viewport' | 'eager' | 'none' (true = 'hover')
+query<T>(key: string | unknown[], fn: (ctx: { signal }) => T | Promise<T>, options?: { staleTime?: number }): Promise<T>
+invalidate(key?: string | unknown[] | ((key: unknown[]) => boolean)): void   // all keys, a prefix, or a filter
+action(fn, options?: { invalidate?: boolean | QueryKey[] }): Action   // callable; .pending, .result, .error, .submit, .reset()
 httpError(status: number, message?: string): HttpError   // throw it to show the status's error page
 errorStatus(error: unknown): number                      // error.status, else 500
-pageRoutes(files: Record<string, PageModule>, dir?: string): RouteDefinition[]   // from import.meta.glob
+pageRoutes(files: Record<string, PageModule | LoadModule>, dir?: string): RouteDefinition[]   // from import.meta.glob
 preloadRoute(routes: RouteDefinition[], url: string): Promise<void>             // before SSR / hydrate
 ```
 

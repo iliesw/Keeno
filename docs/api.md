@@ -125,25 +125,42 @@ See [Built-in components](built-ins.md).
 renderToString(Component, props?, { timeout? }): Promise<string>   // waits for async deriveds; needs linkedom
 renderToStream(Component, props?, { timeout? }): ReadableStream<string>  // streams <Loading> boundaries
 renderToStringWith(document: Document, Component, props?): string
+getRequest(): Request                           // in a server function or a server render
+setHeader(name: string, value: string): void    // a header on the server function's response
 ```
 
 See [Server rendering](ssr.md).
 
+## Server functions
+
+```ts
+server<F extends (...args) => Promise<any>>(fn: F): F   // runs on the server; auto-imported in .kn
+ServerFunctionError                                     // what a failed call throws: message, status
+```
+
+See [Server functions](server-functions.md).
+
 ## Router (`@inflector/keeno-router`)
 
 ```ts
-Router            // props: routes, base?, url?, fallback?, viewTransition?
-Link              // props: href, replace?, transition?, activeClass?, exact?, class?, children
+Router            // props: routes, base?, url?, fallback?, viewTransition?, prefetch?
+Link              // props: href, replace?, transition?, prefetch?, activeClass?, exact?, class?, children
 navigate(to: string, options?: { replace?: boolean; state?: unknown; scroll?: boolean; transition?: boolean }): void
 useRoute(): { path, params, query: URLSearchParams, hash, matched }
 link(event: MouseEvent): void                 // onClick handler for your own <a>
 href(path: string): string                    // path with the router's base
 isActive(path: string, exact?: boolean): boolean
 matchPath(pattern: string, path: string): Record<string, string> | null
-// RouteDefinition: { path, component, layouts?: Component[], errors?: Record<number, Component> }
+// RouteDefinition: { path, component, layouts?: Component[], errors?: Record<number, Component>, load?, staleTime? }
+// load(ctx: { params, query: URLSearchParams, path, signal }): T | Promise<T>   → the page's `data` prop (PageProps<T>)
+prefetch(to: string): Promise<void>           // load a page's code and data before navigating
+// PrefetchMode: 'hover' | 'viewport' | 'eager' | 'none' (true = 'hover')
+query<T>(key: string | unknown[], fn: (ctx: { signal }) => T | Promise<T>, options?: { staleTime?: number }): Promise<T>
+invalidate(key?: string | unknown[] | ((key: unknown[]) => boolean)): void   // all keys, a prefix, or a filter
+action(fn, options?: { invalidate?: boolean | QueryKey[] }): Action   // callable; .pending, .result, .error, .submit, .reset()
 httpError(status: number, message?: string): HttpError   // throw it to show the status's error page
 errorStatus(error: unknown): number                      // error.status, else 500
-pageRoutes(files: Record<string, PageModule>, dir?: string): RouteDefinition[]   // from import.meta.glob
+pageRoutes(files: Record<string, PageModule | LoadModule>, dir?: string): RouteDefinition[]   // from import.meta.glob
 preloadRoute(routes: RouteDefinition[], url: string): Promise<void>             // before SSR / hydrate
 ```
 

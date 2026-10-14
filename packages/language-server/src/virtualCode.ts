@@ -18,7 +18,7 @@ import { split, type SplitResult } from '@inflector/keeno-compiler/split'
 import type { CodeInformation, CodeMapping, VirtualCode } from '@volar/language-core'
 import type * as TS from 'typescript'
 
-const KEENO_APIS = ['state', 'derived', 'store', 'props', 'init', 'update', 'destroy', 'ref']
+const KEENO_APIS = ['state', 'derived', 'store', 'props', 'init', 'update', 'destroy', 'ref', 'server']
 
 export const FEATURES: CodeInformation = {
   completion: true,

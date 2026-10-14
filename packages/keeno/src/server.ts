@@ -7,6 +7,10 @@ import { PORTAL_OUTLET } from './control'
 import { SERVER_RESPONSE, serverHead, type ServerResponse } from './head'
 import { insert, setDocument } from './dom'
 import { Owner, flush, installAsyncRegistry, runWithOwner, type Derived, type LoadingBoundary } from './signal'
+// @ts-ignore: this package is typed without Node's types; only the server loads this module.
+import { AsyncLocalStorage as NodeAsyncLocalStorage } from 'node:async_hooks'
+import { decode, encode } from './serialize'
+import { SERVER_FN_PATH } from './server-fn'
 
 let shared: Document | undefined
 
@@ -271,4 +275,111 @@ function isInside(b: LoadingBoundary, ancestor: LoadingBoundary): boolean {
 
 function escapeText(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
+// ---------------------------------------------------------------------------
+// Server functions
+
+interface RequestScope {
+  request: Request
+  headers: Headers
+}
+
+const requests: { getStore(): RequestScope | undefined; run<T>(store: RequestScope, fn: () => T): T } = new NodeAsyncLocalStorage()
+
+/**
+ * The request being handled: in a server function, or while a page renders on the server. Throws
+ * anywhere else.
+ */
+export function getRequest(): Request {
+  const scope = requests.getStore()
+  if (!scope) throw new Error('[keeno] getRequest() only works in a server function or a server render')
+  return scope.request
+}
+
+/** Add a header to the response of the server function being called: `setHeader('set-cookie', …)`. */
+export function setHeader(name: string, value: string): void {
+  const scope = requests.getStore()
+  if (!scope) throw new Error('[keeno] setHeader() only works in a server function')
+  scope.headers.append(name, value)
+}
+
+/** @internal Run `fn` with `request` as the one `getRequest()` returns. */
+export function withRequest<T>(request: Request, fn: () => T, headers: Headers = new Headers()): T {
+  return requests.run({ request, headers }, fn)
+}
+
+/** A module's server functions by index (`$$serverFns`), loaded on demand, by module id. */
+export type ServerFunctionModules = Record<string, () => Promise<{ $$serverFns?: Record<string, unknown> }>>
+
+export interface ServerFunctionOptions {
+  /** The app's base path (default `/`). */
+  base?: string
+  /** Development: send error messages and stacks to the browser. */
+  dev?: boolean
+}
+
+const statusOf = (error: unknown): number => {
+  const status = (error as { status?: unknown } | null)?.status
+  return typeof status === 'number' && status >= 100 && status <= 599 ? status : 500
+}
+
+const json = (status: number, body: unknown, headers: Headers = new Headers()) => {
+  headers.set('content-type', 'application/json')
+  headers.set('cache-control', 'no-store')
+  return new Response(JSON.stringify(encode(body)), { status, headers })
+}
+
+/**
+ * @internal Answer a call to a server function (`POST {base}_keeno/fn/<module>/<index>`), or
+ * return null when `request` isn't one.
+ */
+export async function handleServerFunction(
+  request: Request,
+  modules: ServerFunctionModules,
+  options: ServerFunctionOptions = {},
+): Promise<Response | null> {
+  const url = new URL(request.url)
+  const prefix = (options.base ?? '/') + SERVER_FN_PATH
+  if (!url.pathname.startsWith(prefix)) return null
+  if (request.method !== 'POST') return json(405, { message: 'Server functions are called with POST' })
+  // Only the app's own pages call them: a form or script on another site can't.
+  const origin = request.headers.get('origin')
+  if (request.headers.get('x-keeno-fn') !== '1' || (origin && origin !== url.origin)) return json(403, { message: 'Forbidden' })
+
+  const [moduleId, index, extra] = url.pathname.slice(prefix.length).split('/')
+  const load = moduleId && !extra && Object.hasOwn(modules, moduleId) ? modules[moduleId] : undefined
+  const fns = load ? (await load()).$$serverFns : undefined
+  const fn = fns && index && Object.hasOwn(fns, index) ? fns[index] : undefined
+  if (typeof fn !== 'function') return json(404, { message: 'No such server function' })
+
+  let args: unknown[]
+  try {
+    const type = request.headers.get('content-type') ?? ''
+    if (type.startsWith('multipart/form-data') || type.startsWith('application/x-www-form-urlencoded')) args = [await request.formData()]
+    else {
+      const text = await request.text()
+      args = text ? (decode(JSON.parse(text)) as unknown[]) : []
+      if (!Array.isArray(args)) throw new Error('not an array')
+    }
+  } catch {
+    return json(400, { message: 'Invalid arguments' })
+  }
+
+  const headers = new Headers()
+  try {
+    const result = await withRequest(request, () => fn(...args), headers)
+    return json(200, result, headers)
+  } catch (error) {
+    const status = statusOf(error)
+    if (status >= 500) console.error(error)
+    const message = error instanceof Error ? error.message : String(error)
+    return json(
+      status,
+      options.dev
+        ? { message, stack: error instanceof Error ? error.stack : undefined }
+        : { message: status >= 500 ? 'Internal Server Error' : message },
+      headers,
+    )
+  }
 }

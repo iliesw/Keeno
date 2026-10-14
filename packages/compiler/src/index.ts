@@ -2,12 +2,14 @@
 import * as t from '@babel/types'
 import { CompileContext, RUNTIME, generate } from './context'
 import { analyze, buildComponentAst, findAutoImports, inferUpdateDeps, rewrite } from './script'
+import { extractServerFunctions } from './server-fn'
 import { split, type SplitResult } from './split'
 import { scopeStyle } from './style'
 import { compileTemplates } from './template'
 
 export { split } from './split'
 export { scopeStyle } from './style'
+export { transformServerFunctions, SERVER_FNS } from './server-fn'
 
 export interface CompileOptions {
   /** Used for the scope hash, the component name, error messages and source maps. */
@@ -23,6 +25,11 @@ export interface CompileOptions {
    * hydrates on its own. Otherwise the `client` attribute is ignored.
    */
   islands?: boolean
+  /**
+   * The server build: `server(fn)` functions are kept and exported in `$$serverFns`. Otherwise
+   * they become stubs that call the server, and what only they used is left out.
+   */
+  ssr?: boolean
 }
 
 export interface CompileResult {
@@ -35,6 +42,8 @@ export interface CompileResult {
   scope: string
   /** Name of the generated component function. */
   name: string
+  /** Number of `server(fn)` functions in the component. */
+  serverFunctions: number
 }
 
 /** FNV-1a 32-bit hash as 8 hex characters. */
@@ -103,6 +112,7 @@ function compileParts(source: string, parts: SplitResult, options: CompileOption
   const name = componentName(filename)
 
   const file = buildComponentAst(parts, ctx, name)
+  const serverFns = extractServerFunctions(file, { ssr: !!options.ssr, id: hash(filename.replace(/\\/g, '/')) })
   analyze(file, ctx)
   inferUpdateDeps(file, ctx)
   rewrite(file, ctx)
@@ -161,11 +171,12 @@ function compileParts(source: string, parts: SplitResult, options: CompileOption
   const firstNonImport = program.body.findIndex((s) => !t.isImportDeclaration(s))
   program.body.splice(firstNonImport, 0, ...templates)
   program.body.unshift(...header)
+  if (serverFns.exports) program.body.push(serverFns.exports)
 
   const out = generate(
     file,
     { sourceMaps: true, sourceFileName: filename, retainLines: false, jsescOption: { minimal: true } },
     source,
   )
-  return { js: out.code, css, map: out.map, scope, name }
+  return { js: out.code, css, map: out.map, scope, name, serverFunctions: serverFns.count }
 }

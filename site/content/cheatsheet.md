@@ -179,7 +179,24 @@ mount(Pages, document.getElementById('app')!)
 
 Or let the plugin render them: `keeno({ renderStrategy: 'ssr' | 'ssg' | 'islands' })` with `start()` from `virtual:keeno-pages` in `src/main.ts`. With `islands`, `<Counter client="visible" />` is the only part that loads JavaScript.
 
+Data: a route's `load` (or a `[id].load.ts` file) passes `data` to the page, `query(key, fn)` caches, `action(fn)` mutates and revalidates, and `<Link prefetch>` loads the next page on hover.
+
+```ts
+const routes = [{ path: '/users/:id', component: User, load: ({ params, signal }) => getUser(params.id, signal) }]
+const save = action(async (form: FormData) => { … })   // save.pending, save.error, <form onSubmit={save.submit}>
+// <Link href="/users/1" prefetch>Ada</Link>, or <Router prefetch="hover"> for every link
+```
+
 More in [Routing](routing.md) and [File-based routing](file-routing.md).
+
+## Server functions
+
+```ts
+const getPost = server(async (id: string) => db.posts.find(id))   // runs on the server
+const post = derived(() => getPost(params.id))                     // called like any function
+```
+
+It can use its arguments and imports, not the component's variables. `getRequest()` and `setHeader()` from `@inflector/keeno/server` reach the request. More in [Server functions](server-functions.md).
 
 ## Mounting and server rendering
 
