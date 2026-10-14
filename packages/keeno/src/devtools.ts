@@ -70,13 +70,58 @@ export interface DevStats {
   top: { id: number; name: string; updates: number }[]
 }
 
+/** A route of a `<Router>`, as the router describes it (see `registerRouter`). */
+export interface DevRoute {
+  path: string
+  component: string
+  /** Layout names, outermost first. */
+  layouts: string[]
+  /** Statuses that have an error page. */
+  errors: number[]
+}
+
+/** Where a `<Router>` is, as the router describes it. */
+export interface DevLocation {
+  /** Path without the router's base. */
+  path: string
+  search: string
+  hash: string
+  params: Record<string, string>
+  /** The pattern of the matched route, or null. */
+  matched: string | null
+}
+
+export interface DevNavigation extends DevLocation {
+  seq: number
+  time: number
+}
+
+/** What `@inflector/keeno-router` hands the dev tools for each browser `<Router>`. */
+export interface DevRouterSource {
+  base: string
+  routes(): DevRoute[]
+  location(): DevLocation
+  navigate(to: string): void
+}
+
+export interface DevRouter {
+  id: number
+  base: string
+  routes: DevRoute[]
+  location: DevLocation
+  /** Navigations since the router mounted, oldest first. */
+  history: DevNavigation[]
+}
+
 export type DevMessage =
   | { type: 'flush'; ms: number; rendered: number[] }
   | { type: 'write' | 'error'; event: DevEvent }
   | { type: 'tree' }
+  | { type: 'route' }
 
 const LOG_LIMIT = 500
 const RECENT_LIMIT = 80
+const HISTORY_LIMIT = 100
 
 /** Roots of the dev tools' own UI (see `mountDevtools`), which the dev tools ignore. */
 export const internalRoots = new WeakSet<Owner>()
@@ -357,9 +402,54 @@ export function installDevtools(roots: Set<Owner>, legacy: Record<string, unknow
     return out.filter((n) => n.isConnected)
   }
 
+  const routers = new Map<number, { source: DevRouterSource; history: DevNavigation[] }>()
+  let nextRouter = 1
+  let navSeq = 0
+
   const api = {
     ...legacy,
     version: 2,
+    /**
+     * Called by each browser `<Router>`. Call `changed()` after every navigation, and `dispose()`
+     * when the router unmounts.
+     */
+    registerRouter(source: DevRouterSource): { changed(): void; dispose(): void } {
+      const id = nextRouter++
+      const entry = { source, history: [] as DevNavigation[] }
+      routers.set(id, entry)
+      const changed = () => {
+        let loc: DevLocation
+        try {
+          loc = untrack(() => source.location())
+        } catch {
+          return
+        }
+        const last = entry.history[entry.history.length - 1]
+        if (last && last.path === loc.path && last.search === loc.search && last.hash === loc.hash) return
+        entry.history.push({ ...loc, seq: ++navSeq, time: performance.now() })
+        if (entry.history.length > HISTORY_LIMIT) entry.history.shift()
+        emit({ type: 'route' })
+      }
+      changed()
+      return {
+        changed,
+        dispose() {
+          if (routers.delete(id)) emit({ type: 'route' })
+        },
+      }
+    },
+    routers(): DevRouter[] {
+      return [...routers].map(([id, { source, history }]) => ({
+        id,
+        base: source.base,
+        routes: untrack(() => source.routes()),
+        location: untrack(() => source.location()),
+        history: history.slice(),
+      }))
+    },
+    navigate(router: number, to: string) {
+      routers.get(router)?.source.navigate(to)
+    },
     components: tree,
     details,
     nodes,

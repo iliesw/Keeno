@@ -1,6 +1,6 @@
 # Built-in components
 
-`@inflector/keeno` exports a few components for things plain markup can't express: catching errors, waiting for async data and promises, loading code on demand, rendering elsewhere in the page, setting the document's title and meta tags, moving live content around without re-creating it, and animating elements in and out. Import them like any component.
+`@inflector/keeno` exports a few components for things plain markup can't express: catching errors, waiting for async data and promises, loading code on demand, rendering elsewhere in the page, setting the document's title and meta tags, rendering long lists, moving live content around without re-creating it, and animating elements in and out. Import them like any component.
 
 ## ErrorBoundary
 
@@ -158,6 +158,30 @@ Use `Chart` like any other component. `Chart.preload()` starts loading earlier, 
 - **Static tags:** a `<title>` already in `index.html` is a default. It is replaced while a `<Head>` sets one, and restored after.
 - **Conditionals:** put them around the `<Head>` (`{draft && <Head>…</Head>}`) or inside it.
 - **Server rendering:** the tags are collected into `context.head` instead (see [Server rendering](ssr.md#head-and-status)). On hydration the client replaces them with its own.
+
+## Virtual
+
+`<Virtual>` renders a long list inside a scrolling box, and only creates the rows in view (plus a few around them). Use it for thousands of rows:
+
+```html Logs.kn
+<script lang="ts">
+  import { Virtual } from '@inflector/keeno'
+  const lines = state<Line[]>([])
+</script>
+
+<Virtual each={lines} itemHeight={24} key={(l) => l.id} class="h-96">
+  {(line, i) => <LogLine line={line} number={i + 1} />}
+</Virtual>
+```
+
+- **Height:** give the box a height with `class` or `style`. It scrolls inside itself.
+- **itemHeight:** one number for every row, or a function `(item, index) => px` for rows of different heights. Each row is wrapped in a `<div>` of that height.
+- **Rows:** the child is a function of the item and its index, called once per row. Rows that stay in view keep their DOM and state while you scroll. A row is created again when its key's item or its index changes.
+- **key:** the identity of an item (default: the item itself), as for keyed lists.
+- **overscan:** rows rendered above and below the visible ones (default 4).
+- **Store arrays:** `each={todos.items}` follows in-place changes such as `push`.
+- **Scrolling from code:** `ref={(list) => (handle = list)}` receives `{ scrollTo(index, behavior?), element }`.
+- **Server rendering:** the server renders the rows that fit in `initialHeight` (default 600 px).
 
 ## reparentable
 

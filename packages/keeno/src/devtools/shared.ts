@@ -1,9 +1,9 @@
 // Shared by the dev tools panel components (ui/*.kn): the API they read, the actions context,
 // value formatting and diffing, and page geometry.
 import { createContext, inject } from '../context'
-import type { DevComponent, DevDetails, DevEvent, DevMessage, DevSignal, DevStats } from '../devtools'
+import type { DevComponent, DevDetails, DevEvent, DevMessage, DevNavigation, DevRoute, DevRouter, DevSignal, DevStats } from '../devtools'
 
-export type { DevComponent, DevDetails, DevEvent, DevMessage, DevSignal, DevStats }
+export type { DevComponent, DevDetails, DevEvent, DevMessage, DevNavigation, DevRoute, DevRouter, DevSignal, DevStats }
 
 export interface Api {
   version: number
@@ -22,10 +22,12 @@ export interface Api {
   resetStats(): void
   subscribe(fn: (m: DevMessage) => void): () => void
   expose(id: number, log?: boolean): void
+  routers(): DevRouter[]
+  navigate(router: number, to: string): void
 }
 
 
-export type Tab = 'components' | 'timeline' | 'perf'
+export type Tab = 'components' | 'timeline' | 'router' | 'perf'
 
 export interface Prefs {
   open: boolean
@@ -137,6 +139,7 @@ export const ICONS = {
   revert: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>',
   edit: '<path d="M4 20h4L19 9l-4-4L4 16z"/>',
   reset: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>',
+  go: '<path d="M5 12h14M13 6l6 6-6 6"/>',
 }
 
 export type IconName = keyof typeof ICONS

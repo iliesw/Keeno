@@ -301,3 +301,52 @@ describe('view transitions', () => {
     expect(el.textContent).toBe('about')
   })
 })
+
+describe('dev tools', () => {
+  const devtools = () => (globalThis as any).__KEENO_DEVTOOLS__
+  function Home() {
+    return 'home'
+  }
+  function User() {
+    return 'user'
+  }
+  function Shell(p: { children: () => unknown }) {
+    return () => p.children()
+  }
+  function Missing() {
+    return 'missing'
+  }
+  const routes: RouteDefinition[] = [
+    { path: '/', component: Home },
+    { path: '/users/:id', component: User, layouts: [Shell], errors: { 404: Missing } },
+  ]
+
+  test('lists the routes, the location and the navigations, and navigates', async () => {
+    render(() => createComponent(Router, { routes }))
+    const mine = () => devtools().routers().at(-1)
+    expect(mine().routes).toEqual([
+      { path: '/', component: 'Home', layouts: [], errors: [] },
+      { path: '/users/:id', component: 'User', layouts: ['Shell'], errors: [404] },
+    ])
+    expect(mine().location).toEqual({ path: '/', search: '', hash: '', params: {}, matched: '/' })
+
+    navigate('/users/7?tab=posts#top')
+    await tick()
+    expect(mine().location).toEqual({ path: '/users/7', search: '?tab=posts', hash: '#top', params: { id: '7' }, matched: '/users/:id' })
+    expect(mine().history.map((n: any) => n.path)).toEqual(['/', '/users/7'])
+
+    devtools().navigate(mine().id, '/')
+    await tick()
+    expect(location.pathname).toBe('/')
+    expect(mine().history.length).toBe(3)
+  })
+
+  test('forgets a router when it unmounts', () => {
+    const before = devtools().routers().length
+    render(() => createComponent(Router, { routes }))
+    expect(devtools().routers().length).toBe(before + 1)
+    app!.destroy()
+    app = undefined
+    expect(devtools().routers().length).toBe(before)
+  })
+})

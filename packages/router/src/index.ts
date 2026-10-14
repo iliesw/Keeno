@@ -1,5 +1,5 @@
 // Client-side router for Keeno: <Router>, <Link>, the `link` click handler, navigate() and useRoute().
-import { ErrorBoundary, State, createContext, derived, flush, inject, lazy, provide, untrack, type Children, type Component } from '@inflector/keeno'
+import { ErrorBoundary, State, createContext, derived, destroy, flush, inject, lazy, provide, untrack, type Children, type Component } from '@inflector/keeno'
 import { attr, callerScope, createComponent, insert, on, serverResponse, template } from '@inflector/keeno/internal'
 
 export type Params = Record<string, string>
@@ -472,6 +472,8 @@ export function Router(props: RouterProps): unknown {
     })
   }
 
+  if (url == null) connectDevtools(routerBase, () => props.routes, info)
+
   const found = derived(() => !!matched.get())
   const response = serverResponse()
   return () => {
@@ -481,6 +483,39 @@ export function Router(props: RouterProps): unknown {
     }
     return levels[0]()
   }
+}
+
+/** A component's name, without the `Hot(...)` of its HMR wrapper. */
+const nameOf = (c: Component<any>) => ((c as any).__keenoHot ? c.name.replace(/^Hot\((.*)\)$/, '$1') : c.name) || 'Anonymous'
+
+/** Show the router in the dev tools' Router tab, when they are installed (`vite dev`). */
+function connectDevtools(
+  routerBase: string,
+  routes: () => RouteDefinition[],
+  info: { get(): { l: Loc; path: string; matched: RouteDefinition | null; params: Params }; onUpdate(fn: () => void): () => void },
+) {
+  const dev = (globalThis as any).__KEENO_DEVTOOLS__
+  if (typeof dev?.registerRouter !== 'function') return
+  const handle = dev.registerRouter({
+    base: routerBase,
+    routes: () =>
+      routes().map((r) => ({
+        path: r.path,
+        component: nameOf(r.component),
+        layouts: (r.layouts ?? []).map(nameOf),
+        errors: Object.keys(r.errors ?? {}).map(Number),
+      })),
+    location: () => {
+      const i = info.get()
+      return { path: i.path, search: i.l.search, hash: i.l.hash, params: i.params, matched: i.matched?.path ?? null }
+    },
+    navigate: (to: string) => navigate(to),
+  })
+  const off = info.onUpdate(() => handle.changed())
+  destroy(() => {
+    off()
+    handle.dispose()
+  })
 }
 
 /** The current route of the closest `<Router>` (call it while the component is created). */
