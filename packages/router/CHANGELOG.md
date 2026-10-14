@@ -1,5 +1,16 @@
 # @inflector/keeno-router
 
+## 0.6.0
+
+### Minor Changes
+
+- [#30](https://github.com/iliesw/Keeno/pull/30) [`bf81575`](https://github.com/iliesw/Keeno/commit/bf81575f7552a63f66e9680be9a374606d06ed48) Thanks [@iliesw](https://github.com/iliesw)! - Route data and prefetching. A route's `load` function (or a `[id].load.ts` file next to a file route) loads the page's data, passed to it as `data`, in parallel with its code. Server rendering waits for it and hydration reuses it. `query()` is a keyed cache that async deriveds re-run from on `invalidate()`, and `action()` wraps a mutation with reactive `pending`, `result` and `error`, then invalidates the cache so the data on screen loads again. `<Link prefetch="hover" | "viewport" | "eager">` (or `<Router prefetch>` for every link) and `prefetch(url)` load a page's code and data before the click.
+
+### Patch Changes
+
+- Updated dependencies [[`bf81575`](https://github.com/iliesw/Keeno/commit/bf81575f7552a63f66e9680be9a374606d06ed48)]:
+  - @inflector/keeno@0.8.0
+
 ## 0.5.0
 
 ### Minor Changes
