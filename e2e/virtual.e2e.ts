@@ -25,3 +25,12 @@ test('scrollTo through ref, list updates and row events', async ({ page }) => {
   await page.click('.prepend')
   await expect(page.locator('.row').first()).toHaveText('New')
 })
+
+test('a list that gets shorter while scrolled far down shows its last rows', async ({ page }) => {
+  await page.locator('.list').evaluate((el) => (el.scrollTop = 24 * 5000))
+  await expect(page.locator('.row', { hasText: /^Row 5000$/ })).toBeVisible()
+  await page.click('.shrink')
+  // 20 rows in a 240px box: the browser clamps the scroll, and rows 10-19 fill the box.
+  await expect(page.locator('.row', { hasText: /^Row 19$/ })).toBeVisible()
+  await expect(page.locator('.row', { hasText: /^Row 10$/ })).toBeVisible()
+})

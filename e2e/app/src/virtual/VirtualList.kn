@@ -8,6 +8,7 @@
 
 <button class="jump" onClick={() => list?.scrollTo(5000)}>Jump</button>
 <button class="prepend" onClick={() => rows.set([{ id: -1, label: 'New' }, ...rows])}>Prepend</button>
+<button class="shrink" onClick={() => rows.set(rows.slice(0, 20))}>Shrink</button>
 <p class="clicks">{clicks}</p>
 <Virtual each={rows} itemHeight={24} key={(r) => r.id} ref={(h) => (list = h)} class="list">
   {(row) => <button class="row" onClick={() => clicks.set(clicks + 1)}>{row.label}</button>}
