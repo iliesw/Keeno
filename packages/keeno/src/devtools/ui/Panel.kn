@@ -6,6 +6,7 @@
   import IconButton from './IconButton.kn'
   import Overlay from './Overlay.kn'
   import Perf from './Perf.kn'
+  import RouterTab from './Router.kn'
   import Timeline from './Timeline.kn'
   import {
     ActionsContext,
@@ -27,6 +28,7 @@
   const TABS: { id: Tab; label: string }[] = [
     { id: 'components', label: 'Components' },
     { id: 'timeline', label: 'Timeline' },
+    { id: 'router', label: 'Router' },
     { id: 'perf', label: 'Perf' },
   ]
 
@@ -116,6 +118,10 @@
   const stats = derived(() => {
     tick
     return prefs.open && prefs.tab === 'perf' ? api.stats() : null
+  })
+  const routers = derived(() => {
+    tick
+    return prefs.open && prefs.tab === 'router' ? api.routers() : []
   })
   const width = derived(() => liveWidth ?? prefs.width)
 
@@ -449,6 +455,7 @@
           onClear={clear}
         />
       )}
+      {prefs.tab === 'router' && <RouterTab routers={routers} />}
       {prefs.tab === 'perf' && <Perf stats={stats} />}
     </div>
   </div>

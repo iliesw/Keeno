@@ -9,12 +9,13 @@ import Components from "./Components";
 import IconButton from "./IconButton";
 import Overlay from "./Overlay";
 import Perf from "./Perf";
+import RouterTab from "./Router";
 import Timeline from "./Timeline";
 import { ActionsContext, DEFAULT_PREFS, STORES, getApi, rectOf, type Actions, type Box, type DevComponent, type DevEvent, type Prefs, type Tab, type TreeRow } from '../shared';
 const _tmpl$1 = _$template("<span class=\"fab-err keeno-a46bb142\"></span>");
 const _tmpl$2 = _$template("<button class=\"keeno-a46bb142\" title=\"Keeno dev tools (Alt+Shift+D)\"><span class=\"logo-mark keeno-a46bb142\"></span><span class=\"fab-name keeno-a46bb142\">Keeno</span></button>");
 const _tmpl$3 = _$template("<button class=\"keeno-a46bb142\" role=\"tab\"></button>");
-const _tmpl$4 = _$template("<div class=\"keeno-a46bb142\" role=\"dialog\" aria-label=\"Keeno dev tools\"><div class=\"resize keeno-a46bb142\"></div><header class=\"keeno-a46bb142\"><div class=\"logo keeno-a46bb142\"><span class=\"logo-mark keeno-a46bb142\"></span><span class=\"keeno-a46bb142\">Keeno</span></div><div class=\"tabs keeno-a46bb142\" role=\"tablist\"></div><div class=\"spacer keeno-a46bb142\"></div><!----><!----><!----></header><div class=\"body keeno-a46bb142\"><!----><!----></div></div>");
+const _tmpl$4 = _$template("<div class=\"keeno-a46bb142\" role=\"dialog\" aria-label=\"Keeno dev tools\"><div class=\"resize keeno-a46bb142\"></div><header class=\"keeno-a46bb142\"><div class=\"logo keeno-a46bb142\"><span class=\"logo-mark keeno-a46bb142\"></span><span class=\"keeno-a46bb142\">Keeno</span></div><div class=\"tabs keeno-a46bb142\" role=\"tablist\"></div><div class=\"spacer keeno-a46bb142\"></div><!----><!----><!----></header><div class=\"body keeno-a46bb142\"><!----><!----><!----></div></div>");
 export default function Panel($$props) {
   const api = getApi();
   const TABS: {
@@ -26,6 +27,9 @@ export default function Panel($$props) {
   }, {
     id: 'timeline',
     label: 'Timeline'
+  }, {
+    id: 'router',
+    label: 'Router'
   }, {
     id: 'perf',
     label: 'Perf'
@@ -124,6 +128,10 @@ export default function Panel($$props) {
   const stats = derived(() => {
     tick.get();
     return prefs.get().open && prefs.get().tab === 'perf' ? api.stats() : null;
+  });
+  const routers = derived(() => {
+    tick.get();
+    return prefs.get().open && prefs.get().tab === 'router' ? api.routers() : [];
   });
   const width = derived(() => liveWidth.get() ?? prefs.get().width);
 
@@ -392,6 +400,7 @@ export default function Panel($$props) {
     const _el$13 = _el$6.nextSibling;
     const _el$14 = _el$13.firstChild;
     const _el$15 = _el$14.nextSibling;
+    const _el$16 = _el$15.nextSibling;
     _$attr(_el$4, "class", () => ['panel', prefs.get().side === 'left' && 'left', (closing.get() || moving.get()) && 'closing'], "keeno-a46bb142");
     _$attr(_el$4, "style", () => `width:min(${width.get()}px, calc(100vw - ${2 * GAP}px))`);
     _$on(_el$5, "pointerdown", startResize);
@@ -467,6 +476,11 @@ export default function Panel($$props) {
       onPause: pause,
       onClear: clear
     }, "keeno-a46bb142")), _el$15);
+    _$insert(_el$13, _$and(() => prefs.get().tab === 'router', () => _$createComponent(RouterTab, {
+      get routers() {
+        return routers.get();
+      }
+    }, "keeno-a46bb142")), _el$16);
     _$insert(_el$13, _$and(() => prefs.get().tab === 'perf', () => _$createComponent(Perf, {
       get stats() {
         return stats.get();
