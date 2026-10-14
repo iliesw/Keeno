@@ -1,9 +1,9 @@
 // Shared by the dev tools panel components (ui/*.kn): the API they read, the actions context,
 // value formatting and diffing, and page geometry.
 import { createContext, inject } from '../context'
-import type { DevComponent, DevDetails, DevEvent, DevMessage, DevNavigation, DevRoute, DevRouter, DevSignal, DevStats } from '../devtools'
+import type { DevComponent, DevDeps, DevDetails, DevEvent, DevGraphNode, DevMessage, DevNavigation, DevRoute, DevRouter, DevSignal, DevStats } from '../devtools'
 
-export type { DevComponent, DevDetails, DevEvent, DevMessage, DevNavigation, DevRoute, DevRouter, DevSignal, DevStats }
+export type { DevComponent, DevDeps, DevDetails, DevEvent, DevGraphNode, DevMessage, DevNavigation, DevRoute, DevRouter, DevSignal, DevStats }
 
 export interface Api {
   version: number
@@ -24,10 +24,14 @@ export interface Api {
   expose(id: number, log?: boolean): void
   routers(): DevRouter[]
   navigate(router: number, to: string): void
+  travel(seq: number | null): void
+  traveling(): number | null
+  deps(id: number): DevDeps | null
+  graph(id: number | null): { nodes: DevGraphNode[]; edges: [string, string][] }
 }
 
 
-export type Tab = 'components' | 'timeline' | 'router' | 'perf'
+export type Tab = 'components' | 'timeline' | 'graph' | 'router' | 'perf'
 
 export interface Prefs {
   open: boolean

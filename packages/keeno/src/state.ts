@@ -33,8 +33,8 @@ export interface StateOptions<T> {
   save?: (next: T, prev: T, ctx: AsyncContext) => unknown
 }
 
-/** Where a write came from; decides which side effects run. */
-type Source = 'local' | 'remote' | 'url' | 'history' | 'rollback'
+/** Where a write came from; decides which side effects run. `devtools`: time travel (no side effects). */
+type Source = 'local' | 'remote' | 'url' | 'history' | 'rollback' | 'devtools'
 
 interface History<T> {
   limit: number
@@ -102,8 +102,8 @@ export class State<T> extends Signal<T> {
     this._value = value
     devHook?.write(this, old, value, source)
     this._notify(old, value)
-    if (this._persistKey && source !== 'remote') savePersisted(this)
-    if (this._url && source !== 'url') scheduleUrlWrite(this)
+    if (this._persistKey && source !== 'remote' && source !== 'devtools') savePersisted(this)
+    if (this._url && source !== 'url' && source !== 'devtools') scheduleUrlWrite(this)
     if (this._save) {
       if (source === 'local' || source === 'history') runSave(this, old)
       else if (source === 'remote') this._save.confirmed = value

@@ -1,0 +1,132 @@
+<script lang="ts">
+  // The Graph tab: the selected component's states and deriveds, what they read (left) and what
+  // reads them (right), as columns: a node sits one column after everything it reads.
+  import { useActions, type DevGraphNode } from '../shared'
+
+  const { graph, title, pulses } = props<{
+    graph: { nodes: DevGraphNode[]; edges: [string, string][] } | null
+    title: string
+    pulses: Record<number, number>
+  }>()
+  const { select } = useActions()
+
+  const COL = 150
+  const ROW = 34
+  const W = 120
+  const H = 24
+  const PAD = 12
+
+  const hovered = state<string | null>(null)
+
+  const layout = derived(() => {
+    if (!graph) return null
+    const incoming = new Map<string, string[]>()
+    for (const [from, to] of graph.edges) {
+      const list = incoming.get(to)
+      if (list) list.push(from)
+      else incoming.set(to, [from])
+    }
+    // Longest path from a node with no inputs (cycles can't happen: the graph is acyclic).
+    const depth = new Map<string, number>()
+    const depthOf = (id: string, seen: Set<string>): number => {
+      const known = depth.get(id)
+      if (known !== undefined) return known
+      if (seen.has(id)) return 0
+      seen.add(id)
+      let d = 0
+      for (const src of incoming.get(id) ?? []) d = Math.max(d, depthOf(src, seen) + 1)
+      depth.set(id, d)
+      return d
+    }
+    const columns: DevGraphNode[][] = []
+    for (const n of graph.nodes) (columns[depthOf(n.id, new Set())] ??= []).push(n)
+    const pos = new Map<string, { x: number; y: number; node: DevGraphNode }>()
+    columns.forEach((col, c) => col.forEach((node, r) => pos.set(node.id, { x: PAD + c * COL, y: PAD + r * ROW, node })))
+    const edges = graph.edges
+      .filter(([a, b]) => pos.has(a) && pos.has(b))
+      .map(([a, b]) => {
+        const p = pos.get(a)!
+        const q = pos.get(b)!
+        const x1 = p.x + W
+        const y1 = p.y + H / 2
+        const x2 = q.x
+        const y2 = q.y + H / 2
+        const mid = (x1 + x2) / 2
+        return { key: `${a}>${b}`, a, b, d: `M${x1},${y1} C${mid},${y1} ${mid},${y2} ${x2},${y2}` }
+      })
+    const rows = Math.max(1, ...columns.map((c) => c?.length ?? 0))
+    return {
+      nodes: [...pos.values()],
+      edges,
+      width: PAD * 2 + (columns.length - 1) * COL + W,
+      height: PAD * 2 + (rows - 1) * ROW + H,
+    }
+  })
+
+  const short = (s: string) => (s.length > 16 ? s.slice(0, 15) + '…' : s)
+  const lit = (a: string, b: string) => hovered !== null && (a === hovered || b === hovered)
+</script>
+
+<div class="view">
+  {!graph && <div class="empty">Select a component (or Stores) in the Components tab to see its dependency graph.</div>}
+  {layout && (
+    <div class="graph-wrap">
+      <div class="toolbar">
+        <span>{title}</span>
+        <span class="small muted">
+          {layout.nodes.length} nodes · {layout.edges.length} edges · reads flow left to right
+        </span>
+      </div>
+      {layout.nodes.length === 0 ? (
+        <div class="empty">This component has no states or deriveds.</div>
+      ) : (
+        <div class="canvas">
+          <svg width={layout.width} height={layout.height} viewBox={`0 0 ${layout.width} ${layout.height}`}>
+            {layout.edges.map((e) => (
+              <path key={e.key} class={['edge', lit(e.a, e.b) && 'lit']} d={e.d} />
+            ))}
+            {layout.nodes.map((p) => (
+              <g
+                key={p.node.id}
+                class={['node', p.node.kind, p.node.own && 'own', p.node.component !== null && !p.node.own && 'link']}
+                transform={`translate(${p.x},${p.y})`}
+                onMouseEnter={() => hovered.set(p.node.id)}
+                onMouseLeave={() => hovered.set(null)}
+                onClick={() => !p.node.own && p.node.component !== null && select(p.node.component, true)}
+              >
+                <title>
+                  {p.node.kind === 'component' ? `${p.node.label}: renders and effects` : p.node.label}
+                  {p.node.componentName && p.node.kind !== 'component' ? ` (${p.node.componentName})` : ''}
+                </title>
+                <rect width={W} height={H} rx="6" />
+                <text x="8" y="16">{short(p.node.kind === 'component' ? `<${p.node.label}>` : p.node.label)}</text>
+                {p.node.kind === 'component' && p.node.component !== null && (pulses[p.node.component] ?? 0) > 0 && (
+                  <text class="pulse" x={W - 8} y="16" text-anchor="end">
+                    {pulses[p.node.component]}
+                  </text>
+                )}
+              </g>
+            ))}
+          </svg>
+        </div>
+      )}
+    </div>
+  )}
+</div>
+
+<style>
+  .graph-wrap { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+  .canvas { flex: 1; overflow: auto; }
+  .edge { fill: none; stroke: var(--border-strong); stroke-width: 1.2; }
+  .edge.lit { stroke: var(--text); stroke-width: 1.6; }
+  .node rect { fill: var(--surface); stroke: var(--border); }
+  .node text { fill: var(--muted); font: 11px var(--mono); }
+  .node.own rect { stroke: var(--border-strong); }
+  .node.own text { fill: var(--text); }
+  .node.derived text { fill: var(--tag); }
+  .node.component text { fill: var(--bool); }
+  .node.store text { fill: var(--faint); font-style: italic; }
+  .node.link { cursor: pointer; }
+  .node.link:hover rect { fill: var(--hover); }
+  .node text.pulse { fill: var(--num); font-size: 10px; }
+</style>
