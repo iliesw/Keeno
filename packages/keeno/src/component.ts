@@ -153,12 +153,18 @@ function mountRoot<P extends Record<string, any>>(
  * inputs before this runs are not kept.
  */
 export function hydrate<P extends Record<string, any>>(Comp: Component<P>, target: Element, props: P = {} as P): MountedApp {
+  return hydrateWith(Comp, target, props)
+}
+
+/** @internal `hydrate`, with the id prefix of an island's async deriveds. */
+export function hydrateWith<P extends Record<string, any>>(Comp: Component<P>, target: Element, props: P, prefix?: string): MountedApp {
   const data = readServerData(target.ownerDocument)
   const fragment = target.ownerDocument.createDocumentFragment()
   while (target.firstChild) fragment.appendChild(target.firstChild)
   try {
     return mountRoot(Comp, target, props, false, {
       next: 0,
+      prefix,
       peek: (id) => (Object.hasOwn(data, id) ? { value: data[id] } : undefined),
       created: () => {},
     })

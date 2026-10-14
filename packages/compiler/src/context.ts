@@ -42,6 +42,8 @@ export class CompileContext {
   helpers = new Map<string, string>()
   /** Hoisted templates, keyed by html (prefixed with `svg:` for SVG fragments). */
   templates = new Map<string, { id: string; html: string; svg: boolean }>()
+  /** Islands build (see `CompileOptions.islands`). */
+  islands = false
   private uidCounts = new Map<string, number>()
 
   constructor(filename: string, scope: string | null) {

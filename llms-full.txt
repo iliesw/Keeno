@@ -1672,7 +1672,9 @@ Error pages receive `status`, `error`, `params` and `reset`:
 
 ## Server rendering
 
-Pass the request URL as `url`. Pages load on demand and rendering is synchronous, so load the page first with `preloadRoute()`, on the server and again in the browser before hydrating:
+The simplest setup is `keeno({ renderStrategy: 'ssr' })` (or `'ssg'` or `'islands'`) with `start()` in `src/main.ts`. See [Render strategies](ssr.md#render-strategies).
+
+To set it up yourself, pass the request URL as `url`. Pages load on demand and rendering is synchronous, so load the page first with `preloadRoute()`, on the server and again in the browser before hydrating:
 
 ```ts entry-server.ts
 import { renderToString } from '@inflector/keeno/server'
@@ -1739,7 +1741,87 @@ Keeno renders components to HTML on the server (Node, Bun or Deno) with `renderT
 bun add linkedom
 ```
 
+To have the Vite plugin set it all up, see [Render strategies](#render-strategies). The rest of this page is the manual setup.
+
 `renderToString` creates nodes with [linkedom](https://github.com/WebReflection/linkedom), a small server-side DOM, so it needs that package installed. It doesn't change any globals.
+
+## Render strategies
+
+With the [file router](file-routing.md), the Vite plugin can do the whole setup. Pick how pages render with one option:
+
+```ts
+// vite.config.ts
+import { defineConfig } from 'vite'
+import keeno from '@inflector/vite-plugin-keeno'
+
+export default defineConfig({ plugins: [keeno({ renderStrategy: 'ssr' })] })
+```
+
+```ts
+// src/main.ts
+import { start } from 'virtual:keeno-pages'
+
+start()
+```
+
+| `renderStrategy` | `vite dev` | `vite build` | In the browser |
+|---|---|---|---|
+| `'spa'` (default) | index.html | `dist/` | `start()` mounts the pages |
+| `'ssr'` | each request rendered and streamed | `dist/client` and `dist/server` | `start()` hydrates the page |
+| `'ssg'` | each request rendered | `dist/<path>/index.html` for every page | `start()` hydrates the page |
+| `'islands'` | each request rendered | `dist/<path>/index.html` for every page | only islands hydrate |
+
+- **Template:** `index.html` needs an app container, `<div id="app"></div>`. The page goes inside it, and the [`<Head>`](built-ins.md#head) tags go in `<head>` (they replace its `<title>`). The response status comes from the router: `404` for a missing page, or an error page's status.
+- **Styles:** component styles are linked in the page's `<head>`, so the page is styled before any JavaScript runs.
+- **Needs:** `linkedom` (`bun add linkedom`), and the file router (`useFileRouter`, on by default).
+
+### ssr in production
+
+`vite build` writes the browser files to `dist/client` and the server bundle to `dist/server`. `vite preview` serves them. For your own server, use `createHandler`:
+
+```js
+// server.js
+import { createServer } from 'node:http'
+import { createHandler } from '@inflector/vite-plugin-keeno/server'
+
+createServer(createHandler()).listen(3000)
+// or with Bun: Bun.serve({ port: 3000, fetch: createHandler().fetch })
+```
+
+It serves the files in `dist/client` (with long-lived caching for `assets/`) and renders every other GET request as a stream. It works as Connect or Express middleware too: `app.use(createHandler())`.
+
+### ssg
+
+`vite build` renders every page without parameters to HTML, plus a `404.html` when there is a [not-found page](file-routing.md#not-found-and-error-pages). List paths for routes with parameters in `prerender`:
+
+```ts
+keeno({ renderStrategy: 'ssg', prerender: ['/blog/hello', '/blog/world'] })
+// or a function: prerender: async () => (await getPosts()).map((p) => `/blog/${p.slug}`)
+```
+
+Any static host can serve `dist/`.
+
+### islands
+
+Pages are static HTML, built like `ssg`. Only components written with `client="…"` load their JavaScript, and each one hydrates on its own:
+
+```html index.kn
+<script lang="ts">
+  import Counter from '../components/Counter.kn'
+</script>
+
+<h1>Static heading</h1>
+<Counter client="visible" start={5} />
+```
+
+- **`client="load"`:** hydrate as soon as the page loads.
+- **`client="idle"`:** when the browser is idle.
+- **`client="visible"`:** when the component scrolls into view.
+- **Props** must be JSON data: functions and children can't be sent to the browser.
+- **Imports:** the component must be imported from a `.kn` file, which is what the browser loads.
+- **Context:** an island is its own app in the browser, so `inject()` doesn't see values provided by the page around it.
+- A page without islands ships no JavaScript at all.
+- With other strategies, `client` is ignored and the component renders as usual.
 
 ## Rendering
 

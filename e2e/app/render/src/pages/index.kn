@@ -1,0 +1,9 @@
+<script lang="ts">
+  import { Head, Loading } from '@inflector/keeno'
+  import Counter from '../components/Counter.kn'
+  const greeting = derived(async () => 'hello from the server')
+</script>
+
+<Head><title>Home · Site</title></Head>
+<Loading fallback="…"><h1 class="home">{greeting}</h1></Loading>
+<Counter client="visible" start={5} />

@@ -296,11 +296,54 @@ export class TemplateCompiler {
         throw this.error(`${attrName(attr)} is only supported on DOM elements`)
       }
     }
-    const props = this.propsExpression(node.openingElement.attributes, node.children)
+    const client = islandAttribute(node)
+    if (client && !ISLAND_STRATEGIES.has(client.strategy)) {
+      throw this.errorAt(client.attr, `client="${client.strategy}": use "load", "idle" or "visible"`)
+    }
+    const attributes = client ? node.openingElement.attributes.filter((a) => a !== client.attr) : node.openingElement.attributes
+    const props = this.propsExpression(attributes, node.children)
+    if (client && this.ctx.islands) {
+      return t.callExpression(this.ctx.helper('island'), [
+        componentRef(node.openingElement.name),
+        props,
+        t.stringLiteral(client.strategy),
+        t.stringLiteral(this.islandId(node)),
+      ])
+    }
     const args: t.Expression[] = [componentRef(node.openingElement.name), props]
     // Lets components that render their own elements (like the router's <Link>) apply our scoped styles.
     if (this.ctx.scope) args.push(t.stringLiteral(this.ctx.scope))
     return t.callExpression(this.ctx.helper('createComponent'), args)
+  }
+
+  /**
+   * Where the browser finds an island's component: the `.kn` file it is imported from, relative to
+   * the project root (`/src/Counter.kn`), plus `#name` for a named export.
+   */
+  private islandId(node: t.JSXElement): string {
+    const name = node.openingElement.name
+    const fail = () => this.errorAt(node, 'client="…" needs a component imported from a .kn file')
+    if (!t.isJSXIdentifier(name)) throw fail()
+    const binding = this.path.scope.getBinding(name.name)
+    const spec = binding?.path.node
+    const decl = binding?.path.parentPath?.node
+    if (!spec || !t.isImportDeclaration(decl) || !decl.source.value.endsWith('.kn')) throw fail()
+    let file = decl.source.value
+    if (file.startsWith('.')) {
+      const dir = this.ctx.filename.replace(/\\/g, '/').split('/').slice(0, -1)
+      for (const part of file.split('/')) {
+        if (part === '..') dir.pop()
+        else if (part !== '.') dir.push(part)
+      }
+      file = dir.join('/')
+    } else if (!file.startsWith('/')) throw fail()
+    if (!file.startsWith('/')) file = '/' + file
+    if (t.isImportDefaultSpecifier(spec)) return file
+    if (t.isImportSpecifier(spec)) {
+      const imported = t.isIdentifier(spec.imported) ? spec.imported.name : spec.imported.value
+      return imported === 'default' ? file : `${file}#${imported}`
+    }
+    throw fail()
   }
 
   // -------------------------------------------------------------------------
@@ -485,6 +528,17 @@ export class TemplateCompiler {
       [],
     )
   }
+}
+
+const ISLAND_STRATEGIES = new Set(['load', 'idle', 'visible'])
+
+/** A component's `client="…"` attribute (island strategy), when written with a string. */
+function islandAttribute(node: t.JSXElement): { attr: t.JSXAttribute; strategy: string } | null {
+  for (const attr of node.openingElement.attributes) {
+    if (!t.isJSXAttribute(attr) || attrName(attr) !== 'client' || !t.isStringLiteral(attr.value)) continue
+    return { attr, strategy: attr.value.value }
+  }
+  return null
 }
 
 /** Props passed as plain values (not getters): literals, functions and plain identifiers. */

@@ -21,6 +21,8 @@ interface Instance {
 export interface ServerResponse {
   heads: Instance[]
   status?: number
+  /** Islands rendered so far (each gets the next number). */
+  islands?: number
 }
 
 /** @internal Key, in a server render's root owner context, of its `ServerResponse`. */

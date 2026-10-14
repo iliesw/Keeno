@@ -52,6 +52,28 @@ describe('create-keeno', () => {
     expect(JSON.parse(files['package.json']!).devDependencies).toHaveProperty('@tailwindcss/vite')
   })
 
+  test('a render strategy sets renderStrategy and starts with start()', () => {
+    const ssr = projectFiles({ name: 'x', template: 'router', tailwind: false, render: 'ssr' })
+    expect(ssr['vite.config.ts']).toContain(`renderStrategy: 'ssr'`)
+    expect(ssr['src/main.ts']).toContain(`import { start } from 'virtual:keeno-pages'`)
+    expect(ssr['server.js']).toContain('createHandler()')
+    const pkg = JSON.parse(ssr['package.json']!)
+    expect(pkg.scripts.start).toBe('node server.js')
+    expect(pkg.dependencies).toHaveProperty('linkedom')
+
+    const islands = projectFiles({ name: 'x', template: 'router', tailwind: false, render: 'islands' })
+    expect(islands['src/pages/index.kn']).toContain('<Counter client="visible" />')
+    expect(islands['server.js']).toBeUndefined()
+
+    const spa = projectFiles({ name: 'x', template: 'router', tailwind: false })
+    expect(spa['vite.config.ts']).not.toContain('renderStrategy')
+    expect(JSON.parse(spa['package.json']!).dependencies).not.toHaveProperty('linkedom')
+  })
+
+  test('--render needs a known strategy', () => {
+    expect(run(tmp, 'x', '--yes', '--render', 'edge').code).toBe(2)
+  })
+
   test('the CLI writes a router project that keeno-check accepts', () => {
     const { code, out } = run(tmp, 'My App', '--yes')
     expect(code).toBe(0)

@@ -3,9 +3,10 @@
 import { defineConfig, devices } from '@playwright/test'
 import { PORTS } from './e2e/apps'
 
-const server = (cwd: string, port: number) => ({
+const server = (cwd: string, port: number, env: Record<string, string> = {}) => ({
   command: `bunx --bun vite --port ${port} --strictPort`,
   cwd,
+  env,
   url: `http://localhost:${port}/`,
   reuseExistingServer: !process.env.CI,
   timeout: 60_000,
@@ -31,5 +32,7 @@ export default defineConfig({
   webServer: [
     server('examples/todo', PORTS.todo),
     server('e2e/app', PORTS.fixtures),
+    server('e2e/app/render', PORTS.ssr, { KEENO_STRATEGY: 'ssr' }),
+    server('e2e/app/render', PORTS.islands, { KEENO_STRATEGY: 'islands' }),
   ],
 })

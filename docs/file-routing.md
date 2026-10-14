@@ -149,7 +149,9 @@ Error pages receive `status`, `error`, `params` and `reset`:
 
 ## Server rendering
 
-Pass the request URL as `url`. Pages load on demand and rendering is synchronous, so load the page first with `preloadRoute()`, on the server and again in the browser before hydrating:
+The simplest setup is `keeno({ renderStrategy: 'ssr' })` (or `'ssg'` or `'islands'`) with `start()` in `src/main.ts`. See [Render strategies](ssr.md#render-strategies).
+
+To set it up yourself, pass the request URL as `url`. Pages load on demand and rendering is synchronous, so load the page first with `preloadRoute()`, on the server and again in the browser before hydrating:
 
 ```ts entry-server.ts
 import { renderToString } from '@inflector/keeno/server'

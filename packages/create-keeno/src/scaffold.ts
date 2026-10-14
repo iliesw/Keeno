@@ -9,11 +9,21 @@ export const TEMPLATES = {
 } as const
 export type Template = keyof typeof TEMPLATES
 
+export const RENDER_STRATEGIES = {
+  spa: 'Render in the browser',
+  ssr: 'Render on the server for each request, then hydrate',
+  ssg: 'Render every page to static HTML at build time, then hydrate',
+  islands: 'Static HTML; only components marked client="…" load JavaScript',
+} as const
+export type RenderStrategy = keyof typeof RENDER_STRATEGIES
+
 export interface Options {
   /** package.json `name`. */
   name: string
   template: Template
   tailwind: boolean
+  /** The router template's `renderStrategy` (default `spa`). */
+  render?: RenderStrategy
   /** Version ranges of the Keeno packages, by package name (default: `keenoVersions()`). */
   versions?: Record<string, string>
 }
@@ -26,6 +36,7 @@ const VERSIONS = {
   typescript: '^5.6.3',
   tailwindcss: '^4.1.0',
   '@tailwindcss/vite': '^4.1.0',
+  linkedom: '^0.18.13',
 }
 
 /**
@@ -84,9 +95,12 @@ export function projectFiles(options: Options): Record<string, string> {
   const { name, template, tailwind } = options
   const v = options.versions ?? keenoVersions()
   const router = template === 'router'
+  const render: RenderStrategy = router ? options.render ?? 'spa' : 'spa'
 
   const dependencies: Record<string, string> = { '@inflector/keeno': v['@inflector/keeno'] }
   if (router) dependencies['@inflector/keeno-router'] = v['@inflector/keeno-router']
+  // Server rendering builds its DOM with linkedom.
+  if (render !== 'spa') dependencies.linkedom = VERSIONS.linkedom
   const devDependencies: Record<string, string> = {
     '@inflector/keeno-check': v['@inflector/keeno-check'],
     '@inflector/vite-plugin-keeno': v['@inflector/vite-plugin-keeno'],
@@ -103,7 +117,13 @@ export function projectFiles(options: Options): Record<string, string> {
     private: true,
     version: '0.0.0',
     type: 'module',
-    scripts: { dev: 'vite', build: 'vite build', preview: 'vite preview', check: 'keeno-check' },
+    scripts: {
+      dev: 'vite',
+      build: 'vite build',
+      preview: 'vite preview',
+      ...(render === 'ssr' ? { start: 'node server.js' } : {}),
+      check: 'keeno-check',
+    },
     dependencies: sortKeys(dependencies),
     devDependencies: sortKeys(devDependencies),
   }
@@ -111,7 +131,7 @@ export function projectFiles(options: Options): Record<string, string> {
   const files: Record<string, string> = {
     'package.json': JSON.stringify(pkg, null, 2) + '\n',
     '.gitignore': 'node_modules\ndist\n*.local\n.DS_Store\n',
-    'README.md': readme(name, router),
+    'README.md': readme(name, router, render),
     'index.html': `<!doctype html>
 <html lang="en">
   <head>
@@ -138,7 +158,7 @@ export function projectFiles(options: Options): Record<string, string> {
   "include": ["src", "vite.config.ts"]
 }
 `,
-    'vite.config.ts': viteConfig(router, tailwind),
+    'vite.config.ts': viteConfig(router, tailwind, render),
     'src/env.d.ts': `/// <reference types="vite/client" />
 ${router ? '/// <reference types="@inflector/vite-plugin-keeno/client" />\n' : ''}
 declare module '*.kn' {
@@ -146,7 +166,14 @@ declare module '*.kn' {
   export default Component
 }
 `,
-    'src/main.ts': router
+    'src/main.ts': router && render !== 'spa'
+      ? `import { start } from 'virtual:keeno-pages'
+import './app.css'
+
+// Pages come from the files in src/pages, rendered the way renderStrategy says (vite.config.ts).
+start()
+`
+      : router
       ? `import { mount } from '@inflector/keeno'
 import Pages from 'virtual:keeno-pages'
 import './app.css'
@@ -163,7 +190,14 @@ mount(App, document.getElementById('app')!)
     'src/app.css': (tailwind ? `@import 'tailwindcss';\n\n` : '') + GLOBAL_CSS,
   }
 
-  if (router) {
+  if (render === 'ssr') files['server.js'] = SERVER
+  if (render === 'islands') {
+    files['src/components/Counter.kn'] = COUNTER
+    files['src/pages/_layout.kn'] = LAYOUT
+    files['src/pages/index.kn'] = ISLAND_PAGE
+    files['src/pages/about.kn'] = ABOUT
+    files['src/pages/_404.kn'] = NOT_FOUND
+  } else if (router) {
     files['src/pages/_layout.kn'] = LAYOUT
     files['src/pages/index.kn'] = counterPage('Home')
     files['src/pages/about.kn'] = ABOUT
@@ -199,10 +233,11 @@ export function isEmptyDir(dir: string): boolean {
 
 const escapeHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
-function viteConfig(router: boolean, tailwind: boolean): string {
+function viteConfig(router: boolean, tailwind: boolean, render: RenderStrategy): string {
   const imports = [`import { defineConfig } from 'vite'`, `import keeno from '@inflector/vite-plugin-keeno'`]
   if (tailwind) imports.push(`import tailwindcss from '@tailwindcss/vite'`)
-  const plugins = [router ? `keeno({ useFileRouter: true, pages: './src/pages' })` : 'keeno()']
+  const strategy = render === 'spa' ? '' : `, renderStrategy: '${render}'`
+  const plugins = [router ? `keeno({ useFileRouter: true, pages: './src/pages'${strategy} })` : 'keeno()']
   if (tailwind) plugins.push('tailwindcss()')
   return `${imports.join('\n')}
 
@@ -212,7 +247,7 @@ ${router ? '  // File-based routing: each .kn file in src/pages is a route.\n' :
 `
 }
 
-function readme(name: string, router: boolean): string {
+function readme(name: string, router: boolean, render: RenderStrategy): string {
   return `# ${name}
 
 A [Keeno](https://github.com/iliesw/Keeno) app.
@@ -222,7 +257,7 @@ A [Keeno](https://github.com/iliesw/Keeno) app.
 | \`dev\` | Start the dev server |
 | \`build\` | Build for production into \`dist/\` |
 | \`preview\` | Serve the production build |
-| \`check\` | Type-check every \`.kn\` and \`.ts\` file |
+${render === 'ssr' ? '| \`start\` | Serve the production build with server rendering (\`server.js\`) |\n' : ''}| \`check\` | Type-check every \`.kn\` and \`.ts\` file |
 
 ${
   router
@@ -231,6 +266,33 @@ ${
 }
 `
 }
+
+const SERVER = `// Production server: static files from dist/client, pages rendered by dist/server (run \`vite build\` first).
+import { createServer } from 'node:http'
+import { createHandler } from '@inflector/vite-plugin-keeno/server'
+
+const port = Number(process.env.PORT ?? 3000)
+createServer(createHandler()).listen(port, () => console.log(\`http://localhost:\${port}\`))
+`
+
+const COUNTER = `<script lang="ts">
+  const { start = 0 } = props<{ start?: number }>()
+  const count = state(start)
+</script>
+
+<button type="button" onClick={() => count.set(count + 1)}>Clicked {count} times</button>
+`
+
+const ISLAND_PAGE = `<script lang="ts">
+  import Counter from '../components/Counter.kn'
+</script>
+
+<main>
+  <h1>Home</h1>
+  <p>This page is static HTML. Only the counter below loads JavaScript, when it scrolls into view.</p>
+  <Counter client="visible" />
+</main>
+`
 
 const GLOBAL_CSS = `:root {
   font-family: system-ui, sans-serif;

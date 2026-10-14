@@ -178,6 +178,8 @@ declare global {
     }
     interface IntrinsicAttributes {
       key?: any
+      /** With `renderStrategy: 'islands'`: hydrate this component on its own, at this moment. */
+      client?: 'load' | 'idle' | 'visible'
     }
     /** Parents write nested markup where components receive `children` as a render function. */
     type LibraryManagedAttributes<C, P> = 'children' extends keyof P ? KnComponentProps<P> : P

@@ -1,0 +1,8 @@
+<script lang="ts">
+  import { Head } from '@inflector/keeno'
+  const n = state(0)
+</script>
+
+<Head><title>About · Site</title></Head>
+<h1 class="about">About</h1>
+<button class="plain" onClick={() => n.set(n + 1)}>plain {n}</button>

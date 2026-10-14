@@ -1,0 +1,10 @@
+<script lang="ts">
+  const { start } = props<{ start: number }>()
+  const count = state(start)
+</script>
+
+<button class="counter" onClick={() => count.set(count + 1)}>count {count}</button>
+
+<style>
+  .counter { color: rgb(9, 8, 7) }
+</style>

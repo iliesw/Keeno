@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import path from 'node:path'
-import keeno from '../src/index'
+import keeno, { pagesModule, serverModule, staticPaths } from '../src/index'
+import { page, splitTemplate, withHead, withoutScripts } from '../src/server'
 
 const root = path.resolve(import.meta.dir, '../../../examples/todo')
 const file = path.join(root, 'src/TodoItem.kn').replaceAll('\\', '/')
@@ -142,5 +143,44 @@ describe('router', () => {
     expect(calls[0]).toBe('/app/src/main.ts')
     expect(calls[1]).toMatch(/vite-plugin-keeno/)
     expect(await p.resolveId.call(ctx, 'other', '/app/src/main.ts', {})).toBeUndefined()
+  })
+})
+
+describe('render strategies', () => {
+  test('start() mounts, hydrates or boots islands', () => {
+    expect(pagesModule('/src/pages')).toContain('return mount(Pages, el)')
+    expect(pagesModule('/src/pages', 'ssr')).toContain('return hydrate(Pages, el)')
+    expect(pagesModule('/src/pages', 'ssg')).toContain('await preloadRoute(routes')
+    const islands = pagesModule('/src/pages', 'islands')
+    expect(islands).toContain('return bootIslands(import.meta.glob(["/**/*.kn","!**/node_modules/**"]))')
+    expect(islands).not.toContain('pageRoutes')
+    // The server build of an islands app has the real pages.
+    expect(pagesModule('/src/pages', 'islands', true)).toContain('pageRoutes(')
+  })
+
+  test('the server module renders with a context for the head and status', () => {
+    const code = serverModule()
+    expect(code).toContain("import Pages, { routes } from 'virtual:keeno-pages'")
+    expect(code).toContain('renderToString(Pages, { url }, { context })')
+    expect(code).toContain('renderToStream(Pages, { url }, { context })')
+  })
+
+  test('only routes without parameters are prerendered by default', () => {
+    const routes = [{ path: '/' }, { path: '/about' }, { path: '/blog/:slug' }, { path: '*rest' }, { path: '/about' }]
+    expect(staticPaths(routes)).toEqual(['/', '/about'])
+  })
+
+  test('a strategy other than spa needs the file router', () => {
+    expect(() => keeno({ renderStrategy: 'ssr', useFileRouter: false })).toThrow('needs useFileRouter')
+  })
+
+  test('template helpers', () => {
+    const template = '<html><head><title>Old</title></head><body><div id="app"></div><script type="module" src="/a.js"></script></body></html>'
+    expect(splitTemplate(template)[0].endsWith('<div id="app">')).toBe(true)
+    expect(() => splitTemplate('<body></body>')).toThrow('app container')
+    expect(withHead('<head><title>Old</title></head>', '<title>New</title>')).toBe('<head><title>New</title>\n</head>')
+    expect(withoutScripts(template)).not.toContain('<script')
+    expect(page(template, '<p>static</p>', '', true)).not.toContain('<script')
+    expect(page(template, '<kn-island></kn-island>', '', true)).toContain('<script')
   })
 })

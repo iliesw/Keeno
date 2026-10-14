@@ -1,0 +1,16 @@
+<script lang="ts">
+  import { Head, type Children } from '@inflector/keeno'
+  import { Link } from '@inflector/keeno-router'
+  const { children } = props<{ children: Children }>()
+</script>
+
+<Head>
+  <title>Site</title>
+  <meta name="description" content="layout description" />
+</Head>
+<nav><Link href="/">Home</Link> <Link href="/about">About</Link></nav>
+<main>{children}</main>
+
+<style>
+  nav { color: rgb(1, 2, 3) }
+</style>
