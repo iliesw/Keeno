@@ -39,6 +39,7 @@ export {
   type LazyOptions,
 } from './control'
 export { Transition, type TransitionProps } from './transition'
+export { Virtual, type VirtualProps, type VirtualHandle } from './virtual'
 export { reparentable, keyedReparentable, type Reparentable, type KeyedReparentable } from './reparent'
 export { moveNode, type Directive } from './dom'
 export { Ref, ref, isRef, type RefTarget } from './ref'
