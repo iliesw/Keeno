@@ -4,7 +4,7 @@ import { describe, expect, test } from 'bun:test'
 import { readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { compile } from '../packages/compiler/src/index'
-import { buildFull, linkedDocs } from './build-llms'
+import { buildFull, buildReferences, linkedDocs, skillReferences } from './build-llms'
 
 const root = path.resolve(import.meta.dir, '..')
 const docs = readdirSync(path.join(root, 'docs')).filter((f) => f.endsWith('.md'))
@@ -18,6 +18,17 @@ describe('docs', () => {
 
   test('llms-full.txt is up to date (run `bun run docs:llms`)', () => {
     expect(read('llms-full.txt')).toBe(buildFull())
+  })
+
+  test('the skill references are up to date (run `bun run docs:llms`)', () => {
+    const copied = Object.fromEntries(readdirSync(skillReferences).map((f) => [f, read(path.relative(root, path.join(skillReferences, f)))]))
+    expect(copied).toEqual(buildReferences())
+  })
+
+  test('SKILL.md links every reference', () => {
+    const skill = read('claude-plugin/skills/keeno/SKILL.md')
+    const linked = [...skill.matchAll(/\]\(references\/([^)]+\.md)\)/g)].map((m) => m[1])
+    expect(linked.sort()).toEqual(docs.slice().sort())
   })
 
   // Fences written as ```html Name.kn are compiled.

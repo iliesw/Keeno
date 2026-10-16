@@ -1,0 +1,20 @@
+{
+  "name": "keeno",
+  "owner": {
+    "name": "iliesw",
+    "url": "https://github.com/iliesw"
+  },
+  "metadata": {
+    "description": "Claude Code plugins for Keeno, the compiled, signal-based frontend framework."
+  },
+  "plugins": [
+    {
+      "name": "keeno",
+      "source": "./claude-plugin",
+      "description": "Skill for writing Keeno apps: .kn components, reactivity, templates, routing, server functions and SSR.",
+      "category": "development",
+      "homepage": "https://keeno.inflector.io",
+      "license": "MIT"
+    }
+  ]
+}
