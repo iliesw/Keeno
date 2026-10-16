@@ -78,6 +78,16 @@ npm, pnpm and yarn work too. Continue with [Getting started](docs/getting-starte
 
 [`llms.txt`](llms.txt) and [`llms-full.txt`](llms-full.txt) summarize the docs for AI assistants.
 
+### Claude Code skill
+
+The `keeno` plugin gives Claude Code a skill with Keeno's rules and the full docs, so it writes `.kn` components correctly. Install it in Claude Code:
+
+```
+/plugin install keeno --marketplace iliesw/Keeno
+```
+
+On older Claude Code versions, add the marketplace first: `/plugin marketplace add iliesw/Keeno`, then `/plugin install keeno@keeno`. The skill lives in [`claude-plugin/`](claude-plugin); `bun run docs:llms` keeps its copy of the docs current.
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). Report security issues privately, as [docs/security.md](docs/security.md) describes.

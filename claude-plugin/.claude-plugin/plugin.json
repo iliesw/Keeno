@@ -1,0 +1,13 @@
+{
+  "name": "keeno",
+  "version": "0.1.0",
+  "description": "Skill for writing Keeno apps: .kn components, reactivity, templates, routing, server functions and SSR.",
+  "author": {
+    "name": "iliesw",
+    "url": "https://github.com/iliesw"
+  },
+  "homepage": "https://keeno.inflector.io",
+  "repository": "https://github.com/iliesw/Keeno",
+  "license": "MIT",
+  "keywords": ["keeno", "frontend", "signals", "kn", "skill"]
+}
