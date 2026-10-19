@@ -1,6 +1,8 @@
 // Drive the real language server over LSP (as an editor would) against the todo example.
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { startLanguageServer, type LanguageServerHandle } from '@volar/test-utils'
+import ts from 'typescript'
+import { componentName, generateScript } from '../src/virtualCode'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 
@@ -37,8 +39,8 @@ afterAll(async () => {
 
 let n = 0
 /** Open an in-memory .kn document next to the example (so `@inflector/keeno` resolves). Returns its URI and a position helper. */
-async function open(content: string) {
-  const uri = pathToFileURL(path.join(exampleSrc, `__test${n++}.kn`)).href
+async function open(content: string, file = `__test${n++}.kn`) {
+  const uri = pathToFileURL(path.join(exampleSrc, file)).href
   const doc = await server.openInMemoryDocument(uri, 'keeno', content.replace('|', ''))
   const at = content.indexOf('|')
   return { uri, pos: doc.positionAt(at < 0 ? 0 : at) }
@@ -227,6 +229,51 @@ describe('typed props', () => {
 
   test('without a type argument props stay untyped', async () => {
     const { uri } = await open(`<script lang="ts">\n  const { a } = props()\n  const n: number = a\n</script>`)
+    expect(await errors(uri)).toEqual([])
+  })
+})
+
+describe('component names', () => {
+  test('the default export is named after the file', () => {
+    expect(componentName('/src/TodoItem.kn')).toBe('TodoItem')
+    expect(componentName('C:\\src\\todo-item.kn')).toBe('TodoItem')
+    expect(componentName('/src/cards/index.kn')).toBe('Cards')
+    expect(componentName('/src/pages/_layout.kn')).toBe('Layout')
+    expect(componentName('/src/pages/[id].kn')).toBe('Id')
+    expect(componentName('/src/404.kn')).toBe('__KeenoComponent')
+    expect(componentName(undefined)).toBe('__KeenoComponent')
+  })
+
+  test('falls back when the code uses the name, but not for strings, comments or properties', () => {
+    const exported = (source: string, file: string) =>
+      /export default function (\w+)/.exec(generateScript(ts, source, undefined, file).text)![1]
+    expect(exported("<script lang=\"ts\">import { Icon } from 'lucide'</script>", '/src/Icon.kn')).toBe('__KeenoComponent')
+    expect(exported('<p>{Date.now()}</p>', '/src/Date.kn')).toBe('__KeenoComponent')
+    const typed = '<script lang="ts">\n  const { a } = props<{ a: string }>()\n  console.log(`[Item] ${a}`) // Item\n</script>\n<p data-x={a.Item}>Item</p>'
+    expect(exported(typed, '/src/Item.kn')).toBe('Item')
+  })
+
+  test('a component file completes as a tag by its name, with an auto-import', async () => {
+    // An on-disk page (in-memory test files sit outside the example's tsconfig project) that
+    // doesn't import TodoItem.kn.
+    // The import goes on the line after the script's last import, or on the script's first line.
+    const cases: [string, number][] = [
+      ["import { Link } from '@inflector/keeno-router'\n  console.log(Link)", 2],
+      ['const a = 1', 1],
+    ]
+    for (const [script, line] of cases) {
+      const { uri, pos } = await open(`<script lang="ts">\n  ${script}\n</script>\n<div>\n  <TodoIt|\n</div>`, 'pages/about.kn')
+      const list = await server.sendCompletionRequest(uri, pos)
+      const item = list?.items.find((i) => i.label === 'TodoItem')
+      expect(item).toBeDefined()
+      const [edit] = (await server.sendCompletionResolveRequest(item!)).additionalTextEdits ?? []
+      expect(edit?.newText).toMatch(/import TodoItem from '\.\.\/TodoItem\.kn'/)
+      expect(edit?.range.start).toEqual({ line, character: 0 })
+    }
+  })
+
+  test('a component named like a global it uses still type-checks', async () => {
+    const { uri } = await open('<script lang="ts">\n  const t: number = Date.now()\n</script>\n<p>{t}</p>', 'Date.kn')
     expect(await errors(uri)).toEqual([])
   })
 })

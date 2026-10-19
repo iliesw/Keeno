@@ -2,7 +2,7 @@
 //
 //   <script> imports            -> module level (`from '@inflector/keeno'` becomes `from '@inflector/keeno/kn'`)
 //   auto-imported keeno APIs      -> `import { state, ... } from '@inflector/keeno/kn'` (editor typings)
-//   rest of <script>            -> body of `export default function __KeenoComponent($$props) { … }`
+//   rest of <script>            -> body of `export default function Name($$props) { … }`
 //   markup                      -> `return (<> … </>)` at the end of that body
 //
 // Typed props: when the script calls `props<P>()`, the body goes in `function __KeenoRender()`
@@ -10,6 +10,11 @@
 // body, where every type the script declares is in scope. The default export then takes
 // `KnComponentProps<P>`, read back through `ReturnType<typeof __KeenoRender>`. Without a type
 // argument, or in plain JS, props stay `Record<string, any>`.
+//
+// `Name` comes from the file (`todo-item.kn` -> `TodoItem`, `cards/index.kn` -> `Cards`), so
+// TypeScript offers the component under that name in completions and auto-imports. It falls
+// back to `__KeenoComponent` when the code already uses the name (an import, a declaration or
+// a global it would shadow).
 //
 // Source text is copied verbatim and mapped back, so TypeScript's completions, hovers,
 // diagnostics and go-to-definition land on the right spot in the .kn file. Parsing uses the
@@ -47,6 +52,11 @@ class Builder {
       data: FEATURES,
     })
     this.text += s
+  }
+
+  /** Map the current (empty) position to `sourceOffset`, so an edit inserted here lands there. */
+  point(sourceOffset: number) {
+    this.mappings.push({ sourceOffsets: [sourceOffset], generatedOffsets: [this.text.length], lengths: [0], data: FEATURES })
   }
 }
 
@@ -111,18 +121,98 @@ function propsTypeText(ts: typeof TS, sf: TS.SourceFile): string | undefined {
   return found
 }
 
+const FALLBACK_NAME = '__KeenoComponent'
+
+/** The component's name from its .kn file path (`todo-item.kn` -> `TodoItem`), or the fallback. */
+export function componentName(fileName: string | undefined): string {
+  if (!fileName) return FALLBACK_NAME
+  const parts = fileName.split(/[\\/]/).filter(Boolean)
+  let base = (parts.pop() ?? '').replace(/\.kn$/, '')
+  if (base === 'index') base = parts.pop() ?? ''
+  const name = base
+    .split(/[^A-Za-z0-9]+/)
+    .filter(Boolean)
+    .map((w) => w[0]!.toUpperCase() + w.slice(1))
+    .join('')
+  return /^[A-Z][A-Za-z0-9]*$/.test(name) ? name : FALLBACK_NAME
+}
+
+/**
+ * Whether the generated code references `name` other than as the default export's own name: an
+ * import or declaration (a clash) or a global (which the export would shadow). Property names,
+ * attribute names, strings and comments don't count.
+ */
+function referencesName(ts: typeof TS, text: string, name: string): boolean {
+  const sf = ts.createSourceFile('component.tsx', text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
+  let found = false
+  const visit = (node: TS.Node): void => {
+    if (found) return
+    if (ts.isIdentifier(node) && node.text === name) {
+      const parent = node.parent
+      const own =
+        (ts.isFunctionDeclaration(parent) && parent.name === node && parent.parent === sf) ||
+        (ts.isPropertyAccessExpression(parent) && parent.name === node) ||
+        (ts.isQualifiedName(parent) && parent.right === node) ||
+        ((ts.isPropertyAssignment(parent) ||
+          ts.isPropertySignature(parent) ||
+          ts.isPropertyDeclaration(parent) ||
+          ts.isMethodDeclaration(parent) ||
+          ts.isMethodSignature(parent)) &&
+          parent.name === node) ||
+        ((ts.isBindingElement(parent) || ts.isImportSpecifier(parent) || ts.isExportSpecifier(parent)) &&
+          parent.propertyName === node) ||
+        (ts.isJsxAttribute(parent) && parent.name === node)
+      if (!own) found = true
+      return
+    }
+    ts.forEachChild(node, visit)
+  }
+  visit(sf)
+  return found
+}
+
 export interface GeneratedScript {
   text: string
   mappings: CodeMapping[]
   lang: 'ts' | 'js'
 }
 
-export function generateScript(ts: typeof TS, source: string, parts = safeSplit(source)): GeneratedScript {
+/**
+ * The TSX virtual file for a .kn source. With `fileName`, the default export is named after the
+ * file (see componentName), unless the code already uses that name.
+ */
+export function generateScript(
+  ts: typeof TS,
+  source: string,
+  parts = safeSplit(source),
+  fileName?: string,
+): GeneratedScript {
+  const name = componentName(fileName)
+  const script = buildScript(ts, source, parts, name)
+  if (name === FALLBACK_NAME || !referencesName(ts, script.text, name)) return script
+  return buildScript(ts, source, parts, FALLBACK_NAME)
+}
+
+function buildScript(ts: typeof TS, source: string, parts: SplitResult, name: string): GeneratedScript {
   const b = new Builder()
   const offset = parts.script?.start ?? 0
   const script = parts.script?.content ?? ''
   const sf = ts.createSourceFile('script.tsx', script, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
   const imports = sf.statements.filter((s) => ts.isImportDeclaration(s) || ts.isImportEqualsDeclaration(s))
+
+  const declared = declaredNames(ts, sf)
+  const missing = KEENO_APIS.filter((n) => !declared.has(n))
+  const directives = directiveEdits(ts, source, parts.ranges)
+  if (directives.length) missing.push('__kn_use')
+  // TypeScript inserts an auto-import at the start of the line after the last import. The
+  // generated import goes first, and that spot is mapped to the line after the script's last
+  // import (or to the script's first line), so the edit reaches the .kn file.
+  const nextLine = (pos: number) => {
+    const nl = script.indexOf('\n', pos)
+    return nl >= 0 && !script.slice(pos, nl).trim() ? nl + 1 : pos
+  }
+  if (missing.length) b.add(`import { ${missing.join(', ')} } from '@inflector/keeno/kn';\n`)
+  if (!imports.length && parts.script) b.point(offset + nextLine(0))
 
   for (const imp of imports) {
     const start = imp.getStart(sf)
@@ -135,15 +225,11 @@ export function generateScript(ts: typeof TS, source: string, parts = safeSplit(
       b.map(offset + start, script.slice(start, imp.end))
     }
     b.add('\n')
+    if (imp === imports[imports.length - 1]) b.point(offset + nextLine(imp.end))
   }
-  const declared = declaredNames(ts, sf)
-  const missing = KEENO_APIS.filter((n) => !declared.has(n))
-  const directives = directiveEdits(ts, source, parts.ranges)
-  if (directives.length) missing.push('__kn_use')
-  if (missing.length) b.add(`import { ${missing.join(', ')} } from '@inflector/keeno/kn';\n`)
 
   const propsType = parts.lang === 'ts' ? propsTypeText(ts, sf) : undefined
-  b.add(propsType ? 'function __KeenoRender() {\n' : 'export default function __KeenoComponent($$props: Record<string, any>) {\n')
+  b.add(propsType ? 'function __KeenoRender() {\n' : `export default function ${name}($$props: Record<string, any>) {\n`)
   let pos = 0
   for (const imp of imports) {
     b.map(offset + pos, script.slice(pos, imp.getStart(sf)))
@@ -178,7 +264,7 @@ export function generateScript(ts: typeof TS, source: string, parts = safeSplit(
   if (propsType) {
     b.add('\n</>)] as const;\n}\n')
     b.add(
-      "export default function __KeenoComponent($$props: import('@inflector/keeno/kn').KnComponentProps<ReturnType<typeof __KeenoRender>[0]>) {\n" +
+      `export default function ${name}($$props: import('@inflector/keeno/kn').KnComponentProps<ReturnType<typeof __KeenoRender>[0]>) {\n` +
         '  return __KeenoRender()[1]\n}\n',
     )
   } else b.add('\n</>);\n}\n')
@@ -247,11 +333,12 @@ export class KeenoVirtualCode implements VirtualCode {
   constructor(
     public snapshot: TS.IScriptSnapshot,
     ts: typeof TS,
+    fileName?: string,
   ) {
     const source = snapshot.getText(0, snapshot.getLength())
     this.mappings = [{ sourceOffsets: [0], generatedOffsets: [0], lengths: [source.length], data: FEATURES }]
     const parts = safeSplit(source)
-    const script = generateScript(ts, source, parts)
+    const script = generateScript(ts, source, parts, fileName)
     this.lang = script.lang
     this.embeddedCodes.push({
       id: 'script',
