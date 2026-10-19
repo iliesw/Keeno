@@ -5,15 +5,15 @@ import type * as TS from 'typescript'
 import type { URI } from 'vscode-uri'
 import { KeenoVirtualCode } from './virtualCode'
 
-export { generateScript, KeenoVirtualCode } from './virtualCode'
+export { componentName, generateScript, KeenoVirtualCode } from './virtualCode'
 
 export function createKeenoLanguagePlugin(ts: typeof TS): LanguagePlugin<URI> {
   return {
     getLanguageId(uri) {
       if (uri.path.endsWith('.kn')) return 'keeno'
     },
-    createVirtualCode(_uri, languageId, snapshot) {
-      if (languageId === 'keeno') return new KeenoVirtualCode(snapshot, ts)
+    createVirtualCode(uri, languageId, snapshot) {
+      if (languageId === 'keeno') return new KeenoVirtualCode(snapshot, ts, uri.path)
     },
     typescript: {
       extraFileExtensions: [{ extension: 'kn', isMixedContent: true, scriptKind: ts.ScriptKind.Deferred }],
