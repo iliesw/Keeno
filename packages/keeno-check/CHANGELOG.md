@@ -1,5 +1,13 @@
 # @inflector/keeno-check
 
+## 0.2.6
+
+### Patch Changes
+
+- Updated dependencies [[`a49d54c`](https://github.com/iliesw/Keeno/commit/a49d54c3e979edc9fb620e54eec156d835718484)]:
+  - @inflector/keeno-language-server@0.4.6
+  - @inflector/keeno-compiler@0.9.0
+
 ## 0.2.5
 
 ### Patch Changes

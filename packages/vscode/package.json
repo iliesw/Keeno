@@ -2,7 +2,7 @@
   "name": "inflector-keeno",
   "displayName": "Keeno Framework",
   "description": "Syntax highlighting and IntelliSense for Keeno (.kn) components",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "publisher": "inflector",
   "private": true,
   "license": "MIT",
