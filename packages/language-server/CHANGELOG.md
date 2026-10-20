@@ -1,5 +1,13 @@
 # @inflector/keeno-language-server
 
+## 0.4.6
+
+### Patch Changes
+
+- [#33](https://github.com/iliesw/Keeno/pull/33) [`a49d54c`](https://github.com/iliesw/Keeno/commit/a49d54c3e979edc9fb620e54eec156d835718484) Thanks [@iliesw](https://github.com/iliesw)! - Components complete by name in the editor. A `.kn` file's default export is now named after the file (`todo-item.kn` is `TodoItem`), so typing `<TodoIt` offers `TodoItem` and adds its import, for every component and not only those re-exported from a `.ts` file. Accepting an auto-import now inserts the import into the `<script>` block; before, the edit was dropped.
+- Updated dependencies []:
+  - @inflector/keeno-compiler@0.9.0
+
 ## 0.4.5
 
 ### Patch Changes

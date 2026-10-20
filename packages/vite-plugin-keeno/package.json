@@ -1,6 +1,6 @@
 {
   "name": "@inflector/vite-plugin-keeno",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "Vite plugin for Keeno (.kn) single-file components, with file-based routing",
   "license": "MIT",
   "repository": {
