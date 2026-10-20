@@ -1,0 +1,176 @@
+<script lang="ts">
+  // The Agent tab: connects Claude Code to the dev server's MCP endpoint in one click, and lists
+  // what coding agents do through it (every tool call, live, in every tab).
+  import IconButton from './IconButton.kn'
+  import { ago, mcpCommand, useActions, type McpActivity, type McpStatus } from '../shared'
+
+  const { available, status, activity, page, now, installing, message, onInstall, onClear } = props<{
+    /** The dev server serves MCP (the plugin's `mcp` option). */
+    available: boolean
+    status: McpStatus | null
+    /** Newest first. */
+    activity: McpActivity[]
+    /** This tab's id, to mark calls answered by another tab. */
+    page: string
+    now: number
+    installing: boolean
+    message: { ok: boolean; text: string } | null
+    onInstall: () => void
+    onClear: () => void
+  }>()
+  const actions = useActions()
+  const open = state<number | null>(null)
+  const copied = state(false)
+
+  /** An agent asked something in the last 5 minutes. */
+  const connected = derived(() => !!status?.client && now - status.client.lastSeen < 5 * 60_000)
+  const installed = derived(() => !!status?.installed && status.installed.url === status.url)
+  const stale = derived(() => !!status?.installed && status.installed.url !== status.url)
+  const command = derived(() => mcpCommand(status?.url ?? `${location.origin}/__keeno/mcp`))
+
+  /** The tools whose `id` is a component. */
+  const COMPONENT_TOOLS = new Set(['keeno_inspect', 'keeno_dom'])
+
+  /** Wall-clock time (calls are stamped by the server, not with performance.now). */
+  const clock = (t: number) => new Date(t).toLocaleTimeString([], { hour12: false })
+
+  function label(a: McpActivity): string {
+    return a.tool.replace(/^keeno_/, '').replace(/_/g, ' ')
+  }
+
+  function argsText(a: McpActivity): string {
+    const { page: _, ...args } = a.args as Record<string, unknown>
+    if (a.tool === 'keeno_eval') return String(args.code ?? '').replace(/\s+/g, ' ')
+    return Object.entries(args)
+      .map(([k, v]) => `${k}: ${typeof v === 'string' ? v : JSON.stringify(v)}`)
+      .join(', ')
+  }
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(command)
+      copied.set(true)
+      setTimeout(() => copied.set(false), 1500)
+    } catch {
+      console.info(command)
+    }
+  }
+</script>
+
+<div class="view">
+  <div class="agent">
+    {!available ? (
+      <div class="empty">
+        The MCP endpoint is off. Remove <code>mcp: false</code> from the Keeno plugin options in <code>vite.config.ts</code> to let coding agents see the app.
+      </div>
+    ) : (
+      <div class="setup">
+        <div class="setup-row">
+          <span class={['dot', connected ? 'live' : installed ? 'ready' : 'off']} />
+          <span class="setup-title">Claude Code</span>
+          <span class="muted small">
+            {connected
+              ? `connected · ${status!.client!.name} · active ${ago(status!.client!.lastSeen, now)}`
+              : installed
+                ? `added (${status!.installed!.scope}) · waiting for a session`
+                : stale
+                  ? `configured for ${status!.installed!.url}`
+                  : status
+                    ? 'not set up'
+                    : 'checking…'}
+          </span>
+          <div class="spacer" />
+          {!installed && (
+            <button class="btn primary" disabled={installing || !status} onClick={() => onInstall()}>
+              {installing ? 'Adding…' : stale ? 'Update' : 'Add to Claude Code'}
+            </button>
+          )}
+        </div>
+        <div class="cmd">
+          <code>{command}</code>
+          <IconButton icon="copy" small title={copied ? 'Copied' : 'Copy the command'} on={copied} onClick={copy} />
+        </div>
+        {message && <div class={['note', message.ok ? 'ok' : 'bad']}>{message.text}</div>}
+        {installed && !connected && !message && (
+          <div class="note muted">Ask Claude Code about the app (“why doesn't the total update?”) and its tool calls show up here.</div>
+        )}
+      </div>
+    )}
+
+    <div class="toolbar feed-head">
+      <span class="feed-title">Activity</span>
+      <span class="count">{activity.length}</span>
+      <div class="spacer" />
+      <IconButton icon="trash" title="Clear" disabled={!activity.length} onClick={() => onClear()} />
+    </div>
+    {activity.length === 0 && <div class="empty">No agent activity yet. What a coding agent reads and changes through MCP appears here as it happens.</div>}
+    <div class="feed">
+      {activity.map((a) => (
+        <div key={a.id} class={['call', a.ok === false && 'failed', a.ok === undefined && 'running', open === a.id && 'open']}>
+          <button class="call-row" onClick={() => open.set(open === a.id ? null : a.id)}>
+            <span class="time">{clock(a.start)}</span>
+            <span class={['state', a.ok === undefined ? 'spin' : a.ok ? 'ok' : 'bad']}>{a.ok === undefined ? '' : a.ok ? '✓' : '✗'}</span>
+            <span class="tool">{label(a)}</span>
+            <span class="args">{argsText(a)}</span>
+            {a.page && a.page !== page && <span class="badge">other tab</span>}
+            {a.ms !== undefined && <span class="ms">{a.ms}ms</span>}
+          </button>
+          {open === a.id && (
+            <div class="detail">
+              {COMPONENT_TOOLS.has(a.tool) && typeof a.args.id === 'number' && (!a.page || a.page === page) && (
+                <button class="link small" onClick={() => actions.select(a.args.id as number, true)}>
+                  Select component {String(a.args.id)}
+                </button>
+              )}
+              {a.tool === 'keeno_eval' && <pre class="code">{String(a.args.code ?? '')}</pre>}
+              <pre class={['result', a.ok === false && 'v-err']}>{a.summary ?? 'Running…'}</pre>
+              {a.client && <div class="muted small">by {a.client}</div>}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  </div>
+</div>
+
+<style>
+  .agent { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: auto; }
+  .setup { padding: 12px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px; flex: none; }
+  .setup-row { display: flex; align-items: center; gap: 8px; min-height: 28px; flex-wrap: wrap; }
+  .setup-title { font-weight: 600; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--faint); }
+  .dot.ready { background: var(--num); }
+  .dot.live { background: var(--str); box-shadow: 0 0 0 3px rgba(98, 192, 115, 0.2); }
+  .btn:disabled { opacity: 0.6; cursor: default; }
+  .cmd { display: flex; align-items: center; gap: 6px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 4px 4px 4px 10px; }
+  .cmd code { flex: 1; min-width: 0; font: 11px/1.4 var(--mono); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .note { font-size: 12px; }
+  .note.ok { color: var(--str); }
+  .note.bad { color: var(--err); }
+  code { font-family: var(--mono); font-size: 12px; }
+  .feed-head { gap: 6px; }
+  .feed-title { font-weight: 500; }
+  .feed { display: flex; flex-direction: column; font-family: var(--mono); font-size: 12px; }
+  .call { border-bottom: 1px solid var(--border); }
+  .call-row { display: flex; align-items: baseline; gap: 8px; width: 100%; padding: 6px 10px; text-align: left; }
+  .call-row:hover { background: var(--hover); }
+  .call.running { animation: arrive 0.6s var(--ease-out); }
+  @keyframes arrive { from { background: var(--accent-dim); } }
+  .time { color: var(--faint); flex: none; }
+  .state { width: 12px; flex: none; text-align: center; }
+  .state.ok { color: var(--str); }
+  .state.bad { color: var(--err); }
+  .state.spin { align-self: center; height: 10px; width: 10px; border: 2px solid var(--border-strong); border-top-color: var(--text); border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .tool { color: var(--tag); flex: none; }
+  .failed .tool { color: var(--err); }
+  .args { flex: 1; min-width: 0; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ms { color: var(--faint); flex: none; }
+  .detail { padding: 0 10px 10px 30px; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+  pre { margin: 0; width: 100%; white-space: pre-wrap; word-break: break-word; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; max-height: 240px; overflow: auto; font: 11px/1.45 var(--mono); }
+  pre.code { color: var(--text); }
+  pre.result { color: var(--muted); }
+  @media (prefers-reduced-motion: reduce) {
+    .state.spin, .call.running { animation: none; }
+  }
+</style>

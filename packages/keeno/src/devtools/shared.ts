@@ -3,6 +3,9 @@
 import { createContext, inject } from '../context'
 import type { DevComponent, DevDeps, DevDetails, DevEvent, DevGraphNode, DevMessage, DevNavigation, DevRoute, DevRouter, DevSignal, DevStats } from '../devtools'
 
+import type { McpActivity, McpBridge, McpStatus } from '../devtools-mcp'
+
+export type { McpActivity, McpBridge, McpStatus }
 export type { DevComponent, DevDeps, DevDetails, DevEvent, DevGraphNode, DevMessage, DevNavigation, DevRoute, DevRouter, DevSignal, DevStats }
 
 export interface Api {
@@ -13,7 +16,7 @@ export interface Api {
   at(target: Node): number | null
   path(id: number): number[]
   stores(): DevSignal[]
-  set(id: number, value: unknown): boolean
+  set(id: number, value: unknown, as?: string): boolean
   undo(id: number): void
   redo(id: number): void
   log(): DevEvent[]
@@ -31,7 +34,7 @@ export interface Api {
 }
 
 
-export type Tab = 'components' | 'timeline' | 'graph' | 'router' | 'perf'
+export type Tab = 'components' | 'timeline' | 'graph' | 'router' | 'perf' | 'agent'
 
 export interface Prefs {
   open: boolean
@@ -51,6 +54,25 @@ export const STORES = -1
 /** The dev tools API installed by the runtime (devtools.ts). */
 export function getApi(): Api {
   return (globalThis as any).__KEENO_DEVTOOLS__
+}
+
+/** The coding agent bridge (devtools-mcp.ts), when the dev server serves MCP. */
+export function getMcp(): McpBridge | undefined {
+  const b = (globalThis as any).__KEENO_MCP__
+  return b && b.version === 1 ? b : undefined
+}
+
+/** The command that adds the dev server's MCP endpoint to Claude Code. */
+export function mcpCommand(url: string): string {
+  return `claude mcp add --transport http keeno ${url}`
+}
+
+/** "3s ago", "5 min ago"... */
+export function ago(time: number, now = Date.now()): string {
+  const s = Math.max(0, Math.round((now - time) / 1000))
+  if (s < 60) return `${s}s ago`
+  if (s < 3600) return `${Math.round(s / 60)} min ago`
+  return `${Math.round(s / 3600)} h ago`
 }
 
 /** What components deep in the panel can do: provided by Panel.kn. */
@@ -144,6 +166,8 @@ export const ICONS = {
   edit: '<path d="M4 20h4L19 9l-4-4L4 16z"/>',
   reset: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>',
   go: '<path d="M5 12h14M13 6l6 6-6 6"/>',
+  copy: '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/>',
+  agent: '<path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z"/>',
 }
 
 export type IconName = keyof typeof ICONS

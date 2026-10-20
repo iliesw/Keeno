@@ -37,7 +37,7 @@ describe('create-keeno', () => {
   test('the minimal template has no router and no Tailwind', () => {
     const files = projectFiles({ name: 'x', template: 'minimal', tailwind: false })
     expect(Object.keys(files).sort()).toEqual(
-      ['.gitignore', 'README.md', 'index.html', 'package.json', 'src/App.kn', 'src/app.css', 'src/env.d.ts', 'src/main.ts', 'tsconfig.json', 'vite.config.ts'].sort(),
+      ['.gitignore', '.mcp.json', 'README.md', 'index.html', 'package.json', 'src/App.kn', 'src/app.css', 'src/env.d.ts', 'src/main.ts', 'tsconfig.json', 'vite.config.ts'].sort(),
     )
     const pkg = JSON.parse(files['package.json']!)
     expect(Object.keys(pkg.dependencies)).toEqual(['@inflector/keeno'])

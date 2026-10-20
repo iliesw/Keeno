@@ -73,4 +73,5 @@ Read the doc for the area you are working in before writing code. They are the p
 
 1. Check `package.json` for the Keeno packages and `vite.config.ts` for the plugin options (`renderStrategy`, file routing) before changing structure.
 2. Write components against the rules above; open the matching reference when touching an area you haven't checked yet.
-3. Verify with `keeno-check` (`@inflector/keeno-check`; usually a `check` script) (types in `.kn` and `.ts`) and the project's tests (`bun test`), then the dev server when the change is visible.
+3. Debug against the running app when the `keeno` MCP server is connected (`keeno_*` tools; the dev server serves it at `/__keeno/mcp` and a browser tab must be open): `keeno_tree` or `keeno_locate` to find a component, `keeno_inspect` for its props and states, `keeno_timeline` and `keeno_deps` for why something did or didn't update, `keeno_console` and `keeno_server_errors` for errors. If it isn't connected, suggest `claude mcp add --transport http keeno http://localhost:5173/__keeno/mcp`.
+4. Verify with `keeno-check` (`@inflector/keeno-check`; usually a `check` script) (types in `.kn` and `.ts`) and the project's tests (`bun test`), then the dev server when the change is visible.

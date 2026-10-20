@@ -15,6 +15,7 @@
       "@inflector/keeno/internal": ["./packages/keeno/src/internal.ts"],
       "@inflector/keeno/kn": ["./packages/keeno/src/kn.d.ts"],
       "@inflector/keeno/devtools": ["./packages/keeno/src/devtools-ui.ts"],
+      "@inflector/keeno/mcp": ["./packages/keeno/src/devtools-mcp.ts"],
       "@inflector/keeno-compiler": ["./packages/compiler/src/index.ts"],
       "@inflector/keeno-compiler/split": ["./packages/compiler/src/split.ts"],
       "@inflector/vite-plugin-keeno": ["./packages/vite-plugin-keeno/src/index.ts"],

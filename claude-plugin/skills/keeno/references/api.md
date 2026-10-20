@@ -207,7 +207,7 @@ interface NavigateOptions { replace?; state?; scroll?; transition? }
 RouterProps, LinkProps, RouteDefinition, PageModule
 
 // @inflector/vite-plugin-keeno
-interface KeenoPluginOptions { hmr?; tailwind?: boolean | TailwindOptions; devtools?; useFileRouter?; pages? }
+interface KeenoPluginOptions { hmr?; tailwind?: boolean | TailwindOptions; devtools?; mcp?; useFileRouter?; pages? }
 interface TailwindOptions { reference?: string }
 ```
 
