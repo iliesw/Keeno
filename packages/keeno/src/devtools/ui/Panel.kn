@@ -9,16 +9,21 @@
   import RouterTab from './Router.kn'
   import Timeline from './Timeline.kn'
   import Graph from './Graph.kn'
+  import Agent from './Agent.kn'
   import {
     ActionsContext,
     DEFAULT_PREFS,
     STORES,
     getApi,
+    getMcp,
     rectOf,
     type Actions,
     type Box,
     type DevComponent,
     type DevEvent,
+    type McpActivity,
+    type McpBridge,
+    type McpStatus,
     type Prefs,
     type Tab,
     type TreeRow,
@@ -32,6 +37,7 @@
     { id: 'graph', label: 'Graph' },
     { id: 'router', label: 'Router' },
     { id: 'perf', label: 'Perf' },
+    { id: 'agent', label: 'Agent' },
   ]
 
   const prefs = state<Prefs>(DEFAULT_PREFS, {
@@ -58,6 +64,17 @@
   const closing = state(false)
   /** True while the panel animates out before moving to the other side. */
   const moving = state(false)
+  /** The coding agent bridge (null: the dev server doesn't serve MCP). */
+  const mcp = state<McpBridge | null>(getMcp() ?? null)
+  const agentCalls = state<McpActivity[]>([])
+  /** Calls up to this id were cleared from the Agent tab. */
+  const clearedUpTo = state(0)
+  const mcpStatus = state<McpStatus | null>(null)
+  const installing = state(false)
+  const installMessage = state<{ ok: boolean; text: string } | null>(null)
+  /** When an agent last called a tool: the tab and the button glow for a moment. */
+  const agentActiveAt = state(0)
+  const now = state(Date.now())
 
   const tree = derived(() => {
     tick
@@ -141,6 +158,66 @@
     return selected === null ? '' : map.get(selected) ?? ''
   })
   const width = derived(() => liveWidth ?? prefs.width)
+  const agentFeed = derived(() => agentCalls.filter((a) => a.id > clearedUpTo).reverse())
+  const agentActive = derived(() => now - agentActiveAt < 2500 || agentCalls.some((a) => a.ok === undefined))
+
+  async function loadStatus() {
+    const b = mcp.peek()
+    if (!b) return
+    try {
+      mcpStatus.set(await b.status())
+    } catch {
+      mcpStatus.set(null)
+    }
+  }
+
+  async function installMcp() {
+    const b = mcp.peek()
+    if (!b || installing.peek()) return
+    installing.set(true)
+    installMessage.set(null)
+    try {
+      const r = await b.install()
+      installMessage.set({ ok: r.ok, text: r.message })
+    } catch (err) {
+      installMessage.set({ ok: false, text: `Could not reach the dev server: ${String(err)}` })
+    }
+    installing.set(false)
+    loadStatus()
+  }
+
+  /** The tools whose `id` argument is a component: it flashes on the page when an agent looks at it. */
+  const COMPONENT_TOOLS = new Set(['keeno_inspect', 'keeno_dom'])
+  const seenCalls = new Set<number>()
+  function watchAgent(b: McpBridge) {
+    const sync = () => {
+      const list = b.activity()
+      for (const a of list) {
+        if (seenCalls.has(a.id)) continue
+        seenCalls.add(a.id)
+        agentActiveAt.set(Date.now())
+        now.set(Date.now())
+        if (COMPONENT_TOOLS.has(a.tool) && typeof a.args.id === 'number' && (!a.page || a.page === b.page)) flash([a.args.id])
+        // The first call of a new agent session: show it as connected.
+        if (!mcpStatus.peek()?.client || a.tool === 'keeno_tree') loadStatus()
+      }
+      agentCalls.set(list)
+    }
+    sync()
+    return b.subscribe(sync)
+  }
+
+  // While the Agent tab is open: keep "active 5s ago" current, and re-check the setup.
+  let agentTimer: ReturnType<typeof setInterval> | undefined
+  function watchAgentTab() {
+    clearInterval(agentTimer)
+    agentTimer = undefined
+    const p = prefs.peek()
+    if (!p.open || p.tab !== 'agent') return
+    loadStatus()
+    agentTimer = setInterval(() => now.set(Date.now()), 5000)
+  }
+  update(() => watchAgentTab(), [prefs])
 
   // A selected component that unmounted.
   update(() => {
@@ -358,6 +435,17 @@
   provide(ActionsContext, actions)
 
   init(() => {
+    let offAgent = mcp.peek() ? watchAgent(mcp.peek()!) : () => {}
+    // The bridge may load after the panel.
+    const onBridge = () => {
+      const b = getMcp()
+      if (!b || b === mcp.peek()) return
+      offAgent()
+      mcp.set(b)
+      offAgent = watchAgent(b)
+    }
+    window.addEventListener('keeno:mcp', onBridge)
+    watchAgentTab()
     const off = api.subscribe((m) => {
       if (m.type === 'flush' && m.rendered.length) {
         if (prefs.peek().open) {
@@ -392,6 +480,9 @@
     )
     return () => {
       off()
+      offAgent()
+      clearInterval(agentTimer)
+      window.removeEventListener('keeno:mcp', onBridge)
       stopPicker()
       window.removeEventListener('keydown', onKey, true)
       window.removeEventListener('resize', unhighlight)
@@ -406,6 +497,7 @@
     <span class="logo-mark" />
     <span class="fab-name">Keeno</span>
     {errorCount > 0 && <span class="fab-err">{errorCount}</span>}
+    {agentActive && <span class="agent-dot" title="A coding agent is using the dev tools" />}
   </button>
 )}
 {prefs.open && (
@@ -431,6 +523,7 @@
             onClick={() => setTab(t.id)}
           >
             {t.label}
+            {t.id === 'agent' && agentActive && <span class="agent-dot" />}
           </button>
         ))}
       </div>
@@ -477,6 +570,19 @@
       {prefs.tab === 'graph' && <Graph graph={graph} title={graphTitle} pulses={pulses} />}
       {prefs.tab === 'router' && <RouterTab routers={routers} />}
       {prefs.tab === 'perf' && <Perf stats={stats} />}
+      {prefs.tab === 'agent' && (
+        <Agent
+          available={mcp !== null}
+          status={mcpStatus}
+          activity={agentFeed}
+          page={mcp?.page ?? ''}
+          now={now}
+          installing={installing}
+          message={installMessage}
+          onInstall={installMcp}
+          onClear={() => clearedUpTo.set(agentCalls.at(-1)?.id ?? clearedUpTo.peek())}
+        />
+      )}
     </div>
   </div>
 )}
@@ -568,6 +674,9 @@
   :global(.badge.src-url) { color: var(--bool); }
   :global(.badge.src-remote) { color: var(--str); }
   :global(.badge.src-history) { color: var(--num); }
+  :global(.badge.src-agent) { color: var(--tag); border-color: rgba(82, 168, 255, 0.4); }
+  :global(.agent-dot) { width: 6px; height: 6px; border-radius: 50%; background: var(--tag); margin-left: 5px; animation: agent-pulse 1s ease-in-out infinite alternate; }
+  @keyframes agent-pulse { from { opacity: 0.35; } }
 
   /* Key/value rows and values */
   :global(.kv) { display: flex; align-items: baseline; gap: 0 4px; padding: 2px 0; min-height: 20px; }

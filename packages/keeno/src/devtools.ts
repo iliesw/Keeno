@@ -181,6 +181,8 @@ export function installDevtools(roots: Set<Owner>, legacy: Record<string, unknow
   const log: DevEvent[] = []
   const listeners = new Set<(m: DevMessage) => void>()
   let seq = 0
+  /** What `set(id, value, as)` labels its writes with (`agent`: a coding agent through MCP). */
+  let relabel: string | null = null
   let signalCount = 0
   const stats = { flushes: 0, updates: 0, total: 0, last: 0, max: 0, recent: [] as number[] }
   const seenErrors = new WeakSet<object>()
@@ -255,7 +257,7 @@ export function installDevtools(roots: Set<Owner>, legacy: Record<string, unknow
         componentName: owner ? nameOf(owner) : null,
         old,
         next,
-        source,
+        source: relabel && source === 'local' ? relabel : source,
       })
     },
     run(c) {
@@ -588,10 +590,17 @@ export function installDevtools(roots: Set<Owner>, legacy: Record<string, unknow
     stores(): DevSignal[] {
       return liveStores().map(describe)
     },
-    set(id: number, value: unknown): boolean {
+    /** Write a state. `as` labels the write in the timeline instead of `local` (`agent`, ...). */
+    set(id: number, value: unknown, as?: string): boolean {
       const s = signal(id)
       if (!(s instanceof State)) return false
-      s.set(value)
+      const prev = relabel
+      relabel = as ?? null
+      try {
+        s.set(value)
+      } finally {
+        relabel = prev
+      }
       return true
     },
     undo(id: number) {

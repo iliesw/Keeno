@@ -130,6 +130,8 @@ export function projectFiles(options: Options): Record<string, string> {
 
   const files: Record<string, string> = {
     'package.json': JSON.stringify(pkg, null, 2) + '\n',
+    // Coding agents (Claude Code, ...) see the running app through the dev server's MCP endpoint.
+    '.mcp.json': JSON.stringify({ mcpServers: { keeno: { type: 'http', url: 'http://localhost:5173/__keeno/mcp' } } }, null, 2) + '\n',
     '.gitignore': 'node_modules\ndist\n*.local\n.DS_Store\n',
     'README.md': readme(name, router, render),
     'index.html': `<!doctype html>
@@ -264,6 +266,8 @@ ${
     ? 'Pages live in `src/pages`: `index.kn` is `/`, `about.kn` is `/about`, `_layout.kn` wraps every page and `_404.kn` renders unknown URLs.'
     : 'Start editing `src/App.kn`.'
 }
+
+While \`dev\` runs, coding agents can inspect the app (components, state, errors) through the MCP server at \`http://localhost:5173/__keeno/mcp\`. Claude Code picks it up from \`.mcp.json\`.
 `
 }
 

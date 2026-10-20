@@ -5,6 +5,7 @@ import path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import * as vite from 'vite'
 import type { Plugin, ResolvedConfig, ViteDevServer } from 'vite'
+import { MCP_CLIENT_ID, RESOLVED_MCP_CLIENT_ID, ServerErrors, mcpClientModule, setupMcp } from './mcp'
 import { SERVER_FN_PATH, createHandler, page, sendResponse, splitTemplate, stylesheetLinks, toRequest, withHead, type ServerEntry } from './server'
 
 /**
@@ -45,6 +46,13 @@ export interface KeenoPluginOptions {
    */
   devtools?: boolean
   /**
+   * An MCP server for coding agents during `vite dev` (default true), at `/__keeno/mcp` on the dev
+   * server: the component tree, states, timeline, dependency graph, routes, console and compile
+   * errors of the open tab. Add it to Claude Code with
+   * `claude mcp add --transport http keeno http://localhost:5173/__keeno/mcp`.
+   */
+  mcp?: boolean
+  /**
    * File-based routing (default true): `virtual:keeno-pages` exports the routes of the `pages`
    * directory and a `<Pages>` component rendering them with `@inflector/keeno-router`.
    */
@@ -76,6 +84,7 @@ export type RenderStrategy = 'spa' | 'ssr' | 'ssg' | 'islands'
 const ROUTER = '@inflector/keeno-router'
 /** This file: the router is resolved from here when the app has no copy of its own. */
 const SELF = fileURLToPath(import.meta.url)
+const VERSION: string = JSON.parse(readFileSync(path.join(path.dirname(SELF), '..', 'package.json'), 'utf8')).version
 
 /** The module that holds the file routes: `import Pages from 'virtual:keeno-pages'`. */
 export const PAGES_ID = 'virtual:keeno-pages'
@@ -262,6 +271,7 @@ function parseId(id: string) {
 
 export default function keeno(options: KeenoPluginOptions = {}): Plugin {
   let config: ResolvedConfig
+  const serverErrors = new ServerErrors()
   let tailwind = false
   let reference: string | undefined
   const strategy: RenderStrategy = options.renderStrategy ?? 'spa'
@@ -298,6 +308,7 @@ export default function keeno(options: KeenoPluginOptions = {}): Plugin {
         return pagesModule(dir ? '/' + dir : '', strategy, !!opts?.ssr)
       }
       if (id === RESOLVED_SERVER_ID) return serverModule(strategy)
+      if (id === RESOLVED_MCP_CLIENT_ID) return mcpClientModule
       if (id === RESOLVED_FNS_ID) {
         const dev = config.command === 'serve' && !config.isProduction
         return serverFunctionsModule(serverFunctionFiles(config.root), { base: config.base, dev })
@@ -334,6 +345,7 @@ export default function keeno(options: KeenoPluginOptions = {}): Plugin {
       const server = id === SERVER_ID || id.replace(/\\/g, '/').endsWith('/' + SERVER_ID)
       if (server && (options.useFileRouter !== false || strategy === 'spa')) return RESOLVED_SERVER_ID
       if (id === FNS_ID) return RESOLVED_FNS_ID
+      if (id === MCP_CLIENT_ID) return RESOLVED_MCP_CLIENT_ID
       if (id !== ROUTER) return
       // The app's own copy if it installed one, else the plugin's.
       const resolveOpts = { ...opts, skipSelf: true }
@@ -367,8 +379,10 @@ export default function keeno(options: KeenoPluginOptions = {}): Plugin {
       } catch (err: any) {
         if (err.loc) err.loc = { file, ...err.loc }
         err.id = file
+        serverErrors.compiled(relative(file), err)
         throw err
       }
+      serverErrors.compiled(relative(file))
 
       let js = result.js
       if (result.css) js = `import ${JSON.stringify(`${file}?${STYLE_QUERY}`)};\n${js}`
@@ -379,11 +393,13 @@ export default function keeno(options: KeenoPluginOptions = {}): Plugin {
       if (config.command === 'serve') js += '\nglobalThis.__KEENO_DEV__ = true\n'
       // The panel only talks to the runtime through `__KEENO_DEVTOOLS__`, so it can load from anywhere.
       if (dev && !opts?.ssr && options.devtools !== false) js += 'import "@inflector/keeno/devtools"\n'
+      if (dev && !opts?.ssr && options.mcp !== false) js += `import ${JSON.stringify(MCP_CLIENT_ID)}\n`
 
       return stripTypes(js, file, result.map)
     },
 
     configureServer(server) {
+      if (options.mcp !== false) setupMcp(server, serverErrors, VERSION)
       // Server function calls, with every strategy.
       server.middlewares.use(async (req, res, next) => {
         if (!req.url?.split('?')[0].startsWith(config.base + SERVER_FN_PATH)) return next()
@@ -394,6 +410,7 @@ export default function keeno(options: KeenoPluginOptions = {}): Plugin {
           await sendResponse(response, res)
         } catch (err: any) {
           server.ssrFixStacktrace(err)
+          serverErrors.failed('server function', err)
           next(err)
         }
       })
@@ -433,6 +450,7 @@ export default function keeno(options: KeenoPluginOptions = {}): Plugin {
           res.end(after)
         } catch (err: any) {
           server.ssrFixStacktrace(err)
+          serverErrors.failed(`server rendering ${req.url}`, err)
           next(err)
         }
       })

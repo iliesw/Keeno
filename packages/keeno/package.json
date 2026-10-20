@@ -53,6 +53,12 @@
       "import": "./dist/devtools-ui.js",
       "default": "./dist/devtools-ui.js"
     },
+    "./mcp": {
+      "keeno-source": "./src/devtools-mcp.ts",
+      "types": "./dist/devtools-mcp.d.ts",
+      "import": "./dist/devtools-mcp.js",
+      "default": "./dist/devtools-mcp.js"
+    },
     "./kn": {
       "keeno-source": "./src/kn.d.ts",
       "types": "./dist/kn.d.ts"

@@ -12,11 +12,14 @@ import Perf from "./Perf";
 import RouterTab from "./Router";
 import Timeline from "./Timeline";
 import Graph from "./Graph";
-import { ActionsContext, DEFAULT_PREFS, STORES, getApi, rectOf, type Actions, type Box, type DevComponent, type DevEvent, type Prefs, type Tab, type TreeRow } from '../shared';
+import Agent from "./Agent";
+import { ActionsContext, DEFAULT_PREFS, STORES, getApi, getMcp, rectOf, type Actions, type Box, type DevComponent, type DevEvent, type McpActivity, type McpBridge, type McpStatus, type Prefs, type Tab, type TreeRow } from '../shared';
 const _tmpl$1 = _$template("<span class=\"fab-err keeno-a46bb142\"></span>");
-const _tmpl$2 = _$template("<button class=\"keeno-a46bb142\" title=\"Keeno dev tools (Alt+Shift+D)\"><span class=\"logo-mark keeno-a46bb142\"></span><span class=\"fab-name keeno-a46bb142\">Keeno</span></button>");
-const _tmpl$3 = _$template("<button class=\"keeno-a46bb142\" role=\"tab\"></button>");
-const _tmpl$4 = _$template("<div class=\"keeno-a46bb142\" role=\"dialog\" aria-label=\"Keeno dev tools\"><div class=\"resize keeno-a46bb142\"></div><header class=\"keeno-a46bb142\"><div class=\"logo keeno-a46bb142\"><span class=\"logo-mark keeno-a46bb142\"></span><span class=\"keeno-a46bb142\">Keeno</span></div><div class=\"tabs keeno-a46bb142\" role=\"tablist\"></div><div class=\"spacer keeno-a46bb142\"></div><!----><!----><!----></header><div class=\"body keeno-a46bb142\"><!----><!----><!----><!----></div></div>");
+const _tmpl$2 = _$template("<span class=\"agent-dot keeno-a46bb142\" title=\"A coding agent is using the dev tools\"></span>");
+const _tmpl$3 = _$template("<button class=\"keeno-a46bb142\" title=\"Keeno dev tools (Alt+Shift+D)\"><span class=\"logo-mark keeno-a46bb142\"></span><span class=\"fab-name keeno-a46bb142\">Keeno</span><!----></button>");
+const _tmpl$4 = _$template("<span class=\"agent-dot keeno-a46bb142\"></span>");
+const _tmpl$5 = _$template("<button class=\"keeno-a46bb142\" role=\"tab\"><!----></button>");
+const _tmpl$6 = _$template("<div class=\"keeno-a46bb142\" role=\"dialog\" aria-label=\"Keeno dev tools\"><div class=\"resize keeno-a46bb142\"></div><header class=\"keeno-a46bb142\"><div class=\"logo keeno-a46bb142\"><span class=\"logo-mark keeno-a46bb142\"></span><span class=\"keeno-a46bb142\">Keeno</span></div><div class=\"tabs keeno-a46bb142\" role=\"tablist\"></div><div class=\"spacer keeno-a46bb142\"></div><!----><!----><!----></header><div class=\"body keeno-a46bb142\"><!----><!----><!----><!----><!----></div></div>");
 export default function Panel($$props) {
   const api = getApi();
   const TABS: {
@@ -37,6 +40,9 @@ export default function Panel($$props) {
   }, {
     id: 'perf',
     label: 'Perf'
+  }, {
+    id: 'agent',
+    label: 'Agent'
   }];
   const prefs = state<Prefs>(DEFAULT_PREFS, {
     persist: 'keeno-devtools',
@@ -71,6 +77,20 @@ export default function Panel($$props) {
   const closing = state(false);
   /** True while the panel animates out before moving to the other side. */
   const moving = state(false);
+  /** The coding agent bridge (null: the dev server doesn't serve MCP). */
+  const mcp = state<McpBridge | null>(getMcp() ?? null);
+  const agentCalls = state<McpActivity[]>([]);
+  /** Calls up to this id were cleared from the Agent tab. */
+  const clearedUpTo = state(0);
+  const mcpStatus = state<McpStatus | null>(null);
+  const installing = state(false);
+  const installMessage = state<{
+    ok: boolean;
+    text: string;
+  } | null>(null);
+  /** When an agent last called a tool: the tab and the button glow for a moment. */
+  const agentActiveAt = state(0);
+  const now = state(Date.now());
   const tree = derived(() => {
     tick.get();
     return api.components();
@@ -153,6 +173,70 @@ export default function Panel($$props) {
     return selected.get() === null ? '' : map.get(selected.get()) ?? '';
   });
   const width = derived(() => liveWidth.get() ?? prefs.get().width);
+  const agentFeed = derived(() => agentCalls.get().filter(a => a.id > clearedUpTo.get()).reverse());
+  const agentActive = derived(() => now.get() - agentActiveAt.get() < 2500 || agentCalls.get().some(a => a.ok === undefined));
+  async function loadStatus() {
+    const b = mcp.peek();
+    if (!b) return;
+    try {
+      mcpStatus.set(await b.status());
+    } catch {
+      mcpStatus.set(null);
+    }
+  }
+  async function installMcp() {
+    const b = mcp.peek();
+    if (!b || installing.peek()) return;
+    installing.set(true);
+    installMessage.set(null);
+    try {
+      const r = await b.install();
+      installMessage.set({
+        ok: r.ok,
+        text: r.message
+      });
+    } catch (err) {
+      installMessage.set({
+        ok: false,
+        text: `Could not reach the dev server: ${String(err)}`
+      });
+    }
+    installing.set(false);
+    loadStatus();
+  }
+
+  /** The tools whose `id` argument is a component: it flashes on the page when an agent looks at it. */
+  const COMPONENT_TOOLS = new Set(['keeno_inspect', 'keeno_dom']);
+  const seenCalls = new Set<number>();
+  function watchAgent(b: McpBridge) {
+    const sync = () => {
+      const list = b.activity();
+      for (const a of list) {
+        if (seenCalls.has(a.id)) continue;
+        seenCalls.add(a.id);
+        agentActiveAt.set(Date.now());
+        now.set(Date.now());
+        if (COMPONENT_TOOLS.has(a.tool) && typeof a.args.id === 'number' && (!a.page || a.page === b.page)) flash([a.args.id]);
+        // The first call of a new agent session: show it as connected.
+        if (!mcpStatus.peek()?.client || a.tool === 'keeno_tree') loadStatus();
+      }
+      agentCalls.set(list);
+    };
+    sync();
+    return b.subscribe(sync);
+  }
+
+  // While the Agent tab is open: keep "active 5s ago" current, and re-check the setup.
+  let agentTimer: ReturnType<typeof setInterval> | undefined;
+  function watchAgentTab() {
+    clearInterval(agentTimer);
+    agentTimer = undefined;
+    const p = prefs.peek();
+    if (!p.open || p.tab !== 'agent') return;
+    loadStatus();
+    agentTimer = setInterval(() => now.set(Date.now()), 5000);
+  }
+  update(() => watchAgentTab(), [prefs]);
 
   // A selected component that unmounted.
   update(() => {
@@ -352,6 +436,17 @@ export default function Panel($$props) {
   };
   provide(ActionsContext, actions);
   init(() => {
+    let offAgent = mcp.peek() ? watchAgent(mcp.peek()!) : () => {};
+    // The bridge may load after the panel.
+    const onBridge = () => {
+      const b = getMcp();
+      if (!b || b === mcp.peek()) return;
+      offAgent();
+      mcp.set(b);
+      offAgent = watchAgent(b);
+    };
+    window.addEventListener('keeno:mcp', onBridge);
+    watchAgentTab();
     const off = api.subscribe(m => {
       if (m.type === 'flush' && m.rendered.length) {
         if (prefs.peek().open) {
@@ -383,6 +478,9 @@ export default function Panel($$props) {
     console.info('%cKeeno%c dev tools ready: Alt+Shift+D to open, Alt+Shift+C to pick a component.', 'font-weight:bold', 'color:inherit');
     return () => {
       off();
+      offAgent();
+      clearInterval(agentTimer);
+      window.removeEventListener('keeno:mcp', onBridge);
       stopPicker();
       window.removeEventListener('keydown', onKey, true);
       window.removeEventListener('resize', unhighlight);
@@ -397,68 +495,75 @@ export default function Panel($$props) {
       return flashes.get();
     }
   }, "keeno-a46bb142"), _$and(() => !prefs.get().open, () => {
-    const _el$2 = _tmpl$2();
-    _$attr(_el$2, "class", () => ['fab', prefs.get().side], "keeno-a46bb142");
-    _$on(_el$2, "click", () => setOpen(true));
-    _$insert(_el$2, _$and(() => errorCount.get() > 0, () => {
+    const _el$3 = _tmpl$3();
+    const _el$4 = _el$3.firstChild;
+    const _el$5 = _el$4.nextSibling;
+    const _el$6 = _el$5.nextSibling;
+    _$attr(_el$3, "class", () => ['fab', prefs.get().side], "keeno-a46bb142");
+    _$on(_el$3, "click", () => setOpen(true));
+    _$insert(_el$3, _$and(() => errorCount.get() > 0, () => {
       const _el$1 = _tmpl$1();
       _$insert(_el$1, () => errorCount.get());
       return _el$1;
-    }));
-    return _el$2;
+    }), _el$6);
+    _$insert(_el$3, _$and(() => agentActive.get(), () => _tmpl$2()));
+    return _el$3;
   }), _$and(() => prefs.get().open, () => {
-    const _el$4 = _tmpl$4();
-    const _el$5 = _el$4.firstChild;
-    const _el$6 = _el$5.nextSibling;
-    const _el$7 = _el$6.firstChild;
-    const _el$8 = _el$7.nextSibling;
-    const _el$9 = _el$8.nextSibling;
-    const _el$10 = _el$9.nextSibling;
-    const _el$11 = _el$10.nextSibling;
+    const _el$10 = _tmpl$6();
+    const _el$11 = _el$10.firstChild;
     const _el$12 = _el$11.nextSibling;
-    const _el$13 = _el$6.nextSibling;
-    const _el$14 = _el$13.firstChild;
+    const _el$13 = _el$12.firstChild;
+    const _el$14 = _el$13.nextSibling;
     const _el$15 = _el$14.nextSibling;
     const _el$16 = _el$15.nextSibling;
     const _el$17 = _el$16.nextSibling;
-    _$attr(_el$4, "class", () => ['panel', prefs.get().side === 'left' && 'left', (closing.get() || moving.get()) && 'closing'], "keeno-a46bb142");
-    _$attr(_el$4, "style", () => `width:min(${width.get()}px, calc(100vw - ${2 * GAP}px))`);
-    _$on(_el$5, "pointerdown", startResize);
-    _$insert(_el$8, _$mapKeyed(() => TABS, t => t.id, t => {
-      const _el$3 = _tmpl$3();
-      _$attr(_el$3, "class", () => ['tab', prefs.get().tab === t.get().id && 'active'], "keeno-a46bb142");
-      _$attr(_el$3, "aria-selected", () => prefs.get().tab === t.get().id ? 'true' : 'false');
-      _$on(_el$3, "click", () => setTab(t.get().id));
-      _$insert(_el$3, () => t.get().label);
-      return _el$3;
+    const _el$18 = _el$17.nextSibling;
+    const _el$19 = _el$12.nextSibling;
+    const _el$20 = _el$19.firstChild;
+    const _el$21 = _el$20.nextSibling;
+    const _el$22 = _el$21.nextSibling;
+    const _el$23 = _el$22.nextSibling;
+    const _el$24 = _el$23.nextSibling;
+    _$attr(_el$10, "class", () => ['panel', prefs.get().side === 'left' && 'left', (closing.get() || moving.get()) && 'closing'], "keeno-a46bb142");
+    _$attr(_el$10, "style", () => `width:min(${width.get()}px, calc(100vw - ${2 * GAP}px))`);
+    _$on(_el$11, "pointerdown", startResize);
+    _$insert(_el$14, _$mapKeyed(() => TABS, t => t.id, t => {
+      const _el$8 = _tmpl$5();
+      const _el$9 = _el$8.firstChild;
+      _$attr(_el$8, "class", () => ['tab', prefs.get().tab === t.get().id && 'active'], "keeno-a46bb142");
+      _$attr(_el$8, "aria-selected", () => prefs.get().tab === t.get().id ? 'true' : 'false');
+      _$on(_el$8, "click", () => setTab(t.get().id));
+      _$insert(_el$8, () => t.get().label, _el$9);
+      _$insert(_el$8, _$and(() => t.get().id === 'agent' && agentActive.get(), () => _tmpl$4()));
+      return _el$8;
     }));
-    _$insert(_el$6, _$createComponent(IconButton, {
+    _$insert(_el$12, _$createComponent(IconButton, {
       icon: "pick",
       title: "Pick a component on the page (Alt+Shift+C)",
       get on() {
         return picking.get();
       },
       onClick: () => picking.get() ? stopPicker() : startPicker()
-    }, "keeno-a46bb142"), _el$10);
-    _$insert(_el$6, _$createComponent(IconButton, {
+    }, "keeno-a46bb142"), _el$16);
+    _$insert(_el$12, _$createComponent(IconButton, {
       icon: "flash",
       title: "Highlight updates",
       get on() {
         return prefs.get().flash;
       },
       onClick: () => setPref('flash', !prefs.get().flash)
-    }, "keeno-a46bb142"), _el$11);
-    _$insert(_el$6, _$createComponent(IconButton, {
+    }, "keeno-a46bb142"), _el$17);
+    _$insert(_el$12, _$createComponent(IconButton, {
       icon: "dock",
       title: "Dock to the other side",
       onClick: dock
-    }, "keeno-a46bb142"), _el$12);
-    _$insert(_el$6, _$createComponent(IconButton, {
+    }, "keeno-a46bb142"), _el$18);
+    _$insert(_el$12, _$createComponent(IconButton, {
       icon: "close",
       title: "Close (Alt+Shift+D)",
       onClick: () => setOpen(false)
     }, "keeno-a46bb142"));
-    _$insert(_el$13, _$and(() => prefs.get().tab === 'components', () => _$createComponent(Components, {
+    _$insert(_el$19, _$and(() => prefs.get().tab === 'components', () => _$createComponent(Components, {
       get rows() {
         return rows.get();
       },
@@ -481,8 +586,8 @@ export default function Panel($$props) {
       get split() {
         return prefs.get().split;
       }
-    }, "keeno-a46bb142")), _el$14);
-    _$insert(_el$13, _$and(() => prefs.get().tab === 'timeline', () => _$createComponent(Timeline, {
+    }, "keeno-a46bb142")), _el$20);
+    _$insert(_el$19, _$and(() => prefs.get().tab === 'timeline', () => _$createComponent(Timeline, {
       get events() {
         return events.get();
       },
@@ -499,8 +604,8 @@ export default function Panel($$props) {
         return travel.get();
       },
       onTravel: seq => api.travel(seq)
-    }, "keeno-a46bb142")), _el$15);
-    _$insert(_el$13, _$and(() => prefs.get().tab === 'graph', () => _$createComponent(Graph, {
+    }, "keeno-a46bb142")), _el$21);
+    _$insert(_el$19, _$and(() => prefs.get().tab === 'graph', () => _$createComponent(Graph, {
       get graph() {
         return graph.get();
       },
@@ -510,17 +615,42 @@ export default function Panel($$props) {
       get pulses() {
         return pulses.get();
       }
-    }, "keeno-a46bb142")), _el$16);
-    _$insert(_el$13, _$and(() => prefs.get().tab === 'router', () => _$createComponent(RouterTab, {
+    }, "keeno-a46bb142")), _el$22);
+    _$insert(_el$19, _$and(() => prefs.get().tab === 'router', () => _$createComponent(RouterTab, {
       get routers() {
         return routers.get();
       }
-    }, "keeno-a46bb142")), _el$17);
-    _$insert(_el$13, _$and(() => prefs.get().tab === 'perf', () => _$createComponent(Perf, {
+    }, "keeno-a46bb142")), _el$23);
+    _$insert(_el$19, _$and(() => prefs.get().tab === 'perf', () => _$createComponent(Perf, {
       get stats() {
         return stats.get();
       }
+    }, "keeno-a46bb142")), _el$24);
+    _$insert(_el$19, _$and(() => prefs.get().tab === 'agent', () => _$createComponent(Agent, {
+      get available() {
+        return mcp.get() !== null;
+      },
+      get status() {
+        return mcpStatus.get();
+      },
+      get activity() {
+        return agentFeed.get();
+      },
+      get page() {
+        return mcp.get()?.page ?? '';
+      },
+      get now() {
+        return now.get();
+      },
+      get installing() {
+        return installing.get();
+      },
+      get message() {
+        return installMessage.get();
+      },
+      onInstall: installMcp,
+      onClear: () => clearedUpTo.set(agentCalls.get().at(-1)?.id ?? clearedUpTo.peek())
     }, "keeno-a46bb142")));
-    return _el$4;
+    return _el$10;
   })];
 }

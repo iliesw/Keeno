@@ -2,7 +2,7 @@
 
 ## Vite plugin
 
-`@inflector/vite-plugin-keeno` compiles `.kn` files, serves their CSS, strips TypeScript (with Oxc on Vite 8, and esbuild on Vite 5 to 7) and chains source maps. It supports Vite 5, 6, 7 and 8. Options: `keeno({ hmr?: boolean, tailwind?: boolean | { reference?: string }, devtools?: boolean, useFileRouter?: boolean, pages?: string })` (`KeenoPluginOptions`). `useFileRouter` (default `true`) and `pages` (default `./src/pages`) configure [file-based routing](file-routing.md). `tailwind` defaults to on when `@tailwindcss/vite` is in the plugins (see [Styles](styles.md#tailwind-css)).
+`@inflector/vite-plugin-keeno` compiles `.kn` files, serves their CSS, strips TypeScript (with Oxc on Vite 8, and esbuild on Vite 5 to 7) and chains source maps. It supports Vite 5, 6, 7 and 8. Options: `keeno({ hmr?: boolean, tailwind?: boolean | { reference?: string }, devtools?: boolean, mcp?: boolean, useFileRouter?: boolean, pages?: string })` (`KeenoPluginOptions`). `useFileRouter` (default `true`) and `pages` (default `./src/pages`) configure [file-based routing](file-routing.md). `tailwind` defaults to on when `@tailwindcss/vite` is in the plugins (see [Styles](styles.md#tailwind-css)).
 
 During `vite dev` the plugin also turns on development mode: warnings such as duplicate keys in a list, and the dev tools panel (below). Production builds have neither.
 
@@ -32,9 +32,47 @@ During `vite dev` every page gets an in-page dev tools panel. Open it with the *
   - **Time travel:** the slider above the list moves the whole app back and forth through the recorded writes. While you are back in time, the bar turns amber; **Back to live** replays the rest. Replayed writes don't add history, aren't persisted or put in the URL, and aren't logged.
 - **Graph:** the dependency graph of the selected component (or of the stores): its states and deriveds, what they read on the left and what reads them on the right, ending with the components that render them. Hover a node to trace its edges, and click a node of another component to select it.
 - **Perf:** counts of components, signals, flushes and component updates; flush times (last, average, slowest) with a chart of the recent ones; and the components that update most.
+- **Agent:** connects coding agents to the app (see [below](#dev-tools-for-coding-agents-mcp)). **Add to Claude Code** sets it up in one click, and the dot shows whether an agent is connected. Below that, every tool call an agent makes appears live, with its arguments, duration and result (click a call to see it). Components an agent inspects flash on the page, states it writes are marked `agent` in the Timeline, and the tab and the ◆ Keeno button pulse while an agent is working.
 - **Stores:** states and deriveds created outside components (in a shared module, for example) are listed under ◆ Stores at the top of the tree. Only those created after the first `mount()` are tracked. Objects made with `store()` aren't listed yet; log `snapshot(todos)` to inspect one.
 
 The panel is itself a Keeno app, rendered in a shadow root so that it doesn't pick up the app's styles. The dev tools leave it out: it is not in the tree, and its own updates are not counted or logged. It remembers whether it was open, the side it is docked to (dock button), its width and the active tab. It doesn't load in browsers driven by test tools (`navigator.webdriver`), so end-to-end tests don't see it. Turn it off with `keeno({ devtools: false })`. Outside Vite, add `import '@inflector/keeno/devtools'` to your dev entry point.
+
+## Dev tools for coding agents (MCP)
+
+During `vite dev` the plugin also serves a [Model Context Protocol](https://modelcontextprotocol.io) server at `/__keeno/mcp`, so coding agents such as Claude Code can look into the running app the way the panel does. Vite prints its URL next to the others when it starts.
+
+The quickest setup is **Add to Claude Code** in the dev tools' Agent tab: it runs `claude mcp add` for this project (local scope) when the `claude` CLI is installed, and otherwise adds the server to the project's `.mcp.json`. Start a new Claude Code session afterwards. To add it by hand:
+
+```bash
+claude mcp add --transport http keeno http://localhost:5173/__keeno/mcp
+```
+
+or commit a `.mcp.json` (projects made with `create-keeno` have one):
+
+```json
+{ "mcpServers": { "keeno": { "type": "http", "url": "http://localhost:5173/__keeno/mcp" } } }
+```
+
+Tool calls are answered by an open browser tab with the app, over Vite's HMR socket, so keep one open. With several tabs, the tools ask the one focused last (`keeno_pages` lists them; every tool takes a `page`).
+
+| Tool | What it returns or does |
+|---|---|
+| `keeno_tree` | The component tree with ids, files, update and error counts; `filter` finds components by name or file |
+| `keeno_inspect` | A component's props, states and deriveds (signal ids, values, flags), errors and ancestors |
+| `keeno_dom` | A component's rendered HTML |
+| `keeno_locate` | Which component renders the elements matching a CSS selector |
+| `keeno_stores` | States and deriveds created outside components |
+| `keeno_set_state` | Writes a state, or undoes or redoes one with `history` |
+| `keeno_timeline` | Recent state writes (old and new value, source) and errors |
+| `keeno_deps` / `keeno_graph` | What a signal reads and what reads it; a component's dependency graph |
+| `keeno_perf` | Flush timings and the components that update most (`reset` to measure one interaction) |
+| `keeno_routes` / `keeno_navigate` | Routes, current location and history of each `<Router>`; client-side navigation |
+| `keeno_travel` | Time travel to a logged write, or back to live |
+| `keeno_console` | The page's `console.error` and `console.warn` output, uncaught errors and rejections |
+| `keeno_eval` | Runs JavaScript in the page and returns the result as JSON |
+| `keeno_server_errors` | Current `.kn` compile errors, and errors thrown by server functions and server rendering |
+
+The endpoint only answers requests from the same machine (loopback addresses, and no foreign `Origin`), since `keeno_eval` runs code in your browser. Turn it off with `keeno({ mcp: false })`. If Vite picks another port because 5173 is taken, use the URL it prints.
 
 ## Inspecting the component tree from the console
 
